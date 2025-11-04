@@ -59,7 +59,7 @@ export default defineConfig((ctx) => {
       // publicPath: '/',
       // analyze: true,
       env: {
-        API_URL: 'https://api.payroll.dotdev.bz'
+        API_URL: 'http://localhost:3031/api'
       },
       // rawDefine: {}
       // ignorePublicFolder: true,

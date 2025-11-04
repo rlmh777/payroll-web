@@ -51,8 +51,8 @@ import { ref } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useRouter } from 'vue-router'
 
-const email = ref('')
-const password = ref('')
+const email = ref('johndoe@gmail.com')
+const password = ref('1234')
 const loading = ref(false)
 const isPwd = ref(true)
 const authStore = useAuthStore()

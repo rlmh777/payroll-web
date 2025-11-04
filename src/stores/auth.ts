@@ -8,7 +8,7 @@ interface User {
   role: string
 }
 
-const API_URL = process.env.API_URL || 'https://api.payroll.dotdev.bz'
+const API_URL = process.env.API_URL || 'http://localhost:3031/api'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null)
@@ -17,7 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(email: string, password: string) {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
