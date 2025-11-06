@@ -30,8 +30,8 @@ const genderSymbol = computed((): string => {
 const genderIconClass = computed((): string => {
     if (!props.gender?.name) return 'gender-unknown';
     const name = props.gender.name.toLowerCase();
-    if (name.includes('male') || name === 'm') return 'gender-male';
-    if (name.includes('female') || name === 'f') return 'gender-female';
+    if (name.includes('Male') || name === 'm') return 'gender-male';
+    if (name.includes('Female') || name === 'f') return 'gender-female';
     return 'gender-unknown';
 });
 </script>
