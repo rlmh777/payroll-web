@@ -1,41 +1,30 @@
 <template>
   <q-layout view="lHh Lpr lFf">
+    <!-- Top main menu -->
     <q-header elevated>
-      <q-toolbar>
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-        />
-
-        <q-toolbar-title>
-          Quasar App
-        </q-toolbar-title>
-
-        <div>Quasar v{{ $q.version }}</div>
+      <q-toolbar class="bg-primary text-white justify-start">
+        <q-toolbar-title>Payroll App</q-toolbar-title>
+        <div class="row items-center q-gutter-sm">
+          <q-btn
+            v-for="item in mainMenuItems"
+            :key="item.id"
+            flat
+            dense
+            no-caps
+            @click="selectMenu(item)"
+            :label="item.title"
+            :icon="item.icon ?? undefined"
+            :class="['menu-btn', selectedMenu?.id === item.id ? 'selected' : '']"
+          />
+        </div>
       </q-toolbar>
     </q-header>
 
-    <q-drawer
-      v-model="leftDrawerOpen"
-      show-if-above
-      bordered
-    >
+    <!-- Side drawer for submenus -->
+    <q-drawer v-model="drawerOpen" show-if-above bordered>
       <q-list>
-        <q-item-label
-          header
-        >
-          Essential Links
-        </q-item-label>
-
-        <EssentialLink
-          v-for="link in linksList"
-          :key="link.title"
-          v-bind="link"
-        />
+        <MenuList v-if="selectedChildren.length" :items="selectedChildren" />
+        <div v-else class="q-pa-md text-grey">No submenu</div>
       </q-list>
     </q-drawer>
 
@@ -46,57 +35,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import EssentialLink, { type EssentialLinkProps } from 'components/EssentialLink.vue';
+import { ref, computed, onMounted } from 'vue';
+import { useMenuStore, type MenuItem } from 'src/stores/menus';
+import MenuList from 'src/components/Menu/MenuList.vue';
 
-const linksList: EssentialLinkProps[] = [
-  {
-    title: 'Docs',
-    caption: 'quasar.dev',
-    icon: 'school',
-    link: 'https://quasar.dev'
-  },
-  {
-    title: 'Github',
-    caption: 'github.com/quasarframework',
-    icon: 'code',
-    link: 'https://github.com/quasarframework'
-  },
-  {
-    title: 'Discord Chat Channel',
-    caption: 'chat.quasar.dev',
-    icon: 'chat',
-    link: 'https://chat.quasar.dev'
-  },
-  {
-    title: 'Forum',
-    caption: 'forum.quasar.dev',
-    icon: 'record_voice_over',
-    link: 'https://forum.quasar.dev'
-  },
-  {
-    title: 'Twitter',
-    caption: '@quasarframework',
-    icon: 'rss_feed',
-    link: 'https://twitter.quasar.dev'
-  },
-  {
-    title: 'Facebook',
-    caption: '@QuasarFramework',
-    icon: 'public',
-    link: 'https://facebook.quasar.dev'
-  },
-  {
-    title: 'Quasar Awesome',
-    caption: 'Community Quasar projects',
-    icon: 'favorite',
-    link: 'https://awesome.quasar.dev'
-  }
-];
+const menuStore = useMenuStore();
+const drawerOpen = ref(false);
+const selectedMenu = ref<MenuItem | null>(null);
 
-const leftDrawerOpen = ref(false);
+onMounted(async () => {
+  drawerOpen.value = false;
+  await menuStore.fetchMenus();
+});
 
-function toggleLeftDrawer () {
-  leftDrawerOpen.value = !leftDrawerOpen.value;
+// Only top-level menus (main menu)
+const mainMenuItems = computed(() => menuStore.menuTree);
+
+// Sub-menu for the selected main menu
+const selectedChildren = computed(() => selectedMenu.value?.children || []);
+
+function selectMenu(item: MenuItem) {
+  selectedMenu.value = item;
+  drawerOpen.value = item.children && item.children.length > 0;
 }
 </script>
+
+<style scoped>
+.menu-btn {
+  color: white;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+}
+
+.menu-btn:hover {
+  opacity: 1;
+}
+
+.menu-btn.selected {
+  background-color: white !important;
+  color: var(--q-primary) !important;
+  border-radius: 6px;
+  font-weight: 600;
+}
+</style>
