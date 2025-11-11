@@ -2,21 +2,44 @@
   <q-layout view="lHh Lpr lFf">
     <!-- Top main menu -->
     <q-header elevated>
-      <q-toolbar class="bg-primary text-white justify-start">
-        <q-toolbar-title>Payroll App</q-toolbar-title>
+      <q-toolbar class="bg-primary text-white">
         <div class="row items-center q-gutter-sm">
-          <q-btn
-            v-for="item in mainMenuItems"
-            :key="item.id"
-            flat
-            dense
-            no-caps
-            @click="selectMenu(item)"
-            :label="item.title"
-            :icon="item.icon ?? undefined"
-            :class="['menu-btn', selectedMenu?.id === item.id ? 'selected' : '']"
-          />
+          <q-toolbar-title> Logo </q-toolbar-title>
+          <div class="row items-center q-gutter-sm justify-start">
+            <q-btn
+              v-for="item in mainMenuItems"
+              :key="item.id"
+              flat
+              dense
+              no-caps
+              @click="selectMenu(item)"
+              :label="item.title"
+              :icon="item.icon ?? undefined"
+              :class="['menu-btn', selectedMenu?.id === item.id ? 'selected' : '']"
+            />
+          </div>
         </div>
+        <q-space />
+        <!-- Logout / User Menu -->
+        <q-btn flat round dense icon="account_circle">
+          <q-menu transition-show="jump-down" transition-hide="jump-up">
+            <q-card class="q-pa-sm" style="min-width: 180px">
+              <q-card-section class="text-center">
+                <q-avatar size="48px" class="bg-primary text-white">
+                  <q-icon name="person" />
+                </q-avatar>
+                <div class="q-mt-sm text-weight-medium">{{ 'User' }}</div>
+                <div class="text-caption text-grey">Logged in</div>
+              </q-card-section>
+
+              <q-separator />
+
+              <q-card-actions align="around">
+                <q-btn flat icon="logout" label="Logout" color="negative" />
+              </q-card-actions>
+            </q-card>
+          </q-menu>
+        </q-btn>
       </q-toolbar>
     </q-header>
 
