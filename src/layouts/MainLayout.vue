@@ -4,10 +4,10 @@
     <q-header elevated>
       <q-toolbar class="bg-primary text-white">
         <div class="row items-center q-gutter-sm">
-          <q-toolbar-title> Logo </q-toolbar-title>
+          <!-- <q-toolbar-title> Logo </q-toolbar-title> -->
           <div class="row items-center q-gutter-sm justify-start">
             <q-btn
-              v-for="item in mainMenuItems"
+              v-for="(item, index) in mainMenuItems"
               :key="item.id"
               flat
               dense
@@ -15,7 +15,11 @@
               @click="selectMenu(item)"
               :label="item.title"
               :icon="item.icon ?? undefined"
-              :class="['menu-btn', selectedMenu?.id === item.id ? 'selected' : '']"
+              :class="[
+                'menu-btn',
+                selectedMenu?.id === item.id ? 'selected' : '',
+                index < mainMenuItems.length - 1 ? 'separator' : '',
+              ]"
             />
           </div>
         </div>
@@ -99,5 +103,17 @@ function selectMenu(item: MenuItem) {
   color: var(--q-primary) !important;
   border-radius: 6px;
   font-weight: 600;
+}
+
+/* --- New Separator Style --- */
+.menu-btn.separator {
+  /* Adds a subtle white vertical line to the right of the button */
+  border-right: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.menu-btn.selected.separator {
+  /* Ensure the separator is visible even when selected, 
+     but maybe match the theme or be clearer */
+  border-right: 1px solid rgba(0, 0, 0, 0.2);
 }
 </style>
