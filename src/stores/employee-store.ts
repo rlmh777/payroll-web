@@ -1,16 +1,19 @@
 import { defineStore, acceptHMRUpdate } from 'pinia';
-import type { Employee } from '../components/models';
+import type { CitizenshipStatus, Country, Employee, Gender, Honorific, Locality, PaymentMethod, PayrateFrequency } from '../components/models';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api'
 
 export const useEmployeeStore = defineStore('employee', {
   state: () => ({
     employees: [] as Employee[],
+    genders: [] as Gender[],
+    localities: [] as Locality[],
+    nationalities: [] as Country[],
+    citizenshipStatuses: [] as CitizenshipStatus[],
+    honorifics: [] as Honorific[],
+    payrateFrequencies: [] as PayrateFrequency[],
+    paymentMethods: [] as PaymentMethod[],
     searchName: '',
-    searchGenderId: '',
-    searchLocalityId: '',
-    searchNationalityId: '',
-    searchCitizenshipStatusId: '',
     sortBy: 'lastName',
     sortDirection: 'asc',
     perPage: 10,
@@ -18,7 +21,14 @@ export const useEmployeeStore = defineStore('employee', {
     lastPage: 1,
     total: 0,
     isLoading: false,
+    isLoadingEmployeeById: false,
+    isLoadingGenders: false,
+    isLoadingLocalities: false,
+    isLoadingNationalities: false,
+    isLoadingCitizenshipStatuses: false,
+    isLoadingHonorifics: false,
     hasMore: true,
+    selectedEmployee: null as Employee | null,
   }),
 
   getters: {  },
@@ -36,10 +46,6 @@ export const useEmployeeStore = defineStore('employee', {
 
       const queryParams = new URLSearchParams();
       if (this.searchName) queryParams.append('search', this.searchName);
-      if (this.searchGenderId) queryParams.append('gender_id', this.searchGenderId);
-      if (this.searchLocalityId) queryParams.append('locality_id', this.searchLocalityId);
-      if (this.searchNationalityId) queryParams.append('nationality_id', this.searchNationalityId);
-      if (this.searchCitizenshipStatusId) queryParams.append('citizenship_status_id', this.searchCitizenshipStatusId);
       if (this.sortBy) queryParams.append('sort_by', this.sortBy);
       if (this.sortDirection) queryParams.append('sort_direction', this.sortDirection);
       if (this.perPage) queryParams.append('per_page', this.perPage.toString());
@@ -59,8 +65,6 @@ export const useEmployeeStore = defineStore('employee', {
         this.lastPage = data.last_page;
         this.total = data.total;
         this.hasMore = data.current_page < data.last_page;
-        
-        console.log(data);
       } catch (error) {
         console.error('Error fetching employees:', error);
       } finally {
@@ -84,6 +88,109 @@ export const useEmployeeStore = defineStore('employee', {
       this.employees = [];
       this.hasMore = true;
       this.isLoading = false;
+    },
+    
+    async fetchEmployeeById(id: string) {
+      if (this.isLoadingEmployeeById) return;
+      
+      this.isLoadingEmployeeById = true;
+      try {
+        const response = await fetch(`${API_URL}/employees/${id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch employee');
+        }
+        const data = await response.json();
+        this.selectedEmployee = data;
+        return data;
+      } catch (error) {
+        console.error('Error fetching employee:', error);
+        throw error;
+      } finally {
+        this.isLoadingEmployeeById = false;
+      }
+    },
+
+    async fetchGenders() {
+      if (this.isLoadingGenders) return;
+      
+      this.isLoadingGenders = true;
+      try {
+        const response = await fetch(`${API_URL}/genders`);
+        const data = await response.json();
+        this.genders = data.data;
+      } catch (error) {
+        console.error('Error fetching genders:', error);
+      } finally {
+        this.isLoadingGenders = false;
+      }
+    },
+
+    async fetchLocalities(search?: string) {
+      if (this.isLoadingLocalities) return;
+      
+      this.isLoadingLocalities = true;
+      try {
+        const queryParams = new URLSearchParams();
+        if (search) {
+          queryParams.append('search', search);
+        }
+        const response = await fetch(`${API_URL}/localities?${queryParams.toString()}`);
+        const data = await response.json();
+        this.localities = data.data;
+      } catch (error) {
+        console.error('Error fetching localities:', error);
+      } finally {
+        this.isLoadingLocalities = false;
+      }
+    },
+
+    async fetchNationalities(search?: string) {
+      if (this.isLoadingNationalities) return;
+      
+      this.isLoadingNationalities = true;
+      try {
+        const queryParams = new URLSearchParams();
+        if (search) {
+          queryParams.append('search', search);
+        }
+        const response = await fetch(`${API_URL}/countries?${queryParams.toString()}`);
+        const data = await response.json();
+        this.nationalities = data.data;
+      } catch (error) {
+        console.error('Error fetching nationalities:', error);
+      } finally {
+        this.isLoadingNationalities = false;
+      }
+    },
+
+    async fetchCitizenshipStatuses() {
+      if (this.isLoadingCitizenshipStatuses) return;
+      
+      this.isLoadingCitizenshipStatuses = true;
+      try {
+        const response = await fetch(`${API_URL}/citizenship-statuses`);
+        const data = await response.json();
+        this.citizenshipStatuses = data.data;
+      } catch (error) {
+        console.error('Error fetching citizenship statuses:', error);
+      } finally {
+        this.isLoadingCitizenshipStatuses = false;
+      }
+    },
+
+    async fetchHonorifics() {
+      if (this.isLoadingHonorifics) return;
+      
+      this.isLoadingHonorifics = true;
+      try {
+        const response = await fetch(`${API_URL}/honorifics`);
+        const data = await response.json();
+        this.honorifics = data.data;
+      } catch (error) {
+        console.error('Error fetching honorifics:', error);
+      } finally {
+        this.isLoadingHonorifics = false;
+      }
     },
   },
 });

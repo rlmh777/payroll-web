@@ -27,7 +27,7 @@
     <employee-left-pane />
     </q-drawer>
 
-    <q-page-container>
+    <q-page-container class="q-ma-md">
       <router-view />
     </q-page-container>
   </q-layout>

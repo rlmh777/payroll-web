@@ -37,6 +37,9 @@ export interface CitizenshipStatus {
 export interface Country {
   id: string;
   name?: string;
+  code1?: string;
+  code2?: string;
+  nationalityName?: string;
 }
 
 export interface PayrateFrequency {
@@ -87,7 +90,7 @@ export interface Employee {
   localityId: string;
   phone?: string | null;
   email?: string | null;
-  genderId: string;
+  genderId?: number | null;
   socialSecurityNumber: string;
   taxIdentificationNumber?: string | null;
   passportNumber?: string | null;

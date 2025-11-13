@@ -6,7 +6,7 @@
                 :key="employee.id"
                 class="col-12"
             >
-                <q-card class="employee-card">
+                <q-card class="employee-card" @click="navigateToEmployee(employee.id)">
                     <div class="employee-card-header">
                         <GenderIcon :gender="employee.gender ?? null" />
                     </div>
@@ -130,10 +130,12 @@
 import { useEmployeeStore } from '../../../stores/employee-store';
 import { onMounted, computed, watch, ref } from 'vue';
 import { useQuasar } from 'quasar';
+import { useRouter } from 'vue-router';
 import GenderIcon from './GenderIcon.vue';
 
 const employeeStore = useEmployeeStore();
 const $q = useQuasar();
+const router = useRouter();
 
 const isInitialLoad = ref(true);
 
@@ -157,10 +159,6 @@ const isInfiniteScrollDisabled = computed(() => !hasMore.value || isLoading.valu
 watch(
     () => [
         employeeStore.searchName,
-        employeeStore.searchGenderId,
-        employeeStore.searchLocalityId,
-        employeeStore.searchNationalityId,
-        employeeStore.searchCitizenshipStatusId,
         employeeStore.sortBy,
         employeeStore.sortDirection,
     ],
@@ -253,6 +251,13 @@ const copyToClipboard = async (text: string, label: string) => {
         });
     }
 };
+
+const navigateToEmployee = (employeeId: string) => {
+    console.log('Navigating to employee:', employeeId);
+    router.push(`/employee/${employeeId}`).catch((err) => {
+        console.error('Navigation error:', err);
+    });
+};
 </script>
 
 <style scoped>
@@ -263,6 +268,7 @@ const copyToClipboard = async (text: string, label: string) => {
 .employee-card {
     position: relative;
     transition: box-shadow 0.3s ease;
+    cursor: pointer;
 }
 
 .employee-card:hover {

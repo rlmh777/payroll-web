@@ -2,6 +2,9 @@
     <div
         class="gender-icon"
         :class="genderIconClass"
+        :aria-label="genderLabel"
+        :title="genderLabel"
+        role="img"
     >
         {{ genderSymbol }}
     </div>
@@ -22,17 +25,22 @@ const props = withDefaults(defineProps<Props>(), {
 const genderSymbol = computed((): string => {
     if (!props.gender?.name) return '?';
     const name = props.gender.name.toLowerCase();
-    if (name.includes('male') || name === 'm') return '♂';
     if (name.includes('female') || name === 'f') return '♀';
+    if (name.includes('male') || name === 'm') return '♂';
     return '?';
 });
 
 const genderIconClass = computed((): string => {
     if (!props.gender?.name) return 'gender-unknown';
     const name = props.gender.name.toLowerCase();
-    if (name.includes('Male') || name === 'm') return 'gender-male';
-    if (name.includes('Female') || name === 'f') return 'gender-female';
+    if (name.includes('female') || name === 'f') return 'gender-female';
+    if (name.includes('male') || name === 'm') return 'gender-male';
     return 'gender-unknown';
+});
+
+const genderLabel = computed((): string => {
+    if (!props.gender?.name) return 'Gender unknown';
+    return `${props.gender.name}`;
 });
 </script>
 
