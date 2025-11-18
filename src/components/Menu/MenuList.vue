@@ -1,8 +1,9 @@
 <template>
   <q-list class="menu-list">
     <template v-for="item in items" :key="item.id">
+      <!-- Expandable menus (except General) -->
       <q-expansion-item
-        v-if="item.children && item.children.length > 0"
+        v-if="item.children && item.children.length > 0 && item.title !== 'General'"
         :icon="item.icon || 'folder'"
         :label="item.title"
         expand-separator
@@ -11,6 +12,21 @@
         <MenuList :items="item.children" />
       </q-expansion-item>
 
+      <!-- Special handling for General -->
+      <q-item
+        v-else-if="item.children && item.title === 'General'"
+        clickable
+        dense
+        class="q-ml-sm"
+        @click="openGeneral(item)"
+      >
+        <q-item-section avatar>
+          <q-icon :name="item.icon || 'settings'" />
+        </q-item-section>
+        <q-item-section>{{ item.title }}</q-item-section>
+      </q-item>
+
+      <!-- Leaf items (no children) -->
       <q-item v-else clickable :to="item.route" dense class="q-ml-sm">
         <q-item-section avatar>
           <q-icon :name="item.icon || 'menu'" />
@@ -22,61 +38,48 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue';
+import { useRouter } from 'vue-router';
 import type { MenuItem } from 'src/stores/menus';
 import MenuList from './MenuList.vue';
 
-defineProps<{
-  items: MenuItem[];
-}>();
-
-// Recursive component needs a name
+defineProps<{ items: MenuItem[] }>();
 defineOptions({ name: 'MenuList' });
+
+const router = useRouter();
+
+async function openGeneral(item: MenuItem) {
+  const submenuString = JSON.stringify(item.children || []);
+  await router.push({
+    name: 'general-settings',
+    state: { submenu: submenuString },
+  });
+}
 </script>
+
 <style scoped>
 .menu-list {
   padding-left: 0.25rem;
   padding-top: 20px;
 }
 
-/* Style for individual side menu items (q-item) */
+/* Styling for q-items */
 .q-item {
-  color: var(--q-color-grey-8); /* Light grey text */
+  color: var(--q-color-grey-8);
   border-radius: 4px;
   transition: all 0.2s ease-in-out;
-  margin: 4px 8px 4px 4px; /* Space above/below and on the right */
-  min-height: 40px; /* Ensure sufficient height for clicking */
+  margin: 4px 8px 4px 4px;
+  min-height: 40px;
 }
 
-/* Hover state for better interaction feedback */
 .q-item:hover {
-  background-color: var(--q-color-grey-2); /* Very light grey background on hover */
-  color: var(--q-color-primary); /* Primary color text on hover */
+  background-color: var(--q-color-grey-2);
+  color: var(--q-color-primary);
 }
 
-/* Active/Selected state for the menu item */
-/* We target the Quasar class 'q-router-link--active' for the currently selected route */
-.q-item.q-router-link--active,
-.q-item.q-router-link--active:hover {
-  background-color: var(--q-color-primary-light); /* Light blue background */
-  color: var(--q-color-primary); /* Primary blue text */
+.q-item.q-router-link--active {
+  background-color: var(--q-color-primary-light);
+  color: var(--q-color-primary);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-}
-
-/* Styling for Expansion Items (for submenus, if you use them) */
-.q-expansion-item {
-  margin: 4px 0;
-  border-radius: 4px;
-}
-
-/* Adjust the padding for nested items */
-.q-item {
-  padding-left: 12px; /* Base padding */
-}
-
-/* Increase padding for nested items that are direct children of the list */
-.q-list > .q-item {
-  padding-left: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 </style>
