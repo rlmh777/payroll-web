@@ -6,7 +6,11 @@
                 :key="employee.id"
                 class="col-12"
             >
-                <q-card class="employee-card" @click="navigateToEmployee(employee.id)">
+                <q-card 
+                    class="employee-card" 
+                    :class="{ 'employee-card-selected': isEmployeeSelected(employee.id) }"
+                    @click="navigateToEmployee(employee.id)"
+                >
                     <div class="employee-card-header">
                         <GenderIcon :gender="employee.gender ?? null" />
                     </div>
@@ -130,12 +134,13 @@
 import { useEmployeeStore } from '../../../stores/employee-store';
 import { onMounted, computed, watch, ref } from 'vue';
 import { useQuasar } from 'quasar';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import GenderIcon from './GenderIcon.vue';
 
 const employeeStore = useEmployeeStore();
 const $q = useQuasar();
 const router = useRouter();
+const route = useRoute();
 
 const isInitialLoad = ref(true);
 
@@ -252,8 +257,12 @@ const copyToClipboard = async (text: string, label: string) => {
     }
 };
 
+const isEmployeeSelected = (employeeId: string): boolean => {
+    const currentEmployeeId = route.params.id as string | undefined;
+    return currentEmployeeId === employeeId;
+};
+
 const navigateToEmployee = (employeeId: string) => {
-    console.log('Navigating to employee:', employeeId);
     router.push(`/employee/${employeeId}`).catch((err) => {
         console.error('Navigation error:', err);
     });
@@ -273,6 +282,11 @@ const navigateToEmployee = (employeeId: string) => {
 
 .employee-card:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.employee-card-selected {
+    background-color: #f5f5f5;
+    border-left: 4px solid var(--q-primary);
 }
 
 .employee-card-header {

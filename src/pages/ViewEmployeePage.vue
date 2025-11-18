@@ -14,7 +14,7 @@
         </template>
       </q-banner>
     </div>
-    <view-employee v-else-if="employee" :employee="employee" />
+    <view-employee v-else-if="employee"  />
   </q-page>
 </template>
 

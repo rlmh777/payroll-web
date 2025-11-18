@@ -79,7 +79,7 @@ export interface Employee {
   code: string;
   internalId1?: string | null;
   internalId2?: string | null;
-  honorificId?: string | null;
+  honorificId?: number | null;
   firstName: string;
   middleName?: string | null;
   lastName: string;

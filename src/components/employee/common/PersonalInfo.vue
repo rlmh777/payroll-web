@@ -1,11 +1,12 @@
 <template>
     <div>
-        <div class="row">
-            <div class="col-12 text-subtitle1 text-weight-medium">
-                Personal Info
+        <div class="row q-gutter-x-lg q-gutter-y-md">
+            <div class="col-3 col-md-2">
+                <HonorificSelect 
+                    v-model="honorific" 
+                    :employeeHonorific="employeeStore.selectedEmployee?.honorific?.name || ''"
+                />
             </div>
-        </div>
-        <div class="row q-gutter-x-lg q-gutter-y-sm">
             <div class="col-3 col-md-2">
                 <q-input v-model="firstName" label="First Name" />
             </div>
@@ -26,6 +27,9 @@
             </div>
                 <div class="col-3 col-md-2">
                 <q-input v-model="passportNumber" label="Passport Number" />
+            </div>
+            <div class="col-3 col-md-2">
+                <q-input v-model="votersId" label="Voters ID" />
             </div>
             <div class="col-3 col-md-2">
                 <q-input v-model="taxIdentificationNumber" label="Tax Identification Number" />
@@ -53,6 +57,7 @@
 import { computed } from 'vue';
 import { useEmployeeStore } from '../../../stores/employee-store';
 import GenderSelect from './GenderSelect.vue';
+import HonorificSelect from './HonorificSelect.vue';
 import NationalitySelect from './NationalitySelect.vue';
 
 const employeeStore = useEmployeeStore();
@@ -130,6 +135,15 @@ const taxIdentificationNumber = computed({
     }
 });
 
+const votersId = computed({
+    get: () => employeeStore.selectedEmployee?.votersId || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.votersId = value || null;
+        }
+    }
+});
+
 const phone = computed({
     get: () => employeeStore.selectedEmployee?.phone || '',
     set: (value: string) => {
@@ -153,6 +167,15 @@ const gender = computed({
     set: (value: number) => {
         if (employeeStore.selectedEmployee) {
             employeeStore.selectedEmployee.genderId = value || null;
+        }
+    }
+});
+
+const honorific = computed({
+    get: () => employeeStore.selectedEmployee?.honorificId || null,
+    set: (value: number | null) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.honorificId = value || null;
         }
     }
 });

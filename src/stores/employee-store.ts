@@ -178,12 +178,16 @@ export const useEmployeeStore = defineStore('employee', {
       }
     },
 
-    async fetchHonorifics() {
+    async fetchHonorifics(search?: string) {
       if (this.isLoadingHonorifics) return;
       
       this.isLoadingHonorifics = true;
       try {
-        const response = await fetch(`${API_URL}/honorifics`);
+        const queryParams = new URLSearchParams();
+        if (search) {
+          queryParams.append('search', search);
+        }
+        const response = await fetch(`${API_URL}/honorifics?${queryParams.toString()}`);
         const data = await response.json();
         this.honorifics = data.data;
       } catch (error) {

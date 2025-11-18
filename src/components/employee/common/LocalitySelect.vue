@@ -26,17 +26,20 @@ import { useEmployeeStore } from '../../../stores/employee-store';
 import type { Locality } from '../../models';
 
 interface Props {
-  value?: string | null;
+  modelValue?: string | null;
   readonly?: boolean;
+  employeeLocality?: string | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   readonly: false,
+  employeeLocality: null,
 });
 
 const emit = defineEmits<{
-  'update:locality': [value: string | null];
+  'update:modelValue': [value: string | null];
+  'change': [value: string | null];
 }>();
 
 const employeeStore = useEmployeeStore();
@@ -69,16 +72,17 @@ const filterLocalities = (val: string, update: (callback: () => void) => void) =
 
 const selectedLocalityId = computed({
   get: (): string | null => {
-    return props.value || null;
+    return props.modelValue || null;
   },
   set: (value: string | null) => {
-    emit('update:locality', value);
+    emit('update:modelValue', value);
+    emit('change', value);
   },
 });
 
 // Fetch localities on mount if not already loaded
 onMounted(async () => {
-  await employeeStore.fetchLocalities('');
+  await employeeStore.fetchLocalities(props?.employeeLocality || '');
 });
 
 // Cleanup timeout on unmount
