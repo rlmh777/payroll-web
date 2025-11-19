@@ -1,11 +1,7 @@
 <template>
   <q-drawer v-model="drawerOpen" show-if-above bordered side="left">
-    <q-toolbar class="items-center">
-      <q-btn flat dense round icon="chevron_left" @click="drawerOpen = false" />
-      <q-toolbar-title>Sections</q-toolbar-title>
-    </q-toolbar>
-
     <q-scroll-area style="height: calc(100% - 56px)">
+      <EmployeeLeftPane v-if="isEmployeeRoute" />
       <MenuList v-if="selectedChildren.length" :items="selectedChildren" />
       <q-list v-else>
         <q-item>
@@ -18,10 +14,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { useRoute } from 'vue-router'; // <-- New Import
 import { useMenuStore, type MenuItem } from '../../../stores/menus';
 import MenuList from '../../menu/MenuList.vue';
+import EmployeeLeftPane from '../../employee/search/EmployeeLeftPane.vue';
 
 const menuStore = useMenuStore();
+const route = useRoute(); // <-- Get the current route instance
 const drawerOpen = ref(false);
 const selectedMenu = ref<MenuItem | null>(null);
 
@@ -65,7 +64,7 @@ watch(
   },
   { immediate: true },
 );
-
+const isEmployeeRoute = computed(() => route.path.startsWith('/employees'));
 const selectedChildren = computed(() => selectedMenu.value?.children || []);
 </script>
 
