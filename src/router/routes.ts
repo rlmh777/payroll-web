@@ -11,14 +11,14 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { 
-        path: '', 
-        component: () => import('pages/IndexPage.vue') 
+      {
+        path: '',
+        component: () => import('pages/IndexPage.vue'),
       },
       {
         path: 'employee/:id',
-        component: () => import('pages/ViewEmployeePage.vue')
-      }
+        component: () => import('pages/ViewEmployeePage.vue'),
+      },
     ],
   },
   {
@@ -38,6 +38,22 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [{ path: '', component: () => import('pages/IndexPage.vue') }],
+  },
+  {
+    path: '/employees',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'employees',
+        component: () => import('pages/EmployeePage.vue'), // Assuming you create this page
+      },
+      {
+        path: 'employee/:id',
+        component: () => import('pages/ViewEmployeePage.vue'),
+      },
+    ],
   },
   {
     path: '/:catchAll(.*)*',

@@ -2,9 +2,9 @@
   <!-- Logout / User Menu -->
   <q-btn flat round dense icon="account_circle">
     <q-menu transition-show="jump-down" transition-hide="jump-up">
-      <q-card class="q-pa-md w-300">
+      <q-card class="q-pa-xl w-400">
         <q-card-section class="text-center">
-          <q-avatar size="48px" class="bg-primary text-white">
+          <q-avatar size="60px" class="bg-primary text-white">
             <q-icon name="person" />
           </q-avatar>
           <div class="q-mt-sm text-weight-medium">{{ 'User' }}</div>
