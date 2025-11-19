@@ -2,12 +2,7 @@
   <q-drawer v-model="drawerOpen" show-if-above bordered side="left">
     <q-scroll-area style="height: calc(100% - 56px)">
       <EmployeeLeftPane v-if="isEmployeeRoute" />
-      <MenuList v-if="selectedChildren.length" :items="selectedChildren" />
-      <q-list v-else>
-        <q-item>
-          <q-item-section>No sections</q-item-section>
-        </q-item>
-      </q-list>
+      <MenuList v-if="selectedChildren.length && !isEmployeeRoute" :items="selectedChildren" />
     </q-scroll-area>
   </q-drawer>
 </template>
