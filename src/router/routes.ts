@@ -60,7 +60,7 @@ const routes: RouteRecordRaw[] = [
         props: { title: 'Setting Roles' },
       },
       {
-        path: '/settings/roles-menus/menus',
+        path: '/settings/roles-menus/menu',
         component: () => import('pages/SettingPage.vue'),
         props: { title: 'Setting Menus' },
       },
