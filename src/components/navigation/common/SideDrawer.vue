@@ -9,13 +9,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
-import { useRoute } from 'vue-router'; // <-- New Import
+import { useRoute } from 'vue-router';
 import { useMenuStore, type MenuItem } from '../../../stores/menus';
 import MenuList from '../../menu/MenuList.vue';
 import EmployeeLeftPane from '../../employee/search/EmployeeLeftPane.vue';
 
 const menuStore = useMenuStore();
-const route = useRoute(); // <-- Get the current route instance
+const route = useRoute();
 const drawerOpen = ref(false);
 const selectedMenu = ref<MenuItem | null>(null);
 

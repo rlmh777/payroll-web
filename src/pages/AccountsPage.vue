@@ -1,5 +1,5 @@
 <template>
   <div class="q-pa-md">
-    <h5>Dashboard</h5>
+    <h5>Accounts</h5>
   </div>
 </template>

@@ -10,7 +10,7 @@
             dense
             :label="item.title"
             :icon="item.icon ?? undefined"
-            class="text-white"
+            :class="selectedTopId === item.id ? 'bg-white text-primary' : 'text-white'"
             @click="openTopMenu(item)"
           />
 
@@ -26,13 +26,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router'; // <-- Import the router
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useMenuStore, type MenuItem } from '../../../stores/menus';
 import LogoutCard from '../common/LogoutCard.vue';
 
 const menuStore = useMenuStore();
-const router = useRouter(); // <-- Get the router instance
+const router = useRouter(); // Vue Router instance
+const selectedTopId = ref(null as string | number | null);
 
 onMounted(async () => {
   await menuStore.fetchMenus();
@@ -41,10 +42,13 @@ onMounted(async () => {
 const topMenus = computed(() => menuStore.menuTree || []);
 
 function openTopMenu(item: MenuItem) {
+  selectedTopId.value = item.id ?? null;
+
   // Check if the item has a route property
   if (item.route) {
     // 1. Navigate to the route using Vue Router
     void router.push(item.route);
+    window.dispatchEvent(new CustomEvent('open-menu', { detail: item.id }));
   } else {
     // 2. Fallback to the custom event if no route is defined (for sub-menus, etc.)
     window.dispatchEvent(new CustomEvent('open-menu', { detail: item.id }));

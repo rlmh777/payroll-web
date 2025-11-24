@@ -34,10 +34,96 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/settings',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', component: () => import('pages/SettingPage.vue'), props: { title: 'Settings' } },
+      {
+        path: '/settings/organization',
+        component: () => import('pages/SettingPage.vue'),
+        props: { title: 'Setting Organization' },
+      },
+      {
+        path: '/settings/calendars',
+        component: () => import('pages/SettingPage.vue'),
+        props: { title: 'Setting Calendars' },
+      },
+      {
+        path: '/settings/holidays',
+        component: () => import('pages/SettingPage.vue'),
+        props: { title: 'Setting Holidays' },
+      },
+      {
+        path: '/settings/roles-menus/roles',
+        component: () => import('pages/SettingPage.vue'),
+        props: { title: 'Setting Roles' },
+      },
+      {
+        path: '/settings/roles-menus/menus',
+        component: () => import('pages/SettingPage.vue'),
+        props: { title: 'Setting Menus' },
+      },
+      {
+        path: '/settings/roles-menus/permissions',
+        component: () => import('pages/SettingPage.vue'),
+        props: { title: 'Setting Permissions' },
+      },
+      {
+        path: '/settings/pay-items',
+        component: () => import('pages/SettingPage.vue'),
+        props: { title: 'Setting Pay Items' },
+      },
+    ],
+  },
+  {
     path: '/dashboard',
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
-    children: [{ path: '', component: () => import('pages/IndexPage.vue') }],
+    children: [{ path: '', component: () => import('pages/DashboardPage.vue') }],
+  },
+  {
+    path: '/accounts',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: () => import('pages/AccountsPage.vue') }],
+  },
+  {
+    path: '/payroll',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('pages/PayrollPage.vue'),
+        props: { title: 'Payroll Page' },
+      },
+      {
+        path: '/payroll/overview',
+        component: () => import('pages/PayrollPage.vue'),
+        props: { title: 'Payroll Overview' },
+      },
+      {
+        path: '/payroll/leave',
+        component: () => import('pages/PayrollPage.vue'),
+        props: { title: 'Payroll Leave' },
+      },
+      {
+        path: '/payroll/timesheets',
+        component: () => import('pages/PayrollPage.vue'),
+        props: { title: 'Payroll Timesheets' },
+      },
+      {
+        path: '/payroll/pay-employees',
+        component: () => import('pages/PayrollPage.vue'),
+        props: { title: 'Payroll Pay Employees' },
+      },
+      {
+        path: '/payroll/taxes-filing',
+        component: () => import('pages/PayrollPage.vue'),
+        props: { title: 'Payroll Taxes Filing' },
+      },
+    ],
   },
   {
     path: '/employees',
@@ -47,13 +133,19 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'employees',
-        component: () => import('pages/EmployeePage.vue'), // Assuming you create this page
+        component: () => import('pages/EmployeePage.vue'),
       },
       {
         path: 'employee/:id',
         component: () => import('pages/ViewEmployeePage.vue'),
       },
     ],
+  },
+  {
+    path: '/reports',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: () => import('pages/ReportsPage.vue') }],
   },
   {
     path: '/:catchAll(.*)*',
