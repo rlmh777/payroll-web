@@ -18,6 +18,7 @@
         clickable
         dense
         class="q-ml-sm"
+        :class="isActive(item) ? 'bg-primary text-white' : ''"
         @click="openGeneral(item)"
       >
         <q-item-section avatar>
@@ -38,14 +39,13 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import type { MenuItem } from 'src/stores/menus';
-import MenuList from './MenuList.vue';
 
 defineProps<{ items: MenuItem[] }>();
-defineOptions({ name: 'MenuList' });
 
 const router = useRouter();
+const route = useRoute();
 
 async function openGeneral(item: MenuItem) {
   const submenuString = JSON.stringify(item.children || []);
@@ -54,32 +54,24 @@ async function openGeneral(item: MenuItem) {
     state: { submenu: submenuString },
   });
 }
+
+/**
+ * Returns true when the item (or any of its descendants) matches the current route.
+ */
+function isActive(item: MenuItem): boolean {
+  if (item.route) {
+    // exact match or route is a prefix of current path
+    try {
+      return route.path === item.route || route.path.startsWith(String(item.route));
+    } catch {
+      return false;
+    }
+  }
+  if (item.children && item.children.length) {
+    return item.children.some((c) => isActive(c));
+  }
+  return false;
+}
 </script>
 
-<style scoped>
-.menu-list {
-  padding-left: 0.25rem;
-  padding-top: 20px;
-}
-
-/* Styling for q-items */
-.q-item {
-  color: var(--q-color-grey-8);
-  border-radius: 4px;
-  transition: all 0.2s ease-in-out;
-  margin: 4px 8px 4px 4px;
-  min-height: 40px;
-}
-
-.q-item:hover {
-  background-color: var(--q-color-grey-2);
-  color: var(--q-color-primary);
-}
-
-.q-item.q-router-link--active {
-  background-color: var(--q-color-primary-light);
-  color: var(--q-color-primary);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-</style>
+<style scoped></style>
