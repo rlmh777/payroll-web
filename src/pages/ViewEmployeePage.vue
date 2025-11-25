@@ -33,6 +33,7 @@ const isLoading = ref(true);
 const error = ref<string | null>(null);
 
 const fetchEmployee = async (employeeId: string) => {
+  console.log('fetchEmployee', employeeId);
   if (!employeeId) {
     error.value = 'Employee ID is required';
     isLoading.value = false;

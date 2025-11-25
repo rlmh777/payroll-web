@@ -11,7 +11,7 @@
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useMenuStore, type MenuItem } from '../../../stores/menus';
-import MenuList from '../../menu/MenuList.vue';
+import MenuList from '../../Menu/MenuList.vue';
 import EmployeeLeftPane from '../../employee/search/EmployeeLeftPane.vue';
 
 const menuStore = useMenuStore();
