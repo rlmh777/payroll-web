@@ -22,6 +22,23 @@ export interface Department {
 export interface Locality {
   id: string;
   name?: string;
+  district?: {
+    id: string;
+    name: string;
+    country?: {
+      id: string;
+      name: string;
+      code1?: string;
+      code2?: string;
+      nationalityName?: string;
+    };
+  };
+}
+
+export interface District {
+  id: string;
+  name: string;
+  countryId?: string;
 }
 
 export interface Honorific {
@@ -95,7 +112,7 @@ export interface Employee {
   taxIdentificationNumber?: string | null;
   passportNumber?: string | null;
   votersId?: string | null;
-  citizenshipStatusId?: string | null;
+  citizenshipStatusId?: number | null;
   nationalityId?: string | null;
   payrateFrequencyId: string;
   paymentMethodId: string;
@@ -109,7 +126,5 @@ export interface Employee {
   gender?: Gender | null;
   citizenshipStatus?: CitizenshipStatus | null;
   nationality?: Country | null;
-  defaultPayrateFrequency?: PayrateFrequency | null;
-  paymentMethods?: PaymentMethod | null;
   employmentDetails?: EmploymentDetail[];
 }

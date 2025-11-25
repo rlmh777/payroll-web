@@ -1,7 +1,7 @@
 <template>
   <q-select
-    v-model="selectedCitizenshipStatusId"
-    :options="citizenshipStatusOptions"
+    v-model="selectedCountryId"
+    :options="countryOptions"
     option-value="id"
     option-label="name"
     use-input
@@ -11,11 +11,13 @@
     map-options
     input-debounce="300"
     :readonly="readonly"
-    label="Citizenship Status"
-    :loading="employeeStore.isLoadingCitizenshipStatuses"
-    @filter="filterCitizenshipStatuses"
+    :disable="disable"
+    :rules="rules"
+    label="Country"
+    :loading="districtStore.isLoadingCountries"
+    @filter="filterCountries"
   >
-    <template v-if="employeeStore.isLoadingCitizenshipStatuses" v-slot:prepend>
+    <template v-if="districtStore.isLoadingCountries" v-slot:prepend>
       <q-spinner color="primary" size="20px" />
     </template>
   </q-select>
@@ -23,41 +25,45 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { useEmployeeStore } from '../../../stores/employee-store';
-import type { CitizenshipStatus } from '../../models';
+import { useDistrictStore } from '../../stores/district-store';
+import type { Country } from '../models';
 
 interface Props {
-  modelValue?: number | null;
+  modelValue?: string | null;
   readonly?: boolean;
-  employeeCitizenshipStatus?: string | null;
+  employeeCountry?: string | null;
+  disable?: boolean;
+  rules?: Array<(val: string | null | undefined) => boolean | string>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   readonly: false,
-  employeeCitizenshipStatus: null,
+  employeeCountry: null,
+  disable: false,
+  rules: () => [],
 });
 
 const emit = defineEmits<{
-  'update:modelValue': [value: number | null];
-  'change': [value: number | null];
+  'update:modelValue': [value: string | null];
+  'change': [value: string | null];
 }>();
 
-const employeeStore = useEmployeeStore();
+const districtStore = useDistrictStore();
 
 const filterTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
 
-const citizenshipStatusOptions = computed((): CitizenshipStatus[] => {
-  return employeeStore.citizenshipStatuses;
+const countryOptions = computed((): Country[] => {
+  return districtStore.countries;
 });
 
-const filterCitizenshipStatuses = (val: string, update: (callback: () => void) => void) => {
+const filterCountries = (val: string, update: (callback: () => void) => void) => {
   // Clear any existing timeout
   if (filterTimeout.value) {
     clearTimeout(filterTimeout.value);
   }
 
-  // If empty string, show all statuses without fetching
+  // If empty string, show all countries without fetching
   if (!val || val.trim() === '') {
     update(() => {
       // Keep current options - no need to refetch
@@ -72,24 +78,23 @@ const filterCitizenshipStatuses = (val: string, update: (callback: () => void) =
 
   // Debounce API calls - wait 300ms after user stops typing
   filterTimeout.value = setTimeout(() => {
-    // For now, citizenship statuses don't have search, but we can filter client-side
-    // If API supports search later, we can add: void employeeStore.fetchCitizenshipStatuses(val);
+    void districtStore.fetchCountries(val);
   }, 300);
 };
 
-const selectedCitizenshipStatusId = computed({
-  get: (): number | null => {
+const selectedCountryId = computed({
+  get: (): string | null => {
     return props.modelValue || null;
   },
-  set: (value: number | null) => {
+  set: (value: string | null) => {
     emit('update:modelValue', value);
     emit('change', value);
   },
 });
 
-// Fetch citizenship statuses on mount if not already loaded
+// Fetch countries on mount if not already loaded
 onMounted(async () => {
-  await employeeStore.fetchCitizenshipStatuses();
+  await districtStore.fetchCountries(props?.employeeCountry || '');
 });
 
 // Cleanup timeout on unmount

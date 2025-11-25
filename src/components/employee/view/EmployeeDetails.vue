@@ -11,25 +11,38 @@
     <!-- leaves, loans, allowances, 
         deductions, contacts, qualifications,
         employment history, employment details -->
-        <q-tab name="mails" icon="mail" label="Mails" />
-        <q-tab name="alarms" icon="alarm" label="Alarms" />
-        <q-tab name="movies" icon="movie" label="Movies" />
+        <q-tab name="attendance" icon="movie" label="Attendance" />
+        <q-tab name="leaves" icon="alarm" label="Leaves" />
+        <q-tab name="allowances" icon="movie" label="Default Allowances" />
+        <q-tab name="deductions" icon="movie" label="Default Deductions" />
+        <!-- <q-tab name="qualifications" icon="mail" label="Qualifications" /> -->
+        <q-tab name="contracts" icon="movie" label="Contracts" />
     </q-tabs>
 
     <q-separator />
 
     <q-tab-panels v-model="tab" animated>
-        <q-tab-panel name="mails">
-        <div class="text-h6">Mails</div>
+        <q-tab-panel name="attendance">
+        <div class="text-h6">Movies</div>
         Lorem ipsum dolor sit amet consectetur adipisicing elit.
         </q-tab-panel>
+        
+        <q-tab-panel name="allowances">
+        <div class="text-h6">Movies</div>
+        Lorem ipsum dolor sit amet consectetur adipisicing elit.
+        </q-tab-panel>  
 
-        <q-tab-panel name="alarms">
+    <q-tab-panel name="deductions">
+    <div class="text-h6">Movies</div>
+    Lorem ipsum dolor sit amet consectetur adipisicing elit.
+    </q-tab-panel>
+
+        <q-tab-panel name="leaves">
         <div class="text-h6">Alarms</div>
         Lorem ipsum dolor sit amet consectetur adipisicing elit.
-        </q-tab-panel>
+        </q-tab-panel>  
 
-        <q-tab-panel name="movies">
+        <q-tab-panel name="contracts">
         <div class="text-h6">Movies</div>
         Lorem ipsum dolor sit amet consectetur adipisicing elit.
         </q-tab-panel>

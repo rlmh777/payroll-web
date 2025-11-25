@@ -49,6 +49,11 @@
                     :employeeNationality="employeeStore.selectedEmployee?.nationality?.nationalityName || ''"
                 />
             </div>
+            <div class="col-3 col-md-2">
+                <CitizenshipStatusSelect    v-model="citizenshipStatus"
+                    :employeeCitizenshipStatus="employeeStore.selectedEmployee?.citizenshipStatus?.name || ''"
+                />
+            </div>
         </div>
     </div>
 </template>
@@ -59,6 +64,7 @@ import { useEmployeeStore } from '../../../stores/employee-store';
 import GenderSelect from './GenderSelect.vue';
 import HonorificSelect from './HonorificSelect.vue';
 import NationalitySelect from './NationalitySelect.vue';
+import CitizenshipStatusSelect from './CitizenshipStatusSelect.vue';
 
 const employeeStore = useEmployeeStore();
 
@@ -185,6 +191,15 @@ const nationality = computed({
     set: (value: string) => {
         if (employeeStore.selectedEmployee) {
             employeeStore.selectedEmployee.nationalityId = value || null;
+        }
+    }
+});
+
+const citizenshipStatus = computed({
+    get: () => employeeStore.selectedEmployee?.citizenshipStatusId || null,
+    set: (value: number | null) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.citizenshipStatusId = value || null;
         }
     }
 });
