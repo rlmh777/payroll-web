@@ -26,18 +26,32 @@
       </template>
       <template v-slot:body-cell-actions="props">
         <q-td :props="props" class="text-right">
-          <q-btn
-            flat
-            round
-            dense
-            icon="edit"
-            color="primary"
-            size="sm"
-            class="edit-btn"
-            @click="openEditDialog(props.row)"
-          >
-            <q-tooltip>Edit Leave</q-tooltip>
-          </q-btn>
+          <div class="action-buttons">
+            <q-btn
+              flat
+              round
+              dense
+              icon="edit"
+              color="primary"
+              size="sm"
+              class="action-btn"
+              @click="openEditDialog(props.row)"
+            >
+              <q-tooltip>Edit Leave</q-tooltip>
+            </q-btn>
+            <q-btn
+              flat
+              round
+              dense
+              icon="delete"
+              color="negative"
+              size="sm"
+              class="action-btn"
+              @click="confirmDelete(props.row)"
+            >
+              <q-tooltip>Delete Leave</q-tooltip>
+            </q-btn>
+          </div>
         </q-td>
       </template>
     </q-table>
@@ -46,17 +60,36 @@
       :employeeLeave="selectedEmployeeLeave"
       @updated="onEmployeeLeaveUpdated"
     />
+    <q-dialog v-model="showDeleteDialog">
+      <q-card>
+        <q-card-section class="row items-center">
+          <q-avatar icon="warning" color="negative" text-color="white" />
+          <span class="q-ml-sm text-h6">Confirm Delete</span>
+        </q-card-section>
+
+        <q-card-section>
+          <span>Are you sure you want to delete this leave record? This action cannot be undone.</span>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" color="grey" v-close-popup />
+          <q-btn flat label="Delete" color="negative" @click="handleDelete" :loading="employeeLeaveStore.isLoading" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useQuasar } from 'quasar';
 import { useEmployeeLeaveStore } from '../../../stores/employee-leave-store';
 import { useEmployeeStore } from '../../../stores/employee-store';
 import SearchEmployeeLeave from './SearchEmployeeLeave.vue';
 import EditEmployeeLeave from './EditEmployeeLeave.vue';
 import type { EmployeeLeave } from '../../models';
 
+const $q = useQuasar();
 const employeeLeaveStore = useEmployeeLeaveStore();
 const employeeStore = useEmployeeStore();
 
@@ -134,7 +167,9 @@ const columns = [
 const rows = computed(() => employeeLeaveStore.employeeLeaves);
 const loading = computed(() => employeeLeaveStore.isLoadingEmployeeLeaves);
 const showEditDialog = ref(false);
+const showDeleteDialog = ref(false);
 const selectedEmployeeLeave = ref<EmployeeLeave | null>(null);
+const employeeLeaveToDelete = ref<EmployeeLeave | null>(null);
 
 const pagination = ref({
   rowsPerPage: 0,
@@ -153,6 +188,34 @@ const openEditDialog = (employeeLeave: EmployeeLeave) => {
 const onEmployeeLeaveUpdated = async () => {
   // Refresh the list after a leave is updated
   await employeeLeaveStore.fetchEmployeeLeaves();
+};
+
+const confirmDelete = (employeeLeave: EmployeeLeave) => {
+  employeeLeaveToDelete.value = employeeLeave;
+  showDeleteDialog.value = true;
+};
+
+const handleDelete = async () => {
+  if (!employeeLeaveToDelete.value) return;
+
+  const success = await employeeLeaveStore.deleteEmployeeLeave(employeeLeaveToDelete.value.id);
+  if (success) {
+    $q.notify({
+      type: 'positive',
+      message: 'Leave record deleted successfully',
+      position: 'top',
+    });
+    showDeleteDialog.value = false;
+    employeeLeaveToDelete.value = null;
+    // Refresh the list after deletion
+    await employeeLeaveStore.fetchEmployeeLeaves();
+  } else {
+    $q.notify({
+      type: 'negative',
+      message: employeeLeaveStore.error || 'Failed to delete leave record',
+      position: 'top',
+    });
+  }
 };
 
 onMounted(async () => {
@@ -174,12 +237,18 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-.edit-btn {
+.action-buttons {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.action-btn {
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 
-:deep(.q-table tbody tr:hover .edit-btn) {
+:deep(.q-table tbody tr:hover .action-btn) {
   opacity: 1;
 }
 </style>
