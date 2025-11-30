@@ -69,6 +69,23 @@ export interface PaymentMethod {
   name?: string;
 }
 
+export interface LeaveType {
+  id: string;
+  name?: string;
+}
+
+export interface EmployeeLeave {
+  id: string;
+  employeeId: string;
+  leaveTypeId: string;
+  startDate: string;
+  endDate: string;
+  notes?: string | null;
+  multiplier?: number;
+  employee?: Employee | null;
+  leave_type?: LeaveType | null;
+}
+
 export interface EmploymentDetail {
   id: string;
   employeeId: string;

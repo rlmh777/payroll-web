@@ -1,5 +1,5 @@
 import { defineStore, acceptHMRUpdate } from 'pinia';
-import type { CitizenshipStatus, Country, Employee, Gender, Honorific, Locality, PaymentMethod, PayrateFrequency } from '../components/models';
+import type { CitizenshipStatus, Country, Employee, Gender, Honorific, LeaveType, Locality, PaymentMethod, PayrateFrequency } from '../components/models';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api'
 
@@ -11,6 +11,7 @@ export const useEmployeeStore = defineStore('employee', {
     nationalities: [] as Country[],
     citizenshipStatuses: [] as CitizenshipStatus[],
     honorifics: [] as Honorific[],
+    leaveTypes: [] as LeaveType[],
     payrateFrequencies: [] as PayrateFrequency[],
     paymentMethods: [] as PaymentMethod[],
     searchName: '',
@@ -27,6 +28,7 @@ export const useEmployeeStore = defineStore('employee', {
     isLoadingNationalities: false,
     isLoadingCitizenshipStatuses: false,
     isLoadingHonorifics: false,
+    isLoadingLeaveTypes: false,
     hasMore: true,
     selectedEmployee: null as Employee | null,
   }),
@@ -194,6 +196,25 @@ export const useEmployeeStore = defineStore('employee', {
         console.error('Error fetching honorifics:', error);
       } finally {
         this.isLoadingHonorifics = false;
+      }
+    },
+
+    async fetchLeaveTypes(search?: string) {
+      if (this.isLoadingLeaveTypes) return;
+      
+      this.isLoadingLeaveTypes = true;
+      try {
+        const queryParams = new URLSearchParams();
+        if (search) {
+          queryParams.append('search', search);
+        }
+        const response = await fetch(`${API_URL}/leave-types?${queryParams.toString()}`);
+        const data = await response.json();
+        this.leaveTypes = data.data;
+      } catch (error) {
+        console.error('Error fetching leave types:', error);
+      } finally {
+        this.isLoadingLeaveTypes = false;
       }
     },
   },
