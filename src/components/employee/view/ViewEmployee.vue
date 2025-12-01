@@ -1,5 +1,5 @@
 <template>
-    <div class="q-pa-md">
+    <div>
       <q-stepper
         v-model="step"
         ref="stepper"

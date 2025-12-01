@@ -6,16 +6,15 @@
       class="my-sticky-dynamic q-mt-sm"
       flat
       bordered
+      dense
       :rows="rows"
       :columns="columns"
       :loading="loading"
       row-key="id"
-      virtual-scroll
-      :virtual-scroll-item-size="48"
-      :virtual-scroll-sticky-size-start="48"
-      :pagination="pagination"
-      :rows-per-page-options="[0]"
-      @virtual-scroll="onScroll"
+      v-model:pagination="pagination"
+      :rows-per-page-options="[5, 10, 15, 20]"
+      @request="onRequest"
+      server-side
     >
       <template v-slot:body-cell-notes="props">
         <q-td :props="props">
@@ -93,20 +92,22 @@ const $q = useQuasar();
 const employeeLeaveStore = useEmployeeLeaveStore();
 const employeeStore = useEmployeeStore();
 
-// Watch for search filter changes and refetch
+// Watch for search filter changes and refetch (reset to page 1)
 watch(
   () => employeeLeaveStore.searchFilters,
   async () => {
-    await employeeLeaveStore.fetchEmployeeLeaves();
+    employeeLeaveStore.currentPage = 1;
+    await employeeLeaveStore.fetchEmployeeLeaves(1, pagination.value.rowsPerPage);
   },
   { deep: true }
 );
 
-// Watch for selectedEmployee changes and refetch
+// Watch for selectedEmployee changes and refetch (reset to page 1)
 watch(
   () => employeeStore.selectedEmployee?.id,
   async () => {
-    await employeeLeaveStore.fetchEmployeeLeaves();
+    employeeLeaveStore.currentPage = 1;
+    await employeeLeaveStore.fetchEmployeeLeaves(1, pagination.value.rowsPerPage);
   }
 );
 
@@ -172,12 +173,36 @@ const selectedEmployeeLeave = ref<EmployeeLeave | null>(null);
 const employeeLeaveToDelete = ref<EmployeeLeave | null>(null);
 
 const pagination = ref({
-  rowsPerPage: 0,
+  rowsPerPage: 5,
+  page: 1,
+  rowsNumber: 0,
 });
 
-const onScroll = () => {
-  // Handle virtual scroll if needed for pagination
-  // For now, we'll load all data at once
+// Sync pagination with store (after fetch completes)
+watch(
+  () => [employeeLeaveStore.currentPage, employeeLeaveStore.total],
+  () => {
+    pagination.value.page = employeeLeaveStore.currentPage;
+    pagination.value.rowsNumber = employeeLeaveStore.total;
+  }
+);
+
+const onRequest = async (props: {
+  pagination: { page: number; rowsPerPage: number; sortBy?: string; descending?: boolean };
+  filter?: string;
+}) => {
+  console.log('onRequest event:', props);
+  const { page, rowsPerPage } = props.pagination;
+  
+  // Update local pagination
+  pagination.value.page = page;
+  pagination.value.rowsPerPage = rowsPerPage;
+  
+  // Fetch data from server
+  await employeeLeaveStore.fetchEmployeeLeaves(page, rowsPerPage);
+  
+  // Update rowsNumber after fetch
+  pagination.value.rowsNumber = employeeLeaveStore.total;
 };
 
 const openEditDialog = (employeeLeave: EmployeeLeave) => {
@@ -186,8 +211,11 @@ const openEditDialog = (employeeLeave: EmployeeLeave) => {
 };
 
 const onEmployeeLeaveUpdated = async () => {
-  // Refresh the list after a leave is updated
-  await employeeLeaveStore.fetchEmployeeLeaves();
+  // Refresh the list after a leave is updated (keep current page)
+  await employeeLeaveStore.fetchEmployeeLeaves(
+    employeeLeaveStore.currentPage,
+    pagination.value.rowsPerPage
+  );
 };
 
 const confirmDelete = (employeeLeave: EmployeeLeave) => {
@@ -207,8 +235,11 @@ const handleDelete = async () => {
     });
     showDeleteDialog.value = false;
     employeeLeaveToDelete.value = null;
-    // Refresh the list after deletion
-    await employeeLeaveStore.fetchEmployeeLeaves();
+    // Refresh the list after deletion (keep current page)
+    await employeeLeaveStore.fetchEmployeeLeaves(
+      employeeLeaveStore.currentPage,
+      pagination.value.rowsPerPage
+    );
   } else {
     $q.notify({
       type: 'negative',
@@ -221,7 +252,8 @@ const handleDelete = async () => {
 onMounted(async () => {
   // Fetch employee leaves with current search filters
   // employeeId will be taken from employeeStore.selectedEmployee
-  await employeeLeaveStore.fetchEmployeeLeaves();
+  // Start with page 1 and default rows per page
+  await employeeLeaveStore.fetchEmployeeLeaves(1, pagination.value.rowsPerPage);
 });
 </script>
 

@@ -16,8 +16,9 @@
         <q-form @submit="onSubmit" class="q-gutter-md">
           <LeaveTypeSelect
             v-model="form.leaveTypeId"
-            :rules="[(val: string | null | undefined) => !!val || 'Leave type is required']"
+            :rules="[(val: number | null | undefined) => !!val || 'Leave type is required']"
             :disable="employeeLeaveStore.isLoading"
+            @change="onLeaveTypeChange"
           />
 
           <q-input
@@ -114,6 +115,11 @@ const form = ref({
   notes: '',
   multiplier: 1.0 as number,
 });
+
+const onLeaveTypeChange = (value: number | null) => {
+  // Ensure form is updated when leave type changes (including when new one is added)
+  form.value.leaveTypeId = value;
+};
 
 const onSubmit = async () => {
   if (!form.value.leaveTypeId || !form.value.startDate || !form.value.endDate) {

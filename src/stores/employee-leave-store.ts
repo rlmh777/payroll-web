@@ -42,7 +42,7 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
   getters: {},
 
   actions: {
-    async fetchEmployeeLeaves() {
+    async fetchEmployeeLeaves(page?: number, perPage?: number) {
       if (this.isLoadingEmployeeLeaves) return;
 
       this.isLoadingEmployeeLeaves = true;
@@ -69,6 +69,12 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
           queryParams.append('endDate', this.searchFilters.endDate);
         }
 
+        // Add pagination parameters
+        const currentPage = page ?? this.currentPage;
+        const itemsPerPage = perPage ?? 5;
+        queryParams.append('page', currentPage.toString());
+        queryParams.append('per_page', itemsPerPage.toString());
+
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
         };
@@ -86,7 +92,19 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
         }
 
         const data = await response.json();
-        this.employeeLeaves = data.data || data;
+        
+        // Handle paginated response
+        if (data.data && Array.isArray(data.data)) {
+          this.employeeLeaves = data.data;
+          this.currentPage = data.current_page || 1;
+          this.lastPage = data.last_page || 1;
+          this.total = data.total || 0;
+        } else if (Array.isArray(data)) {
+          // Fallback for non-paginated response
+          this.employeeLeaves = data;
+        } else {
+          this.employeeLeaves = [];
+        }
       } catch (error) {
         console.error('Error fetching employee leaves:', error);
         this.error = error instanceof Error ? error.message : 'Error fetching employee leaves';
