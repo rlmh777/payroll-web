@@ -1,7 +1,7 @@
 <template>
   <q-page class="q-pa-md">
     <q-card flat>
-      <SearchCountry v-model:modelValue="store.search" @open-new="openNew" />
+      <SearchCountry v-model:modelValue="store.search" />
       <q-card-section class="q-pa-none">
         <q-table
           title="Countries"
@@ -111,8 +111,6 @@ const onRequest = async (props: { pagination: { page: number; rowsPerPage: numbe
   pagination.value.rowsNumber = store.total;
 };
 
-const openNew = () =>
-  store.setCountryToEdit({ name: '', code1: '', code2: '', nationalityName: '' } as Country);
 const onEdit = (row: Country) => store.setCountryToEdit(row);
 
 onMounted(async () => {
