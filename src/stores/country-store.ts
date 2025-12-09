@@ -25,6 +25,7 @@ export const useCountryStore = defineStore('country', {
     total: 0,
     search: '',
     error: null as string | null,
+    countryToEdit: null as Country | null, // <- new
   }),
 
   // --- Actions ---
@@ -90,39 +91,6 @@ export const useCountryStore = defineStore('country', {
       }
     },
     /**
-     * Creates a new country record via API.
-     */
-    async createCountry(country: Partial<Country>) {
-      this.isLoading = true;
-      this.error = null;
-      try {
-        const authStore = useAuthStore();
-
-        const response = await fetch(`${API_URL}/countries`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authStore.token}`,
-          },
-          body: JSON.stringify(country),
-        });
-
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({}));
-          throw new Error(errorBody.message || 'Failed to create country.');
-        }
-
-        // Refresh the list after successful creation
-        await this.fetchCountries();
-      } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Error creating country';
-        throw error;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    /**
      * Updates an existing country record via API.
      */
     async updateCountry(id: string, payload: Partial<Country>) {
@@ -153,6 +121,9 @@ export const useCountryStore = defineStore('country', {
       } finally {
         this.isLoading = false;
       }
+    },
+    setCountryToEdit(country: Country | null) {
+      this.countryToEdit = country ? { ...country } : null;
     },
   },
 });

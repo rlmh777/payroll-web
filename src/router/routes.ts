@@ -76,7 +76,7 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/settings/general/country',
-        component: () => import('components/setting/country/view/CountryView.vue'),
+        component: () => import('components/setting/country/ManageCountry.vue'),
         props: { title: 'Setting Country' },
       },
     ],
