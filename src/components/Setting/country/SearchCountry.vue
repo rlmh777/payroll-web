@@ -22,7 +22,7 @@ watch(
   () => store.search,
   async () => {
     // Always reset to page 1 on new search
-    await store.fetchCountries(1);
+    await store.fetchCountries();
   },
 );
 </script>
