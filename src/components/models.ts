@@ -145,3 +145,8 @@ export interface Employee {
   nationality?: Country | null;
   employmentDetails?: EmploymentDetail[];
 }
+
+export interface Institution {
+  id: string;
+  name?: string;
+}
