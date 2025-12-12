@@ -80,6 +80,10 @@ export interface EmployeeLeave {
   leaveTypeId: string;
   startDate: string;
   endDate: string;
+  fromTime: string;
+  toTime: string;
+  duration: string;
+  totalDays: number;
   notes?: string | null;
   multiplier?: number;
   employee?: Employee | null;

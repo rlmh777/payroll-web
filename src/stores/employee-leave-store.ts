@@ -10,6 +10,10 @@ interface CreateEmployeeLeaveBody {
   leaveTypeId: string;
   startDate: string;
   endDate: string;
+  fromTime?: string | null;
+  toTime?: string | null;
+  duration?: string;
+  totalDays?: number;
   notes?: string | null;
   multiplier?: number;
 }
@@ -19,6 +23,10 @@ interface UpdateEmployeeLeaveBody {
   leaveTypeId?: string;
   startDate?: string;
   endDate?: string;
+  fromTime?: string | null;
+  toTime?: string | null;
+  duration?: string;
+  totalDays?: number;
   notes?: string | null;
   multiplier?: number;
 }
@@ -118,6 +126,10 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
       leaveTypeId: number,
       startDate: string,
       endDate: string,
+      fromTime?: string | null,
+      toTime?: string | null,
+      duration?: string,
+      totalDays?: number,
       notes?: string | null,
       multiplier?: number
     ): Promise<EmployeeLeave | null> {
@@ -141,10 +153,21 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
           endDate,
         };
 
+        if (fromTime !== undefined) {
+          body.fromTime = fromTime;
+        }
+        if (toTime !== undefined) {
+          body.toTime = toTime;
+        }
+        if (duration !== undefined) {
+          body.duration = duration;
+        }
+        if (totalDays !== undefined) {
+          body.totalDays = totalDays;
+        }
         if (notes !== undefined && notes !== null) {
           body.notes = notes;
         }
-
         if (multiplier !== undefined) {
           body.multiplier = multiplier;
         }
@@ -182,6 +205,10 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
       leaveTypeId?: number,
       startDate?: string,
       endDate?: string,
+      fromTime?: string | null,
+      toTime?: string | null,
+      duration?: string,
+      totalDays?: number,
       notes?: string | null,
       multiplier?: number
     ): Promise<EmployeeLeave | null> {
@@ -211,6 +238,18 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
         }
         if (endDate !== undefined) {
           body.endDate = endDate;
+        }
+        if (fromTime !== undefined) {
+          body.fromTime = fromTime;
+        }
+        if (toTime !== undefined) {
+          body.toTime = toTime;
+        }
+        if (duration !== undefined) {
+          body.duration = duration;
+        }
+        if (totalDays !== undefined) {
+          body.totalDays = totalDays;
         }
         if (notes !== undefined) {
           body.notes = notes;

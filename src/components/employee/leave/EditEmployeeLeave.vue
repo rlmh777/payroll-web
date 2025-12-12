@@ -27,6 +27,7 @@
             outlined
             :rules="[val => !!val || 'Start date is required']"
             :disable="employeeLeaveStore.isLoading"
+            @update:model-value="onDateChange"
           />
 
           <q-input
@@ -38,6 +39,36 @@
               val => !!val || 'End date is required',
               val => !form.startDate || val >= form.startDate || 'End date must be after start date'
             ]"
+            :disable="employeeLeaveStore.isLoading"
+            @update:model-value="onDateChange"
+          />
+
+          <LeaveDurationSelect
+            v-if="areDatesValid"
+            v-model="form.duration"
+            :start-date="form.startDate"
+            :end-date="form.endDate"
+            :disable="employeeLeaveStore.isLoading"
+            @change="onDurationChange"
+          />
+
+          <q-input
+            v-if="form.duration === 'Custom'"
+            v-model="form.fromTime"
+            label="From Time *"
+            type="time"
+            outlined
+            :rules="[val => !!val || 'From time is required']"
+            :disable="employeeLeaveStore.isLoading"
+          />
+
+          <q-input
+            v-if="form.duration === 'Custom'"
+            v-model="form.toTime"
+            label="To Time *"
+            type="time"
+            outlined
+            :rules="[val => !!val || 'To time is required']"
             :disable="employeeLeaveStore.isLoading"
           />
 
@@ -87,6 +118,7 @@ import { computed, ref, watch } from 'vue';
 import { useEmployeeLeaveStore } from '../../../stores/employee-leave-store';
 import { useEmployeeStore } from '../../../stores/employee-store';
 import LeaveTypeSelect from '../common/LeaveTypeSelect.vue';
+import LeaveDurationSelect from '../common/LeaveDurationSelect.vue';
 import type { EmployeeLeave } from '../../models';
 
 interface Props {
@@ -112,18 +144,135 @@ const isOpen = computed({
   set: (value) => emit('update:modelValue', value),
 });
 
+const areDatesValid = computed(() => {
+  if (!form.value.startDate || !form.value.endDate) {
+    return false;
+  }
+  // Check if endDate is after or equal to startDate
+  return form.value.endDate >= form.value.startDate;
+});
+
 const form = ref({
   leaveTypeId: null as number | null,
   startDate: '',
   endDate: '',
+  duration: null as string | null,
+  fromTime: null as string | null,
+  toTime: null as string | null,
+  totalDays: null as number | null,
   notes: '',
   multiplier: 1.0 as number,
 });
 
-const onSubmit = async () => {
-  if (!form.value.leaveTypeId || !form.value.startDate || !form.value.endDate || !props.employeeLeave) {
+const onDurationChange = (value: string | null) => {
+  form.value.duration = value;
+  
+  // Set default times based on duration
+  if (value === 'Full Day') {
+    form.value.fromTime = '08:00';
+    form.value.toTime = '17:00';
+  } else if (value === 'Morning') {
+    form.value.fromTime = '08:00';
+    form.value.toTime = '12:00';
+  } else if (value === 'Afternoon') {
+    form.value.fromTime = '13:00';
+    form.value.toTime = '17:00';
+  } else if (value === 'Custom') {
+    // Keep existing times or leave null for user to set
+    if (!form.value.fromTime) form.value.fromTime = null;
+    if (!form.value.toTime) form.value.toTime = null;
+  } else {
+    // For 'All Days', set default times but they won't be shown
+    form.value.fromTime = '08:00';
+    form.value.toTime = '17:00';
+  }
+  
+  calculateTotalDays();
+};
+
+const onDateChange = () => {
+  calculateTotalDays();
+  // Reset duration if dates change to ensure correct options are shown
+  if (form.value.duration) {
+    const start = new Date(form.value.startDate);
+    const end = new Date(form.value.endDate);
+    const isSingleDay = start.toDateString() === end.toDateString();
+    
+    // If duration becomes invalid for new date range, reset it
+    if ((isSingleDay && form.value.duration === 'All Days') ||
+        (!isSingleDay && form.value.duration === 'Full Day')) {
+      form.value.duration = null;
+      form.value.fromTime = null;
+      form.value.toTime = null;
+    }
+  }
+};
+
+const calculateTotalDays = () => {
+  if (!form.value.startDate || !form.value.endDate) {
+    form.value.totalDays = null;
     return;
   }
+  
+  const start = new Date(form.value.startDate);
+  const end = new Date(form.value.endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
+  
+  // Adjust based on duration for single day
+  if (diffDays === 1) {
+    if (form.value.duration === 'Full Day') {
+      form.value.totalDays = 1.0;
+    } else if (form.value.duration === 'Morning' || form.value.duration === 'Afternoon') {
+      form.value.totalDays = 0.5;
+    } else if (form.value.duration === 'Custom' && form.value.fromTime && form.value.toTime) {
+      // Calculate hours for custom duration
+      const from = new Date(`2000-01-01T${form.value.fromTime}`);
+      const to = new Date(`2000-01-01T${form.value.toTime}`);
+      const hours = (to.getTime() - from.getTime()) / (1000 * 60 * 60);
+      form.value.totalDays = hours / 8; // Assuming 8 hours = 1 day
+    } else {
+      form.value.totalDays = diffDays;
+    }
+  } else {
+    // For multiple days, use the duration setting
+    if (form.value.duration === 'All Days') {
+      form.value.totalDays = diffDays;
+    } else if (form.value.duration === 'Morning' || form.value.duration === 'Afternoon') {
+      form.value.totalDays = diffDays * 0.5;
+    } else if (form.value.duration === 'Custom' && form.value.fromTime && form.value.toTime) {
+      // Calculate hours for custom duration per day
+      const from = new Date(`2000-01-01T${form.value.fromTime}`);
+      const to = new Date(`2000-01-01T${form.value.toTime}`);
+      const hours = (to.getTime() - from.getTime()) / (1000 * 60 * 60);
+      form.value.totalDays = diffDays * (hours / 8); // Assuming 8 hours = 1 day
+    } else {
+      form.value.totalDays = diffDays;
+    }
+  }
+};
+
+const onSubmit = async () => {
+  if (!form.value.leaveTypeId || !form.value.startDate || !form.value.endDate || 
+      !form.value.duration || form.value.totalDays === null || form.value.totalDays === undefined || 
+      !props.employeeLeave) {
+    return;
+  }
+
+  // For Custom duration, ensure times are provided
+  if (form.value.duration === 'Custom' && (!form.value.fromTime || !form.value.toTime)) {
+    return;
+  }
+
+  // Format time from HH:mm to HH:mm:00 for API
+  const formatTimeForAPI = (time: string | null): string | null => {
+    if (!time) return null;
+    // If time is in HH:mm format, convert to HH:mm:00
+    if (time.match(/^\d{2}:\d{2}$/)) {
+      return `${time}:00`;
+    }
+    return time;
+  };
 
   const updatedEmployeeLeave = await employeeLeaveStore.updateEmployeeLeave(
     props.employeeLeave.id,
@@ -131,6 +280,10 @@ const onSubmit = async () => {
     form.value.leaveTypeId || undefined,
     form.value.startDate,
     form.value.endDate,
+    formatTimeForAPI(form.value.fromTime),
+    formatTimeForAPI(form.value.toTime),
+    form.value.duration,
+    form.value.totalDays,
     form.value.notes || null,
     form.value.multiplier
   );
@@ -153,6 +306,10 @@ watch(isOpen, async (newValue) => {
       leaveTypeId: props.employeeLeave.leaveTypeId ? (typeof props.employeeLeave.leaveTypeId === 'string' ? Number(props.employeeLeave.leaveTypeId) : props.employeeLeave.leaveTypeId) : null,
       startDate: props.employeeLeave.startDate || '',
       endDate: props.employeeLeave.endDate || '',
+      duration: props.employeeLeave.duration || null,
+      fromTime: props.employeeLeave.fromTime ? formatTimeForInput(props.employeeLeave.fromTime) : null,
+      toTime: props.employeeLeave.toTime ? formatTimeForInput(props.employeeLeave.toTime) : null,
+      totalDays: props.employeeLeave.totalDays !== null && props.employeeLeave.totalDays !== undefined ? props.employeeLeave.totalDays : null,
       notes: props.employeeLeave.notes || '',
       multiplier: props.employeeLeave.multiplier || 1.0,
     };
@@ -162,6 +319,24 @@ watch(isOpen, async (newValue) => {
     }
   }
 });
+
+// Watch for time changes in Custom mode to recalculate totalDays
+watch([() => form.value.fromTime, () => form.value.toTime], () => {
+  if (form.value.duration === 'Custom') {
+    calculateTotalDays();
+  }
+});
+
+// Helper function to format time from API (HH:mm:ss) to input format (HH:mm)
+const formatTimeForInput = (time: string): string => {
+  if (!time) return '';
+  // If time is in HH:mm:ss format, convert to HH:mm
+  if (time.includes(':')) {
+    const parts = time.split(':');
+    return `${parts[0]}:${parts[1]}`;
+  }
+  return time;
+};
 </script>
 
 <style scoped>
