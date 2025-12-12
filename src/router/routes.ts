@@ -74,6 +74,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/SettingPage.vue'),
         props: { title: 'Setting Pay Items' },
       },
+      {
+        path: '/settings/general/country',
+        component: () => import('components/setting/country/ManageCountry.vue'),
+        props: { title: 'Setting Country' },
+      },
     ],
   },
   {
