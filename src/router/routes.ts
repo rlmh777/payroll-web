@@ -79,6 +79,16 @@ const routes: RouteRecordRaw[] = [
         component: () => import('components/setting/country/ManageCountry.vue'),
         props: { title: 'Setting Country' },
       },
+      {
+        path: '/settings/general/institution',
+        component: () => import('components/setting/institution/ManageInstitution.vue'),
+        props: { title: 'Setting Institution' },
+      },
+      {
+        path: '/settings/general/degree',
+        component: () => import('components/setting/degree/ManageDegree.vue'),
+        props: { title: 'Setting Degree' },
+      },
     ],
   },
   {

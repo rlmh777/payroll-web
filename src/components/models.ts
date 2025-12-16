@@ -145,3 +145,13 @@ export interface Employee {
   nationality?: Country | null;
   employmentDetails?: EmploymentDetail[];
 }
+
+export interface Institution {
+  id: string;
+  name?: string;
+}
+
+export interface Degree {
+  id: string;
+  name?: string;
+}
