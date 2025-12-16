@@ -46,8 +46,8 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { type QTableProps } from 'quasar';
 import { useCountryStore, type Country } from '../../../stores/country-store';
-import UpdateCountry from './UpdateCountry.vue';
-import SearchCountry from './SearchCountry.vue';
+import UpdateCountry from '../../setting/country/UpdateCountry.vue';
+import SearchCountry from '../../setting/country/SearchCountry.vue';
 
 const store = useCountryStore();
 const dialogOpen = ref(false);
