@@ -33,7 +33,7 @@
                 >
                   <q-tooltip>Edit District</q-tooltip>
                 </q-btn>
-                <q-btn
+                <!-- <q-btn
                   flat
                   round
                   dense
@@ -44,7 +44,7 @@
                   @click="onDelete(props.row)"
                 >
                   <q-tooltip>Delete District</q-tooltip>
-                </q-btn>
+                </q-btn> -->
               </div>
             </q-td>
           </template>
@@ -56,7 +56,6 @@
 </template>
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useQuasar } from 'quasar';
 import { type QTableProps } from 'quasar';
 import { useDistrictStore, type District } from '../../../stores/district-store';
 import SearchDistrict from './SearchDistrict.vue';
@@ -64,7 +63,6 @@ import UpdateDistrict from './UpdateDistrict.vue';
 
 const store = useDistrictStore();
 const dialogOpen = ref(false);
-const $q = useQuasar();
 
 const pagination = ref({
   page: 1,
@@ -125,41 +123,41 @@ const onRequest = async (props: { pagination: { page: number; rowsPerPage: numbe
 
 const onEdit = (row: District) => store.setDistrictToEdit(row);
 
-const onDelete = (row: District) => {
-  $q.dialog({
-    title: 'Confirm Delete',
-    message: `Are you sure you want to delete "${row.name}"?`,
-    cancel: true,
-    persistent: true,
-    ok: {
-      label: 'Delete',
-      color: 'negative',
-    },
-  })
-    .onOk(() => {
-      void (async () => {
-        try {
-          await store.deleteDistrict(row.id);
+// const onDelete = (row: District) => {
+//   $q.dialog({
+//     title: 'Confirm Delete',
+//     message: `Are you sure you want to delete "${row.name}"?`,
+//     cancel: true,
+//     persistent: true,
+//     ok: {
+//       label: 'Delete',
+//       color: 'negative',
+//     },
+//   })
+//     .onOk(() => {
+//       void (async () => {
+//         try {
+//           await store.deleteDistrict(row.id);
 
-          $q.notify({
-            color: 'positive',
-            position: 'top',
-            icon: 'warning',
-            message: 'District deleted successfully.',
-          });
-        } catch (error) {
-          console.error(error);
-          $q.notify({
-            color: 'negative',
-            position: 'top',
-            icon: 'error',
-            message: 'Failed to delete District.',
-          });
-        }
-      })();
-    })
-    .onCancel(() => {});
-};
+//           $q.notify({
+//             color: 'positive',
+//             position: 'top',
+//             icon: 'warning',
+//             message: 'District deleted successfully.',
+//           });
+//         } catch (error) {
+//           console.error(error);
+//           $q.notify({
+//             color: 'negative',
+//             position: 'top',
+//             icon: 'error',
+//             message: 'Failed to delete District.',
+//           });
+//         }
+//       })();
+//     })
+//     .onCancel(() => {});
+// };
 
 onMounted(async () => {
   await store.fetchDistricts({ page: 1, perPage: pagination.value.rowsPerPage });
