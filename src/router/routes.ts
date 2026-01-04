@@ -89,6 +89,16 @@ const routes: RouteRecordRaw[] = [
         component: () => import('components/setting/degree/ManageDegree.vue'),
         props: { title: 'Setting Degree' },
       },
+      {
+        path: '/settings/general/district',
+        component: () => import('components/setting/district/ManageDistrict.vue'),
+        props: { title: 'Setting Degree' },
+      },
+      {
+        path: '/settings/general/locality',
+        component: () => import('components/setting/locality/ManageLocality.vue'),
+        props: { title: 'Setting Degree' },
+      },
     ],
   },
   {

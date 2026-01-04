@@ -10,7 +10,7 @@
     />
     <q-space />
     <q-btn dense icon="add_circle" color="primary" @click="store.openCreateDailog()">
-      Add Institution
+      Add Degree
     </q-btn>
   </q-card-section>
 

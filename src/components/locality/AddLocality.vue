@@ -1,10 +1,5 @@
 <template>
-  <q-dialog
-    v-model="isOpen"
-    position="right"
-    :maximized="false"
-    @hide="onClose"
-  >
+  <q-dialog v-model="isOpen" position="right" :maximized="false" @hide="onClose">
     <q-card class="add-locality-card">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6">Add New Location</div>
@@ -18,7 +13,7 @@
             v-model="form.name"
             label="Location Name *"
             outlined
-            :rules="[val => !!val || 'Location name is required']"
+            :rules="[(val) => !!val || 'Location name is required']"
             :disable="localityStore.isLoading"
           />
 
@@ -36,12 +31,7 @@
               @click="onClose"
               :disable="localityStore.isLoading"
             />
-            <q-btn
-              type="submit"
-              label="Save"
-              color="primary"
-              :loading="localityStore.isLoading"
-            />
+            <q-btn type="submit" label="Save" color="primary" :loading="localityStore.isLoading" />
           </div>
         </q-form>
       </q-card-section>
@@ -63,7 +53,7 @@ const props = defineProps<Props>();
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  'saved': [localityId: string];
+  saved: [localityId: string];
 }>();
 
 const localityStore = useLocalityStore();
@@ -84,10 +74,7 @@ const onSubmit = async () => {
     return;
   }
 
-  const newLocality = await localityStore.createLocality(
-    form.value.name,
-    form.value.districtId
-  );
+  const newLocality = await localityStore.createLocality(form.value.name, form.value.districtId);
 
   if (newLocality) {
     emit('saved', newLocality.id);
@@ -106,12 +93,12 @@ const onClose = () => {
 // Fetch districts when dialog opens
 watch(isOpen, async (newValue) => {
   if (newValue) {
-    await districtStore.fetchDistricts();
+    await districtStore.fetchDistricts({});
   }
 });
 
 onMounted(async () => {
-  await districtStore.fetchDistricts();
+  await districtStore.fetchDistricts({});
 });
 </script>
 
@@ -128,4 +115,3 @@ onMounted(async () => {
   overflow-y: auto;
 }
 </style>
-

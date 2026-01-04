@@ -25,14 +25,27 @@ export const useLocalityStore = defineStore('locality', {
     isLoadingDistricts: false,
     currentPage: 1,
     lastPage: 1,
+    search: '',
     total: 0,
     error: null as string | null,
+    isCreateOpen: false, // <- new
+    localityToEdit: null as Locality | null, // <- new
   }),
 
   getters: {},
 
   actions: {
-    async fetchLocalities(search?: string, districtId?: string) {
+    async fetchLocalities({
+      search,
+      districtId,
+      page,
+      perPage,
+    }: {
+      search?: string;
+      districtId?: string;
+      page?: number;
+      perPage?: number;
+    }) {
       if (this.isLoading) return;
 
       this.isLoading = true;
@@ -40,7 +53,14 @@ export const useLocalityStore = defineStore('locality', {
 
       try {
         const authStore = useAuthStore();
-        const queryParams = new URLSearchParams();
+        // 1. Determine Pagination Parameters
+        const currentPage = page ?? this.currentPage;
+        // Default page size (e.g., 10) if not provided and state is missing
+        const itemsPerPage = perPage ?? 10;
+        const queryParams = new URLSearchParams({
+          page: String(currentPage),
+          per_page: String(itemsPerPage),
+        });
         if (search) {
           queryParams.append('search', search);
         }
@@ -66,6 +86,9 @@ export const useLocalityStore = defineStore('locality', {
 
         const data = await response.json();
         this.localities = data.data || data;
+        this.currentPage = data.current_page ?? 1;
+        this.lastPage = data.last_page ?? 1;
+        this.total = data.total ?? 0;
       } catch (error) {
         console.error('Error fetching localities:', error);
         this.error = error instanceof Error ? error.message : 'Error fetching localities';
@@ -143,7 +166,7 @@ export const useLocalityStore = defineStore('locality', {
 
         // Add to localities list
         this.localities = [...this.localities, newLocality];
-
+        await this.fetchLocalities({});
         return newLocality;
       } catch (error) {
         console.error('Error creating locality:', error);
@@ -234,10 +257,18 @@ export const useLocalityStore = defineStore('locality', {
         this.isLoading = false;
       }
     },
+    openCreateDailog() {
+      this.isCreateOpen = true;
+    },
+    closeCreateDailog() {
+      this.isCreateOpen = false;
+    },
+    setLocalityToEdit(locality: Locality | null) {
+      this.localityToEdit = locality ? { ...locality } : null;
+    },
   },
 });
 
 if (import.meta.hot) {
   import.meta.hot.accept(acceptHMRUpdate(useLocalityStore, import.meta.hot));
 }
-
