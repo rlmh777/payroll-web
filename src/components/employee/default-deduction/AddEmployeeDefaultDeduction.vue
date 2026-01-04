@@ -1,0 +1,257 @@
+<template>
+  <q-dialog
+    v-model="isOpen"
+    position="right"
+    :maximized="false"
+    @hide="onClose"
+  >
+    <q-card class="add-employee-default-deduction-card">
+      <q-card-section class="row items-center q-pb-none">
+        <div class="text-h6">Add Employee Default Deduction</div>
+        <q-space />
+        <q-btn icon="close" flat round dense v-close-popup />
+      </q-card-section>
+
+      <q-card-section>
+        <q-form @submit="onSubmit" class="q-gutter-md">
+          <DeductionTypeSelect
+            v-model="form.deductionTypeId"
+            :rules="[(val: number | null | undefined) => !!val || 'Deduction type is required']"
+            :disable="employeeDefaultDeductionStore.isLoading"
+            :showAddNew="true"
+          />
+
+          <VendorSelect
+            v-model="form.paymentToId"
+            :rules="[(val: string | null | undefined) => !!val || 'Vendor/Creditor is required']"
+            :disable="employeeDefaultDeductionStore.isLoading"
+            :showAddNew="true"
+            :showEdit="true"
+          />
+
+          <PayRateFrequencySelect
+            v-model="form.frequencyId"
+            :rules="[(val: number | null | undefined) => !!val || 'Frequency is required']"
+            :disable="employeeDefaultDeductionStore.isLoading"
+          />
+
+          <AccountSelect
+            v-model="form.accountId"
+            :rules="[(val: string | null | undefined) => !!val || 'Account is required']"
+            :disable="employeeDefaultDeductionStore.isLoading"
+            :showAddNew="true"
+            :showEdit="true"
+          />
+
+          <q-input
+            v-model.number="form.amount"
+            label="Amount *"
+            type="number"
+            step="0.01"
+            min="0"
+            outlined
+            :rules="[
+              val => val !== null && val !== undefined && val >= 0 || 'Amount is required',
+              val => val <= 999999999999.99 || 'Amount must be less than 1,000,000,000,000'
+            ]"
+            :disable="employeeDefaultDeductionStore.isLoading"
+          />
+
+          <q-input
+            v-model="form.note"
+            label="Note"
+            type="textarea"
+            outlined
+            rows="3"
+            maxlength="255"
+            counter
+            :disable="employeeDefaultDeductionStore.isLoading"
+          />
+
+          <div class="row q-gutter-sm justify-end q-mt-lg">
+            <q-btn
+              flat
+              label="Cancel"
+              color="grey"
+              @click="onClose"
+              :disable="employeeDefaultDeductionStore.isLoading"
+            />
+            <q-btn
+              type="submit"
+              label="Save"
+              color="primary"
+              :loading="employeeDefaultDeductionStore.isLoading"
+            />
+          </div>
+        </q-form>
+      </q-card-section>
+    </q-card>
+  </q-dialog>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
+import { useQuasar } from 'quasar';
+import { useEmployeeDefaultDeductionStore } from '../../../stores/employee-default-deduction-store';
+import { useEmployeeStore } from '../../../stores/employee-store';
+import { useDeductionTypeStore } from '../../../stores/deduction-type-store';
+import DeductionTypeSelect from '../../deduction-type/DeductionTypeSelect.vue';
+import VendorSelect from '../common/VendorSelect.vue';
+import PayRateFrequencySelect from '../common/PayRateFrequencySelect.vue';
+import AccountSelect from '../common/AccountSelect.vue';
+
+const $q = useQuasar();
+
+interface Props {
+  modelValue: boolean;
+}
+
+const props = defineProps<Props>();
+
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean];
+  'saved': [employeeDefaultDeductionId: string];
+}>();
+
+const employeeDefaultDeductionStore = useEmployeeDefaultDeductionStore();
+const employeeStore = useEmployeeStore();
+const deductionTypeStore = useDeductionTypeStore();
+
+const isOpen = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value),
+});
+
+const form = ref({
+  deductionTypeId: null as number | null,
+  paymentToId: null as string | null,
+  frequencyId: null as number | null,
+  accountId: null as string | null,
+  amount: null as number | null,
+  note: null as string | null,
+});
+
+const onSubmit = async () => {
+  if (!form.value.deductionTypeId || !form.value.paymentToId || !form.value.frequencyId || 
+      !form.value.accountId || form.value.amount === null || form.value.amount === undefined) {
+    return;
+  }
+
+  if (!employeeStore.selectedEmployee?.id) {
+    $q.notify({
+      color: 'negative',
+      position: 'top',
+      icon: 'error',
+      message: 'No employee selected',
+    });
+    return;
+  }
+
+  try {
+    // Extract values after validation - TypeScript knows they're non-null
+    const deductionTypeId = form.value.deductionTypeId;
+    const paymentToId = form.value.paymentToId;
+    const frequencyId = form.value.frequencyId;
+    const accountId = form.value.accountId;
+    const amount = form.value.amount;
+
+    const newEmployeeDefaultDeduction = await employeeDefaultDeductionStore.createEmployeeDefaultDeduction(
+      employeeStore.selectedEmployee.id,
+      deductionTypeId,
+      paymentToId,
+      frequencyId,
+      accountId,
+      form.value.note,
+      amount
+    );
+
+    if (newEmployeeDefaultDeduction) {
+      $q.notify({
+        color: 'positive',
+        position: 'top',
+        icon: 'check_circle',
+        message: 'Employee default deduction created successfully!',
+      });
+      emit('saved', newEmployeeDefaultDeduction.id);
+      onClose();
+    } else if (employeeDefaultDeductionStore.error) {
+      $q.notify({
+        color: 'negative',
+        position: 'top',
+        icon: 'error',
+        message: employeeDefaultDeductionStore.error,
+      });
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create employee default deduction';
+    $q.notify({
+      color: 'negative',
+      position: 'top',
+      icon: 'error',
+      message: errorMessage,
+    });
+  }
+};
+
+const onClose = () => {
+  form.value = {
+    deductionTypeId: null,
+    paymentToId: null,
+    frequencyId: null,
+    accountId: null,
+    amount: null,
+    note: null,
+  };
+  isOpen.value = false;
+};
+
+// Watch for deduction type selection to auto-populate amount
+watch(() => form.value.deductionTypeId, (newDeductionTypeId) => {
+  if (newDeductionTypeId && deductionTypeStore.deductionTypes.length > 0) {
+    const selectedDeductionType = deductionTypeStore.deductionTypes.find(dt => dt.id === newDeductionTypeId);
+    if (selectedDeductionType && selectedDeductionType.defaultAmount !== null && selectedDeductionType.defaultAmount !== undefined) {
+      form.value.amount = selectedDeductionType.defaultAmount;
+    }
+  }
+});
+
+// Fetch data when dialog opens
+watch(isOpen, async (newValue) => {
+  if (newValue) {
+    // Reset form to ensure clean state
+    form.value = {
+      deductionTypeId: null,
+      paymentToId: null,
+      frequencyId: null,
+      accountId: null,
+      amount: null,
+      note: null,
+    };
+    // Fetch required data if not already loaded
+    if (deductionTypeStore.deductionTypes.length === 0) {
+      await deductionTypeStore.fetchDeductionTypes();
+    }
+    if (employeeStore.accounts.length === 0) {
+      await employeeStore.fetchAccounts();
+    }
+    if (employeeStore.payrateFrequencies.length === 0) {
+      await employeeStore.fetchPayrateFrequencies();
+    }
+  }
+});
+</script>
+
+<style scoped>
+.add-employee-default-deduction-card {
+  width: 30vw;
+  height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-employee-default-deduction-card :deep(.q-card__section) {
+  overflow-y: auto;
+}
+</style>
+

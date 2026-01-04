@@ -1,5 +1,6 @@
 import { defineStore, acceptHMRUpdate } from 'pinia';
-import type { CitizenshipStatus, Country, Employee, Gender, Honorific, LeaveType, Locality, PaymentMethod, PayrateFrequency } from '../components/models';
+import { useAuthStore } from './auth';
+import type { Account, Allowance, CitizenshipStatus, Country, Employee, Gender, Honorific, LeaveType, Locality, PaymentMethod, PayrateFrequency } from '../components/models';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api'
 
@@ -14,6 +15,8 @@ export const useEmployeeStore = defineStore('employee', {
     leaveTypes: [] as LeaveType[],
     payrateFrequencies: [] as PayrateFrequency[],
     paymentMethods: [] as PaymentMethod[],
+    accounts: [] as Account[],
+    allowances: [] as Allowance[],
     searchName: '',
     sortBy: 'lastName',
     sortDirection: 'asc',
@@ -29,6 +32,9 @@ export const useEmployeeStore = defineStore('employee', {
     isLoadingCitizenshipStatuses: false,
     isLoadingHonorifics: false,
     isLoadingLeaveTypes: false,
+    isLoadingAccounts: false,
+    isLoadingAllowances: false,
+    isLoadingPayrateFrequencies: false,
     hasMore: true,
     selectedEmployee: null as Employee | null,
   }),
@@ -215,6 +221,79 @@ export const useEmployeeStore = defineStore('employee', {
         console.error('Error fetching leave types:', error);
       } finally {
         this.isLoadingLeaveTypes = false;
+      }
+    },
+
+    async fetchAccounts(search?: string) {
+      if (this.isLoadingAccounts) return;
+      
+      this.isLoadingAccounts = true;
+      try {
+        const queryParams = new URLSearchParams();
+        if (search) {
+          queryParams.append('search', search);
+        }
+        queryParams.append('per_page', '100'); // Get more accounts for select
+        const response = await fetch(`${API_URL}/accounts?${queryParams.toString()}`);
+        const data = await response.json();
+        this.accounts = data.data || data;
+      } catch (error) {
+        console.error('Error fetching accounts:', error);
+      } finally {
+        this.isLoadingAccounts = false;
+      }
+    },
+
+    async fetchAllowances(search?: string) {
+      if (this.isLoadingAllowances) return;
+      
+      this.isLoadingAllowances = true;
+      try {
+        const queryParams = new URLSearchParams();
+        if (search) {
+          queryParams.append('search', search);
+        }
+        queryParams.append('per_page', '100'); // Get more allowances for select
+        const response = await fetch(`${API_URL}/allowances?${queryParams.toString()}`);
+        const data = await response.json();
+        this.allowances = data.data || data;
+      } catch (error) {
+        console.error('Error fetching allowances:', error);
+      } finally {
+        this.isLoadingAllowances = false;
+      }
+    },
+
+    async fetchPayrateFrequencies() {
+      if (this.isLoadingPayrateFrequencies) return;
+      
+      this.isLoadingPayrateFrequencies = true;
+      try {
+        const authStore = useAuthStore();
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        if (authStore.token) {
+          headers['Authorization'] = `Bearer ${authStore.token}`;
+        }
+
+        // Fetch from payrate-frequencies endpoint
+        const queryParams = new URLSearchParams();
+        queryParams.append('per_page', '100'); // Get all frequencies for select
+        const response = await fetch(`${API_URL}/payrate-frequencies?${queryParams.toString()}`, { headers });
+        if (response.ok) {
+          const data = await response.json();
+          // Handle paginated response
+          this.payrateFrequencies = data.data || data;
+        } else {
+          throw new Error(`Failed to fetch payrate frequencies: ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error('Error fetching payrate frequencies:', error);
+        this.payrateFrequencies = [];
+      } finally {
+        this.isLoadingPayrateFrequencies = false;
       }
     },
   },

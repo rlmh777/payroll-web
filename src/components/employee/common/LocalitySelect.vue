@@ -65,12 +65,14 @@ interface Props {
   modelValue?: string | null;
   readonly?: boolean;
   employeeLocality?: string | null;
+  showAddNew?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   readonly: false,
   employeeLocality: null,
+  showAddNew: false,
 });
 
 const emit = defineEmits<{
@@ -85,7 +87,7 @@ const showAddDialog = ref(false);
 
 const localityOptions = computed((): (Locality | { id: string; name: string })[] => {
   const options = [...employeeStore.localities];
-  if (!props.readonly) {
+  if (props.showAddNew && !props.readonly) {
     options.unshift({ id: 'add-new', name: 'Add New Location' });
   }
   return options;

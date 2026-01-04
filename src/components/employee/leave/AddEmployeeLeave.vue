@@ -116,10 +116,13 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useQuasar } from 'quasar';
 import { useEmployeeLeaveStore } from '../../../stores/employee-leave-store';
 import { useEmployeeStore } from '../../../stores/employee-store';
 import LeaveTypeSelect from '../common/LeaveTypeSelect.vue';
 import LeaveDurationSelect from '../common/LeaveDurationSelect.vue';
+
+const $q = useQuasar();
 
 interface Props {
   modelValue: boolean;
@@ -279,22 +282,45 @@ const onSubmit = async () => {
     return time;
   };
 
-  const newEmployeeLeave = await employeeLeaveStore.createEmployeeLeave(
-    employeeStore.selectedEmployee.id,
-    form.value.leaveTypeId,
-    form.value.startDate,
-    form.value.endDate,
-    formatTimeForAPI(form.value.fromTime),
-    formatTimeForAPI(form.value.toTime),
-    form.value.duration,
-    form.value.totalDays,
-    form.value.notes || null,
-    form.value.multiplier
-  );
+  try {
+    const newEmployeeLeave = await employeeLeaveStore.createEmployeeLeave(
+      employeeStore.selectedEmployee.id,
+      form.value.leaveTypeId,
+      form.value.startDate,
+      form.value.endDate,
+      formatTimeForAPI(form.value.fromTime),
+      formatTimeForAPI(form.value.toTime),
+      form.value.duration,
+      form.value.totalDays,
+      form.value.notes || null,
+      form.value.multiplier
+    );
 
-  if (newEmployeeLeave) {
-    emit('saved', newEmployeeLeave.id);
-    onClose();
+    if (newEmployeeLeave) {
+      $q.notify({
+        color: 'positive',
+        position: 'top',
+        icon: 'check_circle',
+        message: 'Employee leave created successfully!',
+      });
+      emit('saved', newEmployeeLeave.id);
+      onClose();
+    } else if (employeeLeaveStore.error) {
+      $q.notify({
+        color: 'negative',
+        position: 'top',
+        icon: 'error',
+        message: employeeLeaveStore.error,
+      });
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create employee leave';
+    $q.notify({
+      color: 'negative',
+      position: 'top',
+      icon: 'error',
+      message: errorMessage,
+    });
   }
 };
 

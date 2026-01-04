@@ -17,7 +17,6 @@
     <q-tab-panels v-model="tab" animated class="q-mt-none">
       <q-tab-panel name="attendance">
         <div class="text-h6">Movies</div>
-        Lorem ipsum dolor sit amet consectetur adipisicing elit.
       </q-tab-panel>
 
       <q-tab-panel name="leaves">
@@ -25,13 +24,11 @@
       </q-tab-panel>
 
       <q-tab-panel name="allowances">
-        <div class="text-h6">Movies</div>
-        Lorem ipsum dolor sit amet consectetur adipisicing elit.
+        <manage-employee-default-allowances />
       </q-tab-panel>
 
       <q-tab-panel name="deductions">
-        <div class="text-h6">Movies</div>
-        Lorem ipsum dolor sit amet consectetur adipisicing elit.
+        <manage-employee-default-deductions />
       </q-tab-panel>
 
       <q-tab-panel name="contracts">
@@ -45,6 +42,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import EmployeeLeaveList from '../leave/EmployeeLeaveList.vue';
+import ManageEmployeeDefaultAllowances from '../default-allowance/ManageEmployeeDefaultAllowances.vue';
+import ManageEmployeeDefaultDeductions from '../default-deduction/ManageEmployeeDefaultDeductions.vue';
 
 const tab = ref('mails');
 </script>

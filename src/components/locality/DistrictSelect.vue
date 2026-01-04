@@ -63,6 +63,7 @@ interface Props {
   employeeDistrict?: string | null;
   disable?: boolean;
   rules?: Array<(val: string | null | undefined) => boolean | string>;
+  showAddNew?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -71,6 +72,7 @@ const props = withDefaults(defineProps<Props>(), {
   employeeDistrict: null,
   disable: false,
   rules: () => [],
+  showAddNew: false,
 });
 
 const emit = defineEmits<{
@@ -85,7 +87,7 @@ const showAddDialog = ref(false);
 
 const districtOptions = computed((): (District | { id: string; name: string })[] => {
   const options = [...districtStore.districts];
-  if (!props.readonly) {
+  if (props.showAddNew && !props.readonly) {
     options.unshift({ id: 'add-new', name: 'Add New District' });
   }
   return options;

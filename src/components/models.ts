@@ -159,3 +159,89 @@ export interface Degree {
   id: string;
   name?: string;
 }
+
+export interface Allowance {
+  id: string;
+  name: string;
+  isTaxable?: boolean;
+  isSocialSecurityDeductable?: boolean;
+  note?: string | null;
+  defaultAmount: number;
+}
+
+export interface AccountType {
+  id: number;
+  name: string;
+  normal_balance?: string | null;
+  statement?: string | null;
+}
+
+export interface Account {
+  id: string;
+  name: string;
+  description?: string | null;
+  code1?: string | null;
+  code2?: string | null;
+  balance?: number | null;
+  parent_id?: string | null;
+  account_type_id?: number | null;
+  parent?: Account | null;
+  children?: Account[];
+  accountType?: AccountType | null;
+}
+
+export interface DeductionType {
+    id: number;
+    name: string;
+  isTaxable?: boolean;
+  isSocialSecurityDeductable?: boolean;
+  note?: string | null;
+  defaultAmount?: number;
+}
+
+export interface EmployeeDefaultAllowance {
+  id: string;
+  employeeId: string;
+  allowanceId: string;
+  frequencyId: number;
+  accountId: string;
+  note: string;
+  amount: number;
+  employee?: Employee | null;
+  allowance?: Allowance | null;
+  payrate_frequency?: PayrateFrequency | null;
+  chart_of_account?: Account | null;
+}
+
+export interface Bank {
+  id: string;
+  name: string;
+  code?: string | null;
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  bankId?: string | null;
+  accountNumber?: string | null;
+  bank?: Bank | null;
+}
+
+export interface EmployeeDefaultDeduction {
+  id: string;
+  employeeId: string;
+  deductionTypeId: number;
+  paymentToId: string;
+  frequencyId: number;
+  accountId: string;
+  note?: string | null;
+  amount: number;
+  employee?: Employee | null;
+  deduction?: DeductionType | null;
+  deductionType?: DeductionType | null;
+  payrate_frequency?: PayrateFrequency | null;
+  chart_of_account?: Account | null;
+  vendor?: Vendor | null;
+}

@@ -1,7 +1,7 @@
 import { defineStore, acceptHMRUpdate } from 'pinia';
 import { useAuthStore } from './auth';
 import { useEmployeeStore } from './employee-store';
-import type { EmployeeLeave } from '../components/models';
+import type { EmployeeDefaultDeduction } from '../components/models';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 
@@ -15,81 +15,80 @@ interface ErrorWithData extends Error {
   errorData?: ApiErrorData;
 }
 
-interface CreateEmployeeLeaveBody {
+interface CreateEmployeeDefaultDeductionBody {
   employeeId: string;
-  leaveTypeId: string;
-  startDate: string;
-  endDate: string;
-  fromTime?: string | null;
-  toTime?: string | null;
-  duration?: string;
-  totalDays?: number;
-  notes?: string | null;
-  multiplier?: number;
+  deductionTypeId: number;
+  paymentToId: string;
+  frequencyId: number;
+  accountId: string;
+  note?: string | null;
+  amount: number;
 }
 
-interface UpdateEmployeeLeaveBody {
+interface UpdateEmployeeDefaultDeductionBody {
   employeeId?: string;
-  leaveTypeId?: string;
-  startDate?: string;
-  endDate?: string;
-  fromTime?: string | null;
-  toTime?: string | null;
-  duration?: string;
-  totalDays?: number;
-  notes?: string | null;
-  multiplier?: number;
+  deductionTypeId?: number;
+  paymentToId?: string;
+  frequencyId?: number;
+  accountId?: string;
+  note?: string | null;
+  amount?: number;
 }
 
-export const useEmployeeLeaveStore = defineStore('employeeLeave', {
+export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDeduction', {
   state: () => ({
-    employeeLeaves: [] as EmployeeLeave[],
+    employeeDefaultDeductions: [] as EmployeeDefaultDeduction[],
     isLoading: false,
-    isLoadingEmployeeLeaves: false,
+    isLoadingEmployeeDefaultDeductions: false,
     currentPage: 1,
     lastPage: 1,
     total: 0,
     error: null as string | null,
     searchFilters: {
-      leaveTypeId: null as number | null,
-      startDate: null as string | null,
-      endDate: null as string | null,
+      search: null as string | null,
+      deductionTypeId: null as number | null,
+      frequencyId: null as number | null,
+      accountId: null as string | null,
     },
   }),
 
   getters: {},
 
   actions: {
-    async fetchEmployeeLeaves(page?: number, perPage?: number) {
-      if (this.isLoadingEmployeeLeaves) return;
+    async fetchEmployeeDefaultDeductions(page?: number, perPage?: number) {
+      if (this.isLoadingEmployeeDefaultDeductions) return;
 
-      this.isLoadingEmployeeLeaves = true;
+      this.isLoadingEmployeeDefaultDeductions = true;
       this.error = null;
 
       try {
         const authStore = useAuthStore();
         const employeeStore = useEmployeeStore();
         const queryParams = new URLSearchParams();
-        
-        // Get employeeId from selectedEmployee in employee store
+
+        // Add employee filter if selected
         if (employeeStore.selectedEmployee?.id) {
           queryParams.append('employeeId', employeeStore.selectedEmployee.id);
         }
-        
+
         // Add search filters
-        if (this.searchFilters.leaveTypeId) {
-          queryParams.append('leaveTypeId', this.searchFilters.leaveTypeId.toString());
+        if (this.searchFilters.search) {
+          queryParams.append('search', this.searchFilters.search);
         }
-        if (this.searchFilters.startDate) {
-          queryParams.append('startDate', this.searchFilters.startDate);
+        if (this.searchFilters.deductionTypeId) {
+          queryParams.append('deductionId', this.searchFilters.deductionTypeId.toString());
         }
-        if (this.searchFilters.endDate) {
-          queryParams.append('endDate', this.searchFilters.endDate);
+        // Note: API uses 'deductionId' for filtering but 'deductionTypeId' in the body
+        if (this.searchFilters.frequencyId) {
+          queryParams.append('frequency_id', String(this.searchFilters.frequencyId));
+        }
+        if (this.searchFilters.accountId) {
+          queryParams.append('account_id', this.searchFilters.accountId);
         }
 
         // Add pagination parameters
         const currentPage = page ?? this.currentPage;
-        const itemsPerPage = perPage ?? 5;
+        const itemsPerPage = perPage ?? 10;
         queryParams.append('page', currentPage.toString());
         queryParams.append('per_page', itemsPerPage.toString());
 
@@ -101,48 +100,45 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
           headers['Authorization'] = `Bearer ${authStore.token}`;
         }
 
-        const response = await fetch(`${API_URL}/employee-leaves?${queryParams.toString()}`, {
+        const response = await fetch(`${API_URL}/employee-default-deductions?${queryParams.toString()}`, {
           headers,
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch employee leaves: ${response.statusText}`);
+          throw new Error(`Failed to fetch employee default deductions: ${response.statusText}`);
         }
 
         const data = await response.json();
-        
+
         // Handle paginated response
         if (data.data && Array.isArray(data.data)) {
-          this.employeeLeaves = data.data;
+          this.employeeDefaultDeductions = data.data;
           this.currentPage = data.current_page || 1;
           this.lastPage = data.last_page || 1;
           this.total = data.total || 0;
         } else if (Array.isArray(data)) {
           // Fallback for non-paginated response
-          this.employeeLeaves = data;
+          this.employeeDefaultDeductions = data;
         } else {
-          this.employeeLeaves = [];
+          this.employeeDefaultDeductions = [];
         }
       } catch (error) {
-        console.error('Error fetching employee leaves:', error);
-        this.error = error instanceof Error ? error.message : 'Error fetching employee leaves';
+        console.error('Error fetching employee default deductions:', error);
+        this.error = error instanceof Error ? error.message : 'Error fetching employee default deductions';
       } finally {
-        this.isLoadingEmployeeLeaves = false;
+        this.isLoadingEmployeeDefaultDeductions = false;
       }
     },
 
-    async createEmployeeLeave(
+    async createEmployeeDefaultDeduction(
       employeeId: string,
-      leaveTypeId: number,
-      startDate: string,
-      endDate: string,
-      fromTime?: string | null,
-      toTime?: string | null,
-      duration?: string,
-      totalDays?: number,
-      notes?: string | null,
-      multiplier?: number
-    ): Promise<EmployeeLeave | null> {
+      deductionTypeId: number,
+      paymentToId: string,
+      frequencyId: number,
+      accountId: string,
+      note: string | null,
+      amount: number
+    ): Promise<EmployeeDefaultDeduction | null> {
       this.isLoading = true;
       this.error = null;
 
@@ -156,33 +152,17 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
           headers['Authorization'] = `Bearer ${authStore.token}`;
         }
 
-        const body: CreateEmployeeLeaveBody = {
+        const body: CreateEmployeeDefaultDeductionBody = {
           employeeId,
-          leaveTypeId: leaveTypeId.toString(),
-          startDate,
-          endDate,
+          deductionTypeId,
+          paymentToId,
+          frequencyId,
+          accountId,
+          note,
+          amount,
         };
 
-        if (fromTime !== undefined) {
-          body.fromTime = fromTime;
-        }
-        if (toTime !== undefined) {
-          body.toTime = toTime;
-        }
-        if (duration !== undefined) {
-          body.duration = duration;
-        }
-        if (totalDays !== undefined) {
-          body.totalDays = totalDays;
-        }
-        if (notes !== undefined && notes !== null) {
-          body.notes = notes;
-        }
-        if (multiplier !== undefined) {
-          body.multiplier = multiplier;
-        }
-
-        const response = await fetch(`${API_URL}/employee-leaves`, {
+        const response = await fetch(`${API_URL}/employee-default-deductions`, {
           method: 'POST',
           headers,
           body: JSON.stringify(body),
@@ -191,7 +171,7 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
         if (!response.ok) {
           const errorData: ApiErrorData = await response.json().catch(() => ({}));
           // Extract error message from errors object if present
-          let errorMessage = errorData.error || `Failed to create employee leave: ${response.statusText}`;
+          let errorMessage = errorData.error || `Failed to create employee default deduction: ${response.statusText}`;
           if (errorData.errors) {
             // Get first error message from errors object
             const errorKeys = Object.keys(errorData.errors);
@@ -211,34 +191,31 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
         }
 
         const result = await response.json();
-        const newEmployeeLeave = result.data || result;
+        const newEmployeeDefaultDeduction = result.data || result;
 
-        // Add to employee leaves list
-        this.employeeLeaves = [...this.employeeLeaves, newEmployeeLeave];
+        // Add to employee default deductions list
+        this.employeeDefaultDeductions = [...this.employeeDefaultDeductions, newEmployeeDefaultDeduction];
 
-        return newEmployeeLeave;
+        return newEmployeeDefaultDeduction;
       } catch (error) {
-        console.error('Error creating employee leave:', error);
-        this.error = error instanceof Error ? error.message : 'Error creating employee leave';
+        console.error('Error creating employee default deduction:', error);
+        this.error = error instanceof Error ? error.message : 'Error creating employee default deduction';
         return null;
       } finally {
         this.isLoading = false;
       }
     },
 
-    async updateEmployeeLeave(
+    async updateEmployeeDefaultDeduction(
       id: string,
       employeeId?: string,
-      leaveTypeId?: number,
-      startDate?: string,
-      endDate?: string,
-      fromTime?: string | null,
-      toTime?: string | null,
-      duration?: string,
-      totalDays?: number,
-      notes?: string | null,
-      multiplier?: number
-    ): Promise<EmployeeLeave | null> {
+      deductionTypeId?: number,
+      paymentToId?: string,
+      frequencyId?: number,
+      accountId?: string,
+      note?: string | null,
+      amount?: number
+    ): Promise<EmployeeDefaultDeduction | null> {
       this.isLoading = true;
       this.error = null;
 
@@ -252,40 +229,31 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
           headers['Authorization'] = `Bearer ${authStore.token}`;
         }
 
-        const body: UpdateEmployeeLeaveBody = {};
+        const body: UpdateEmployeeDefaultDeductionBody = {};
 
         if (employeeId !== undefined) {
           body.employeeId = employeeId;
         }
-        if (leaveTypeId !== undefined) {
-          body.leaveTypeId = leaveTypeId.toString();
+        if (deductionTypeId !== undefined) {
+          body.deductionTypeId = deductionTypeId;
         }
-        if (startDate !== undefined) {
-          body.startDate = startDate;
+        if (paymentToId !== undefined) {
+          body.paymentToId = paymentToId;
         }
-        if (endDate !== undefined) {
-          body.endDate = endDate;
+        if (frequencyId !== undefined) {
+          body.frequencyId = frequencyId;
         }
-        if (fromTime !== undefined) {
-          body.fromTime = fromTime;
+        if (accountId !== undefined) {
+          body.accountId = accountId;
         }
-        if (toTime !== undefined) {
-          body.toTime = toTime;
+        if (note !== undefined) {
+          body.note = note;
         }
-        if (duration !== undefined) {
-          body.duration = duration;
-        }
-        if (totalDays !== undefined) {
-          body.totalDays = totalDays;
-        }
-        if (notes !== undefined) {
-          body.notes = notes;
-        }
-        if (multiplier !== undefined) {
-          body.multiplier = multiplier;
+        if (amount !== undefined) {
+          body.amount = amount;
         }
 
-        const response = await fetch(`${API_URL}/employee-leaves/${id}`, {
+        const response = await fetch(`${API_URL}/employee-default-deductions/${id}`, {
           method: 'PUT',
           headers,
           body: JSON.stringify(body),
@@ -294,7 +262,7 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
         if (!response.ok) {
           const errorData: ApiErrorData = await response.json().catch(() => ({}));
           // Extract error message from errors object if present
-          let errorMessage = errorData.error || `Failed to update employee leave: ${response.statusText}`;
+          let errorMessage = errorData.error || `Failed to update employee default deduction: ${response.statusText}`;
           if (errorData.errors) {
             // Get first error message from errors object
             const errorKeys = Object.keys(errorData.errors);
@@ -314,25 +282,25 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
         }
 
         const result = await response.json();
-        const updatedEmployeeLeave = result.data || result;
+        const updatedEmployeeDefaultDeduction = result.data || result;
 
-        // Update in employee leaves list
-        const index = this.employeeLeaves.findIndex((el) => el.id === id);
+        // Update in employee default deductions list
+        const index = this.employeeDefaultDeductions.findIndex((edd) => edd.id === id);
         if (index !== -1) {
-          this.employeeLeaves[index] = updatedEmployeeLeave;
+          this.employeeDefaultDeductions[index] = updatedEmployeeDefaultDeduction;
         }
 
-        return updatedEmployeeLeave;
+        return updatedEmployeeDefaultDeduction;
       } catch (error) {
-        console.error('Error updating employee leave:', error);
-        this.error = error instanceof Error ? error.message : 'Error updating employee leave';
+        console.error('Error updating employee default deduction:', error);
+        this.error = error instanceof Error ? error.message : 'Error updating employee default deduction';
         return null;
       } finally {
         this.isLoading = false;
       }
     },
 
-    async deleteEmployeeLeave(id: string): Promise<boolean> {
+    async deleteEmployeeDefaultDeduction(id: string): Promise<boolean> {
       this.isLoading = true;
       this.error = null;
 
@@ -346,23 +314,23 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
           headers['Authorization'] = `Bearer ${authStore.token}`;
         }
 
-        const response = await fetch(`${API_URL}/employee-leaves/${id}`, {
+        const response = await fetch(`${API_URL}/employee-default-deductions/${id}`, {
           method: 'DELETE',
           headers,
         });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to delete employee leave: ${response.statusText}`);
+          throw new Error(errorData.error || `Failed to delete employee default deduction: ${response.statusText}`);
         }
 
-        // Remove from employee leaves list
-        this.employeeLeaves = this.employeeLeaves.filter((el) => el.id !== id);
+        // Remove from employee default deductions list
+        this.employeeDefaultDeductions = this.employeeDefaultDeductions.filter((edd) => edd.id !== id);
 
         return true;
       } catch (error) {
-        console.error('Error deleting employee leave:', error);
-        this.error = error instanceof Error ? error.message : 'Error deleting employee leave';
+        console.error('Error deleting employee default deduction:', error);
+        this.error = error instanceof Error ? error.message : 'Error deleting employee default deduction';
         return false;
       } finally {
         this.isLoading = false;
@@ -372,6 +340,6 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
 });
 
 if (import.meta.hot) {
-  import.meta.hot.accept(acceptHMRUpdate(useEmployeeLeaveStore, import.meta.hot));
+  import.meta.hot.accept(acceptHMRUpdate(useEmployeeDefaultDeductionStore, import.meta.hot));
 }
 

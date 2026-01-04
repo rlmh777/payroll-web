@@ -26,6 +26,7 @@
             v-model="form.districtId"
             :rules="[(val: string | null | undefined) => !!val || 'District is required']"
             :disable="localityStore.isLoading"
+            :showAddNew="true"
           />
 
           <div class="row q-gutter-sm justify-end q-mt-lg">

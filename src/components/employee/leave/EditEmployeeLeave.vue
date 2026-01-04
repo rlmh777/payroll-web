@@ -115,11 +115,14 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useQuasar } from 'quasar';
 import { useEmployeeLeaveStore } from '../../../stores/employee-leave-store';
 import { useEmployeeStore } from '../../../stores/employee-store';
 import LeaveTypeSelect from '../common/LeaveTypeSelect.vue';
 import LeaveDurationSelect from '../common/LeaveDurationSelect.vue';
 import type { EmployeeLeave } from '../../models';
+
+const $q = useQuasar();
 
 interface Props {
   modelValue: boolean;
@@ -274,23 +277,46 @@ const onSubmit = async () => {
     return time;
   };
 
-  const updatedEmployeeLeave = await employeeLeaveStore.updateEmployeeLeave(
-    props.employeeLeave.id,
-    undefined, // employeeId - not updating
-    form.value.leaveTypeId || undefined,
-    form.value.startDate,
-    form.value.endDate,
-    formatTimeForAPI(form.value.fromTime),
-    formatTimeForAPI(form.value.toTime),
-    form.value.duration,
-    form.value.totalDays,
-    form.value.notes || null,
-    form.value.multiplier
-  );
+  try {
+    const updatedEmployeeLeave = await employeeLeaveStore.updateEmployeeLeave(
+      props.employeeLeave.id,
+      undefined, // employeeId - not updating
+      form.value.leaveTypeId || undefined,
+      form.value.startDate,
+      form.value.endDate,
+      formatTimeForAPI(form.value.fromTime),
+      formatTimeForAPI(form.value.toTime),
+      form.value.duration,
+      form.value.totalDays,
+      form.value.notes || null,
+      form.value.multiplier
+    );
 
-  if (updatedEmployeeLeave) {
-    emit('updated', updatedEmployeeLeave.id);
-    onClose();
+    if (updatedEmployeeLeave) {
+      $q.notify({
+        color: 'positive',
+        position: 'top',
+        icon: 'check_circle',
+        message: 'Employee leave updated successfully!',
+      });
+      emit('updated', updatedEmployeeLeave.id);
+      onClose();
+    } else if (employeeLeaveStore.error) {
+      $q.notify({
+        color: 'negative',
+        position: 'top',
+        icon: 'error',
+        message: employeeLeaveStore.error,
+      });
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update employee leave';
+    $q.notify({
+      color: 'negative',
+      position: 'top',
+      icon: 'error',
+      message: errorMessage,
+    });
   }
 };
 
