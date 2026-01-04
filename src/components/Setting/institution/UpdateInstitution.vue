@@ -2,7 +2,7 @@
   <q-dialog v-model="isOpen" position="right">
     <q-card class="q-drawer-card">
       <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">{{ 'Edit Country' }}</div>
+        <div class="text-h6">{{ 'Edit Institution' }}</div>
         <q-space />
         <q-btn icon="close" flat round dense @click="closeDialog" :disable="saving" />
       </q-card-section>
