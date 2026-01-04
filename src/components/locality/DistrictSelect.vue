@@ -45,10 +45,7 @@
         </q-item>
       </template>
     </q-select>
-    <AddDistrict
-      v-model="showAddDialog"
-      @saved="onDistrictSaved"
-    />
+    <AddDistrict v-model="showAddDialog" @saved="onDistrictSaved" />
   </div>
 </template>
 
@@ -77,7 +74,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | null];
-  'change': [value: string | null];
+  change: [value: string | null];
 }>();
 
 const districtStore = useDistrictStore();
@@ -114,7 +111,7 @@ const filterDistricts = (val: string, update: (callback: () => void) => void) =>
 
   // Debounce API calls - wait 300ms after user stops typing
   filterTimeout.value = setTimeout(() => {
-    void districtStore.fetchDistricts(val);
+    void districtStore.fetchDistricts({ search: val });
   }, 300);
 };
 
@@ -139,7 +136,7 @@ const openAddDistrictDialog = () => {
 
 const onDistrictSaved = async (districtId: string) => {
   // Refresh districts list
-  await districtStore.fetchDistricts(props?.employeeDistrict || '');
+  await districtStore.fetchDistricts({ search: props?.employeeDistrict || '' });
   // Set the newly created district as selected
   emit('update:modelValue', districtId);
   emit('change', districtId);
@@ -147,7 +144,7 @@ const onDistrictSaved = async (districtId: string) => {
 
 // Fetch districts on mount if not already loaded
 onMounted(async () => {
-  await districtStore.fetchDistricts(props?.employeeDistrict || '');
+  await districtStore.fetchDistricts({ countryId: props?.employeeDistrict || '' });
 });
 
 // Cleanup timeout on unmount
@@ -158,6 +155,4 @@ onUnmounted(() => {
 });
 </script>
 
-<style scoped>
-</style>
-
+<style scoped></style>

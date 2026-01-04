@@ -46,7 +46,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | null];
-  'change': [value: string | null];
+  change: [value: string | null];
 }>();
 
 const districtStore = useDistrictStore();
@@ -105,6 +105,4 @@ onUnmounted(() => {
 });
 </script>
 
-<style scoped>
-</style>
-
+<style scoped></style>

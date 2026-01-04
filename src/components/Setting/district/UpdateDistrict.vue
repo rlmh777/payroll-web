@@ -2,7 +2,7 @@
   <q-dialog v-model="isOpen" position="right">
     <q-card class="q-drawer-card">
       <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">{{ 'Edit Institution' }}</div>
+        <div class="text-h6">{{ 'Edit District' }}</div>
         <q-space />
         <q-btn icon="close" flat round dense @click="closeDialog" :disable="saving" />
       </q-card-section>
@@ -17,6 +17,13 @@
             :rules="[(val) => !!val || 'Name is required']"
             :disable="saving"
           />
+          <!-- show id not name of -->
+
+          <CountrySelect
+            v-model="editing.countryId!"
+            :rules="[(val: string | null | undefined) => !!val || 'Country is required']"
+            :disable="store.isLoading"
+          />
           <q-card-actions align="right" class="q-pt-md">
             <q-btn flat label="Cancel" color="grey" @click="closeDialog" :disable="saving" />
             <q-btn :loading="saving" color="primary" label="Save Changes" type="submit" />
@@ -30,18 +37,17 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { useInstitutionStore } from '../../../stores/institution-store';
-import type { Institution } from '../../../components/models';
-
-const store = useInstitutionStore();
+import { useDistrictStore, type District } from '../../../stores/district-store';
+import CountrySelect from '../../../components/district/CountrySelect.vue';
+const store = useDistrictStore();
 const $q = useQuasar();
 
 const saving = ref(false);
 
-// reactive editing object based on store.institutionToEdit
-const editing = ref<Partial<Institution>>({});
+// reactive editing object based on store.degreeToEdit
+const editing = ref<Partial<District>>({});
 watch(
-  () => store.institutionToEdit,
+  () => store.districtToEdit,
   (newVal) => {
     editing.value = newVal ? { ...newVal } : {};
   },
@@ -50,14 +56,14 @@ watch(
 
 // dialog opens when store.institution is set
 const isOpen = computed({
-  get: () => !!store.institutionToEdit,
+  get: () => !!store.districtToEdit,
   set: (val: boolean) => {
-    if (!val) store.setInstitutionToEdit(null); // closing dialog clears store
+    if (!val) store.setDistrictToEdit(null); // closing dialog clears store
   },
 });
 
 function closeDialog() {
-  store.setInstitutionToEdit(null);
+  store.setDistrictToEdit(null);
 }
 
 async function save() {
@@ -75,20 +81,20 @@ async function save() {
   try {
     if (editing.value.id) {
       const payload = editing.value;
-      await store.updateInstitution(editing.value.id, payload);
-      await store.fetchInstitutions(store.currentPage, store.total);
+      await store.updateDistrict(editing.value.id, payload.name!, payload.countryId!);
+      await store.fetchDistricts({ page: store.currentPage, perPage: store.total });
       $q.notify({
         color: 'positive',
         position: 'top',
         icon: 'check_circle',
-        message: 'Institution updated!',
+        message: 'District updated!',
       });
     } else {
       $q.notify({
         color: 'warning',
         position: 'top',
         icon: 'info',
-        message: 'Select a Institution to edit.',
+        message: 'Select a Degree to edit.',
       });
     }
   } finally {

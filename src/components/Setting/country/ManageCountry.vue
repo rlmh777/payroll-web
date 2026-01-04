@@ -20,7 +20,7 @@
         >
           <template v-slot:body-cell-actions="props">
             <q-td :props="props" class="text-right">
-              <div class="action-buttons">
+              <!-- <div class="action-buttons">
                 <q-btn
                   flat
                   round
@@ -33,7 +33,7 @@
                 >
                   <q-tooltip>Edit Country</q-tooltip>
                 </q-btn>
-              </div>
+              </div> -->
             </q-td>
           </template>
         </q-table>
@@ -45,9 +45,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { type QTableProps } from 'quasar';
-import { useCountryStore, type Country } from '../../../stores/country-store';
-import UpdateCountry from '../../setting/country/UpdateCountry.vue';
-import SearchCountry from '../../setting/country/SearchCountry.vue';
+import { useCountryStore } from '../../../stores/country-store';
+import UpdateCountry from './UpdateCountry.vue';
+import SearchCountry from './SearchCountry.vue';
 
 const store = useCountryStore();
 const dialogOpen = ref(false);
@@ -111,7 +111,7 @@ const onRequest = async (props: { pagination: { page: number; rowsPerPage: numbe
   pagination.value.rowsNumber = store.total;
 };
 
-const onEdit = (row: Country) => store.setCountryToEdit(row);
+// const onEdit = (row: Country) => store.setCountryToEdit(row);
 
 onMounted(async () => {
   await store.fetchCountries(1, pagination.value.rowsPerPage);

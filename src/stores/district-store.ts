@@ -25,15 +25,28 @@ export const useDistrictStore = defineStore('district', {
     isLoadingCountries: false,
     isLoadingDistricts: false,
     currentPage: 1,
+    search: '',
     lastPage: 1,
     total: 0,
     error: null as string | null,
+    isCreateOpen: false, // <- new
+    districtToEdit: null as District | null, // <- new
   }),
 
   getters: {},
 
   actions: {
-    async fetchDistricts(search?: string, countryId?: string) {
+    async fetchDistricts({
+      search,
+      countryId,
+      page,
+      perPage,
+    }: {
+      search?: string;
+      countryId?: string;
+      page?: number;
+      perPage?: number;
+    }) {
       if (this.isLoadingDistricts) return;
 
       this.isLoadingDistricts = true;
@@ -41,7 +54,16 @@ export const useDistrictStore = defineStore('district', {
 
       try {
         const authStore = useAuthStore();
-        const queryParams = new URLSearchParams();
+        // 1. Determine Pagination Parameters
+        const currentPage = page ?? this.currentPage;
+        // Default page size (e.g., 10) if not provided and state is missing
+        const itemsPerPage = perPage ?? 10;
+
+        const queryParams = new URLSearchParams({
+          page: String(currentPage),
+          per_page: String(itemsPerPage),
+        });
+
         if (search) {
           queryParams.append('search', search);
         }
@@ -67,6 +89,9 @@ export const useDistrictStore = defineStore('district', {
 
         const data = await response.json();
         this.districts = data.data || data;
+        this.currentPage = data.current_page ?? 1;
+        this.lastPage = data.last_page ?? 1;
+        this.total = data.total ?? 0;
       } catch (error) {
         console.error('Error fetching districts:', error);
         this.error = error instanceof Error ? error.message : 'Error fetching districts';
@@ -144,7 +169,7 @@ export const useDistrictStore = defineStore('district', {
 
         // Add to districts list
         this.districts = [...this.districts, newDistrict];
-
+        await this.fetchDistricts({});
         return newDistrict;
       } catch (error) {
         console.error('Error creating district:', error);
@@ -235,10 +260,18 @@ export const useDistrictStore = defineStore('district', {
         this.isLoading = false;
       }
     },
+    openCreateDailog() {
+      this.isCreateOpen = true;
+    },
+    closeCreateDailog() {
+      this.isCreateOpen = false;
+    },
+    setDistrictToEdit(district: District | null) {
+      this.districtToEdit = district ? { ...district } : null;
+    },
   },
 });
 
 if (import.meta.hot) {
   import.meta.hot.accept(acceptHMRUpdate(useDistrictStore, import.meta.hot));
 }
-
