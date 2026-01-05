@@ -18,6 +18,8 @@
             v-model="form.leaveTypeId"
             :rules="[(val: number | null | undefined) => !!val || 'Leave type is required']"
             :disable="employeeLeaveStore.isLoading"
+            :showAddNew="true"
+            :showEdit="true"
             @change="onLeaveTypeChange"
           />
 

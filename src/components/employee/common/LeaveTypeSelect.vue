@@ -32,12 +32,25 @@
             <q-icon name="add" color="primary" />
           </q-item-section>
           <q-item-section>
-            <q-item-label>Add New</q-item-label>
+            <q-item-label>Add New Leave Type</q-item-label>
           </q-item-section>
         </q-item>
         <q-item v-else v-bind="scope.itemProps">
           <q-item-section>
             <q-item-label>{{ scope.opt.name }}</q-item-label>
+          </q-item-section>
+          <q-item-section v-if="showEdit && !readonly" side>
+            <q-btn
+              flat
+              round
+              dense
+              icon="edit"
+              color="primary"
+              size="sm"
+              @click.stop="openEditLeaveTypeDialog(scope.opt as LeaveType)"
+            >
+              <q-tooltip>Edit Leave Type</q-tooltip>
+            </q-btn>
           </q-item-section>
         </q-item>
       </template>
@@ -46,6 +59,11 @@
       v-model="showAddDialog"
       @saved="onLeaveTypeSaved"
     />
+    <EditLeaveType
+      v-model="showEditDialog"
+      :leaveType="selectedLeaveType"
+      @updated="onLeaveTypeUpdated"
+    />
   </div>
 </template>
 
@@ -53,18 +71,23 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useEmployeeStore } from '../../../stores/employee-store';
 import AddLeaveType from '../../leave-type/AddLeaveType.vue';
+import EditLeaveType from '../../leave-type/EditLeaveType.vue';
 import type { LeaveType } from '../../models';
 
 interface Props {
   modelValue?: number | null;
   readonly?: boolean;
   employeeLeaveType?: number | null;
+  showAddNew?: boolean;
+  showEdit?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   readonly: false,
   employeeLeaveType: null as number | null,
+  showAddNew: false,
+  showEdit: false,
 });
 
 const emit = defineEmits<{
@@ -77,10 +100,12 @@ const employeeStore = useEmployeeStore();
 const filterTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
 const lastSearchTerm = ref<string>('');
 const showAddDialog = ref(false);
+const showEditDialog = ref(false);
+const selectedLeaveType = ref<LeaveType | null>(null);
 
 const leaveTypeOptions = computed((): (LeaveType | { id: string; name: string })[] => {
   const options = [...employeeStore.leaveTypes];
-  if (!props.readonly) {
+  if (props.showAddNew && !props.readonly) {
     options.unshift({ id: 'add-new', name: 'Add New Leave Type' });
   }
   return options;
@@ -146,6 +171,11 @@ const openAddLeaveTypeDialog = () => {
   showAddDialog.value = true;
 };
 
+const openEditLeaveTypeDialog = (leaveType: LeaveType) => {
+  selectedLeaveType.value = leaveType;
+  showEditDialog.value = true;
+};
+
 const onLeaveTypeSaved = async (leaveTypeId: string) => {
   // Refresh leave types list
   await employeeStore.fetchLeaveTypes('');
@@ -160,6 +190,11 @@ const onLeaveTypeSaved = async (leaveTypeId: string) => {
     emit('update:modelValue', id);
     emit('change', id);
   }
+};
+
+const onLeaveTypeUpdated = async () => {
+  // Refresh leave types after update
+  await employeeStore.fetchLeaveTypes('');
 };
 
 // Fetch leave types on mount if not already loaded
