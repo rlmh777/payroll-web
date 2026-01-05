@@ -76,27 +76,27 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/settings/general/country',
-        component: () => import('components/setting/country/ManageCountry.vue'),
+        component: () => import('components/settings/country/ManageCountry.vue'),
         props: { title: 'Setting Country' },
       },
       {
         path: '/settings/general/institution',
-        component: () => import('components/setting/institution/ManageInstitution.vue'),
+        component: () => import('components/settings/institution/ManageInstitution.vue'),
         props: { title: 'Setting Institution' },
       },
       {
         path: '/settings/general/degree',
-        component: () => import('components/setting/degree/ManageDegree.vue'),
+        component: () => import('components/settings/degree/ManageDegree.vue'),
         props: { title: 'Setting Degree' },
       },
       {
         path: '/settings/general/district',
-        component: () => import('components/setting/district/ManageDistrict.vue'),
+        component: () => import('components/settings/district/ManageDistrict.vue'),
         props: { title: 'Setting Degree' },
       },
       {
         path: '/settings/general/locality',
-        component: () => import('components/setting/locality/ManageLocality.vue'),
+        component: () => import('components/settings/locality/ManageLocality.vue'),
         props: { title: 'Setting Degree' },
       },
     ],

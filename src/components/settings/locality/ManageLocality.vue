@@ -53,7 +53,7 @@
       </q-card-section>
     </q-card>
     <!-- Update Locality Dialog -->
-    <UpdateLocality v-model="dialogOpen" />
+    <EditLocality v-model="dialogOpen" />
   </q-page>
 </template>
 <script setup lang="ts">
@@ -63,7 +63,7 @@ import { type QTableProps } from 'quasar';
 import { useLocalityStore } from '../../../stores/locality-store';
 import SearchLocality from './SearchLocality.vue';
 import type { Locality } from '../../../components/models';
-import UpdateLocality from './UpdateLocality.vue';
+import EditLocality from '../../../components/locality/EditLocality.vue';
 
 const store = useLocalityStore();
 const dialogOpen = ref(false);

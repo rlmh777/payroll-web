@@ -51,7 +51,11 @@
         </q-table>
       </q-card-section>
     </q-card>
-    <UpdateDistrict v-model="dialogOpen" />
+    <EditDistrict
+      v-model="showEditDialog"
+      :district="selectedDistrict"
+      @updated="onDistrictUpdated"
+    />
   </q-page>
 </template>
 <script setup lang="ts">
@@ -59,10 +63,11 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { type QTableProps } from 'quasar';
 import { useDistrictStore, type District } from '../../../stores/district-store';
 import SearchDistrict from './SearchDistrict.vue';
-import UpdateDistrict from './UpdateDistrict.vue';
+import EditDistrict from '../../district/EditDistrict.vue';
 
 const store = useDistrictStore();
-const dialogOpen = ref(false);
+const showEditDialog = ref(false);
+const selectedDistrict = ref<District | null>(null);
 
 const pagination = ref({
   page: 1,
@@ -86,13 +91,11 @@ const columns: QTableProps['columns'] = [
 
 const districts = computed(() => store.districts);
 
-//Watch store.cToEdit to open/close dialog automatically
-watch(
-  () => store.districtToEdit,
-  (newVal) => {
-    dialogOpen.value = !!newVal;
-  },
-);
+const onDistrictUpdated = async () => {
+  // Refresh the list after a district is updated
+  await store.fetchDistricts({ page: store.currentPage, perPage: pagination.value.rowsPerPage });
+  pagination.value.rowsNumber = store.total;
+};
 
 // Watch for search changes
 // watch(
@@ -121,7 +124,10 @@ const onRequest = async (props: { pagination: { page: number; rowsPerPage: numbe
   pagination.value.rowsNumber = store.total;
 };
 
-const onEdit = (row: District) => store.setDistrictToEdit(row);
+const onEdit = (row: District) => {
+  selectedDistrict.value = row;
+  showEditDialog.value = true;
+};
 
 // const onDelete = (row: District) => {
 //   $q.dialog({

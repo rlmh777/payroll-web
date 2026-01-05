@@ -2,7 +2,7 @@
   <q-dialog v-model="isOpen" position="right">
     <q-card class="q-drawer-card">
       <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">{{ 'Edit District' }}</div>
+        <div class="text-h6">{{ 'Edit Locality' }}</div>
         <q-space />
         <q-btn icon="close" flat round dense @click="closeDialog" :disable="saving" />
       </q-card-section>
@@ -17,11 +17,9 @@
             :rules="[(val) => !!val || 'Name is required']"
             :disable="saving"
           />
-          <!-- show id not name of -->
-
-          <CountrySelect
-            v-model="editing.countryId!"
-            :rules="[(val: string | null | undefined) => !!val || 'Country is required']"
+          <DistrictSelect
+            v-model="districtId"
+            :rules="[(val: string | undefined | null) => !!val || 'District is required']"
             :disable="store.isLoading"
           />
           <q-card-actions align="right" class="q-pt-md">
@@ -37,17 +35,27 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { useDistrictStore, type District } from '../../../stores/district-store';
-import CountrySelect from '../../../components/district/CountrySelect.vue';
-const store = useDistrictStore();
+import { useLocalityStore } from '../../stores/locality-store';
+import type { Locality } from '../models';
+import DistrictSelect from './DistrictSelect.vue';
+const store = useLocalityStore();
 const $q = useQuasar();
 
 const saving = ref(false);
 
-// reactive editing object based on store.degreeToEdit
-const editing = ref<Partial<District>>({});
+// reactive editing object based on store.LocalityToEdit
+const editing = ref<Partial<Locality>>({});
+
+const districtId = computed({
+  get: () => editing.value.district?.id || null,
+  set: (val: string | null) => {
+    if (editing.value.district) {
+      editing.value.district.id = val || '';
+    }
+  },
+});
 watch(
-  () => store.districtToEdit,
+  () => store.localityToEdit,
   (newVal) => {
     editing.value = newVal ? { ...newVal } : {};
   },
@@ -56,14 +64,14 @@ watch(
 
 // dialog opens when store.institution is set
 const isOpen = computed({
-  get: () => !!store.districtToEdit,
+  get: () => !!store.localityToEdit,
   set: (val: boolean) => {
-    if (!val) store.setDistrictToEdit(null); // closing dialog clears store
+    if (!val) store.setLocalityToEdit(null); // closing dialog clears store
   },
 });
 
 function closeDialog() {
-  store.setDistrictToEdit(null);
+  store.setLocalityToEdit(null);
 }
 
 async function save() {
@@ -81,20 +89,29 @@ async function save() {
   try {
     if (editing.value.id) {
       const payload = editing.value;
-      await store.updateDistrict(editing.value.id, payload.name!, payload.countryId!);
-      await store.fetchDistricts({ page: store.currentPage, perPage: store.total });
+
+      if (!payload?.district?.id) {
+        return $q.notify({
+          color: 'negative',
+          position: 'top',
+          icon: 'warning',
+          message: 'District is required.',
+        });
+      }
+      await store.updateLocality(editing.value.id, payload.name!, payload.district.id);
+      await store.fetchLocalities({ page: store.currentPage, perPage: store.total });
       $q.notify({
         color: 'positive',
         position: 'top',
         icon: 'check_circle',
-        message: 'District updated!',
+        message: 'Locality updated!',
       });
     } else {
       $q.notify({
         color: 'warning',
         position: 'top',
         icon: 'info',
-        message: 'Select a Degree to edit.',
+        message: 'Select a Locality to edit.',
       });
     }
   } finally {
