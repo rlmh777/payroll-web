@@ -40,11 +40,6 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', component: () => import('pages/SettingPage.vue'), props: { title: 'Settings' } },
       {
-        path: '/settings/organization',
-        component: () => import('pages/SettingPage.vue'),
-        props: { title: 'Setting Organization' },
-      },
-      {
         path: '/settings/calendars',
         component: () => import('pages/SettingPage.vue'),
         props: { title: 'Setting Calendars' },
@@ -98,6 +93,11 @@ const routes: RouteRecordRaw[] = [
         path: '/settings/general/locality',
         component: () => import('components/settings/locality/ManageLocality.vue'),
         props: { title: 'Setting Degree' },
+      },
+      {
+        path: '/settings/organization',
+        component: () => import('components/settings/organization/ManageOrganization.vue'),
+        props: { title: 'Setting Organizationss' },
       },
     ],
   },
