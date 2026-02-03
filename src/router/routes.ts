@@ -46,8 +46,7 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/settings/calendars',
-        component: () => import('pages/SettingPage.vue'),
-        props: { title: 'Setting Calendars' },
+        component: () => import('pages/CalendarSettingPage.vue'),
       },
       {
         path: '/settings/holidays',

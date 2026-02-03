@@ -15,6 +15,7 @@
     "postinstall": "quasar prepare"
   },
   "dependencies": {
+    "@quasar/quasar-ui-qcalendar": "^4.1.2",
     "axios": "^1.2.1",
     "vue-i18n": "^11.0.0",
     "pinia": "^3.0.1",
