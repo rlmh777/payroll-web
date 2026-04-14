@@ -8,3 +8,10 @@
 <script setup lang="ts">
 import ManageCalendar from 'src/components/settings/calendar/ManageCalendar.vue';
 </script>
+
+<style scoped>
+.calendar-setting-card {
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+</style>

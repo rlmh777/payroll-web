@@ -1,5 +1,5 @@
 <template>
-  <q-drawer v-model="drawerOpen" show-if-above bordered side="left">
+  <q-drawer v-if="hasSideMenu" v-model="drawerOpen" show-if-above bordered side="left">
     <q-scroll-area style="height: calc(100% - 56px)">
       <EmployeeLeftPane v-if="isEmployeeRoute" />
       <MenuList v-if="selectedChildren.length && !isEmployeeRoute" :items="selectedChildren" />
@@ -42,7 +42,7 @@ function onOpenMenu(e: Event) {
   const found = menuStore.menuTree?.find((m) => m.id === id) ?? null;
   if (found) {
     selectedMenu.value = found;
-    drawerOpen.value = true;
+    drawerOpen.value = Boolean(found.children && found.children.length);
   }
 }
 
@@ -61,6 +61,16 @@ watch(
 );
 const isEmployeeRoute = computed(() => route.path.startsWith('/employees'));
 const selectedChildren = computed(() => selectedMenu.value?.children || []);
+const hasSideMenu = computed(() => isEmployeeRoute.value || selectedChildren.value.length > 0);
+
+watch(
+  () => hasSideMenu.value,
+  (hasMenu) => {
+    if (!hasMenu) {
+      drawerOpen.value = false;
+    }
+  },
+);
 </script>
 
 <style scoped></style>

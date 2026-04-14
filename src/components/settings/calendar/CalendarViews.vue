@@ -22,10 +22,10 @@
                 :key="entry.id"
                 class="calendar-day-item calendar-day-item--mini"
               >
-                <span
-                  class="calendar-dot"
-                  :style="{ backgroundColor: typeColors[entry.type ?? 'other'] }"
-                ></span>
+                    <span
+                      class="calendar-dot"
+                      :style="{ backgroundColor: eventColor(entry) }"
+                    ></span>
               </div>
             </div>
           </template>
@@ -43,11 +43,8 @@
           <q-item-section>
             <q-item-label>{{ event.description }}</q-item-label>
             <q-item-label caption>
-              {{ typeLabels[event.type ?? 'other'] }} · Multiplier: {{ event.multiplier }}
+              {{ typeLabels[event.type ?? 'other'] }} · Rate: {{ event.rate }}
             </q-item-label>
-          </q-item-section>
-          <q-item-section side>
-            <q-btn flat dense icon="delete" color="negative" @click="removeEvent(event.id)" />
           </q-item-section>
         </q-item>
         <div v-if="!eventsForSelected.length" class="text-grey-6 q-pa-md">
@@ -73,10 +70,10 @@
             :key="entry.id"
             class="calendar-day-item"
           >
-            <span
-              class="calendar-dot"
-              :style="{ backgroundColor: typeColors[entry.type ?? 'other'] }"
-            ></span>
+              <span
+                class="calendar-dot"
+                :style="{ backgroundColor: eventColor(entry) }"
+              ></span>
             <span class="calendar-day-text">{{ entry.description }}</span>
           </div>
         </div>
@@ -116,8 +113,8 @@ defineProps({
     type: Object as PropType<Record<CalendarType, string>>,
     required: true,
   },
-  typeColors: {
-    type: Object as PropType<Record<CalendarType, string>>,
+  eventColor: {
+    type: Function as PropType<(event: CalendarEntry) => string>,
     required: true,
   },
   getSlotDate: {
@@ -138,10 +135,6 @@ defineProps({
   },
   typeChipColor: {
     type: Function as PropType<(type?: CalendarType) => string>,
-    required: true,
-  },
-  removeEvent: {
-    type: Function as PropType<(id: string) => void>,
     required: true,
   },
 });

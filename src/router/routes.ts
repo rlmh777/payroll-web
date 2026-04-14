@@ -49,6 +49,14 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/CalendarSettingPage.vue'),
       },
       {
+        path: '/settings/calendars/define-work-timesheet',
+        component: () => import('pages/DefineWorkTimesheetPage.vue'),
+      },
+      {
+        path: '/settings/calendars/work-shift-departments',
+        component: () => import('pages/WorkShiftDepartmentsPage.vue'),
+      },
+      {
         path: '/settings/holidays',
         component: () => import('pages/SettingPage.vue'),
         props: { title: 'Setting Holidays' },
@@ -98,7 +106,25 @@ const routes: RouteRecordRaw[] = [
         component: () => import('components/settings/locality/ManageLocality.vue'),
         props: { title: 'Setting Degree' },
       },
+      {
+        path: '/settings/general/calendar',
+        component: () => import('pages/CalendarGeneralPage.vue'),
+      },
+      {
+        path: '/settings/general/calendar/define-work-timesheet',
+        redirect: '/payroll/timesheets',
+      },
+      {
+        path: '/settings/general/calendar/work-shift-departments',
+        component: () => import('pages/WorkShiftDepartmentsPage.vue'),
+      },
     ],
+  },
+  {
+    path: '/calendars',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: () => import('pages/CalendarSettingPage.vue') }],
   },
   {
     path: '/dashboard',
@@ -134,7 +160,7 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/payroll/timesheets',
-        component: () => import('pages/PayrollPage.vue'),
+        component: () => import('pages/DefineWorkTimesheetPage.vue'),
         props: { title: 'Payroll Timesheets' },
       },
       {
@@ -170,6 +196,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [{ path: '', component: () => import('pages/ReportsPage.vue') }],
+  },
+  {
+    path: '/leaves',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: () => import('pages/LeaveApprovalPage.vue') }],
   },
   {
     path: '/:catchAll(.*)*',

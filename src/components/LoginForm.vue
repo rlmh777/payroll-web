@@ -1,12 +1,12 @@
 <template>
-  <q-form @submit="onSubmit" class="q-gutter-md" style="width: 100%;">
+  <q-form @submit="onSubmit" class="q-gutter-md" style="width: 100%">
     <q-input
       outlined
       rounded
       v-model="email"
       label="Email"
       type="email"
-      :rules="[val => !!val || 'Email is required', isValidEmail]"
+      :rules="[(val) => !!val || 'Email is required', isValidEmail]"
     >
       <template v-slot:prepend>
         <q-icon name="mail" />
@@ -19,7 +19,7 @@
       v-model="password"
       label="Password"
       :type="isPwd ? 'password' : 'text'"
-      :rules="[val => !!val || 'Password is required']"
+      :rules="[(val) => !!val || 'Password is required']"
     >
       <template v-slot:prepend>
         <q-icon name="lock" />
@@ -47,33 +47,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useAuthStore } from 'src/stores/auth'
-import { useRouter } from 'vue-router'
+import { ref } from 'vue';
+import { useAuthStore } from 'src/stores/auth';
+import { useRouter } from 'vue-router';
 
-const email = ref('johndoe@gmail.com')
-const password = ref('1234')
-const loading = ref(false)
-const isPwd = ref(true)
-const authStore = useAuthStore()
-const router = useRouter()
+const email = ref('supervisor@example.com');
+const password = ref('Password123!');
+const loading = ref(false);
+const isPwd = ref(true);
+const authStore = useAuthStore();
+const router = useRouter();
 
 const isValidEmail = (val: string) => {
-  const emailPattern = /^(?=[a-zA-Z0-9@._%+-]{6,254}$)[a-zA-Z0-9._%+-]{1,64}@(?:[a-zA-Z0-9-]{1,63}\.){1,8}[a-zA-Z]{2,63}$/
-  return emailPattern.test(val) || 'Invalid email format'
-}
+  const emailPattern =
+    /^(?=[a-zA-Z0-9@._%+-]{6,254}$)[a-zA-Z0-9._%+-]{1,64}@(?:[a-zA-Z0-9-]{1,63}\.){1,8}[a-zA-Z]{2,63}$/;
+  return emailPattern.test(val) || 'Invalid email format';
+};
 
 async function onSubmit() {
-  loading.value = true
+  loading.value = true;
   try {
-    const success = await authStore.login(email.value, password.value)
+    const success = await authStore.login(email.value, password.value);
     if (success) {
-      void router.push('/')
+      void router.push('/');
     }
   } catch (error) {
-    console.error('Navigation error:', error)
+    console.error('Navigation error:', error);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
-</script> 
+</script>

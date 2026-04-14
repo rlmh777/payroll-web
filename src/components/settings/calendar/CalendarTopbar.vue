@@ -13,6 +13,14 @@
 
     <div class="row items-center q-gutter-sm">
       <q-btn-toggle v-model="modeModel" unelevated toggle-color="primary" :options="viewOptions" />
+      <q-btn-toggle
+        v-if="showApprovalToggle"
+        v-model="approvalModeModel"
+        unelevated
+        toggle-color="primary"
+        :options="approvalOptions"
+        class="calendar-approval-toggle"
+      />
     </div>
   </div>
 </template>
@@ -24,10 +32,13 @@ const props = defineProps<{
   viewMode: 'day' | 'month' | 'year';
   viewOptions: Array<{ label: string; value: 'day' | 'month' | 'year' }>;
   headerLabel: string;
+  approvalMode: 'calendar' | 'approvals';
+  showApprovalToggle: boolean;
 }>();
 
 const emit = defineEmits<{
   (event: 'update:viewMode', value: 'day' | 'month' | 'year'): void;
+  (event: 'update:approvalMode', value: 'calendar' | 'approvals'): void;
   (event: 'prev'): void;
   (event: 'next'): void;
   (event: 'today'): void;
@@ -36,6 +47,16 @@ const emit = defineEmits<{
 const modeModel = computed({
   get: () => props.viewMode,
   set: (value: 'day' | 'month' | 'year') => emit('update:viewMode', value),
+});
+
+const approvalOptions = [
+  { label: '', value: 'calendar', icon: 'calendar_month' },
+  { label: '', value: 'approvals', icon: 'task_alt' },
+];
+
+const approvalModeModel = computed({
+  get: () => props.approvalMode,
+  set: (value: 'calendar' | 'approvals') => emit('update:approvalMode', value),
 });
 </script>
 
@@ -58,5 +79,9 @@ const modeModel = computed({
   font-weight: 600;
   min-width: 160px;
   text-align: center;
+}
+
+.calendar-approval-toggle :deep(.q-btn) {
+  min-width: 42px;
 }
 </style>
