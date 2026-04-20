@@ -13,6 +13,14 @@ export interface WorkTimesheet {
   is_active: boolean;
 }
 
+export interface WorkTimesheetPayload {
+  name: string;
+  start_time: string;
+  end_time: string;
+  break_minutes: number;
+  days: string[];
+}
+
 export const useWorkTimesheetStore = defineStore('workTimesheet', {
   state: () => ({
     workTimesheets: [] as WorkTimesheet[],
@@ -52,13 +60,7 @@ export const useWorkTimesheetStore = defineStore('workTimesheet', {
         this.isLoading = false;
       }
     },
-    async createWorkTimesheet(payload: {
-      name: string;
-      start_time: string;
-      end_time: string;
-      break_minutes: number;
-      days: string[];
-    }) {
+    async createWorkTimesheet(payload: WorkTimesheetPayload) {
       this.isLoading = true;
       this.error = null;
 
@@ -79,6 +81,38 @@ export const useWorkTimesheetStore = defineStore('workTimesheet', {
         return data as WorkTimesheet;
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Failed to save work timesheet';
+        return null;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    async updateWorkTimesheet(id: string, payload: WorkTimesheetPayload) {
+      this.isLoading = true;
+      this.error = null;
+
+      try {
+        const response = await fetch(`${API_URL}/work-timesheets/${id}`, {
+          method: 'PUT',
+          headers: this.buildHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.message || 'Failed to update work timesheet.');
+        }
+
+        const data = (await response.json()) as WorkTimesheet;
+        const index = this.workTimesheets.findIndex((timesheet) => timesheet.id === id);
+        if (index !== -1) {
+          this.workTimesheets[index] = data;
+        } else {
+          this.workTimesheets = [data, ...this.workTimesheets];
+        }
+
+        return data;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to update work timesheet';
         return null;
       } finally {
         this.isLoading = false;

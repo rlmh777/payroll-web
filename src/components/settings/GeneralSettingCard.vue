@@ -17,31 +17,58 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import type { MenuItem } from 'src/stores/menus'; // Ensure this path is correct
+import { computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useMenuStore, type MenuItem } from 'src/stores/menus';
 
 const router = useRouter();
-const submenuItems = ref<MenuItem[]>([]);
+const route = useRoute();
+const menuStore = useMenuStore();
 
-onMounted(() => {
-  const historyState = window.history.state as { submenu?: string };
-
-  if (historyState && historyState.submenu) {
-    try {
-      // Parse the JSON string back into the MenuItem array
-      submenuItems.value = JSON.parse(historyState.submenu) as MenuItem[];
-    } catch (e) {
-      console.error('Failed to parse submenu data from history state:', e);
-      submenuItems.value = [];
+function findMenuByRoute(items: MenuItem[], path: string): MenuItem | null {
+  for (const item of items) {
+    if (item.route === path) {
+      return item;
     }
+
+    if (item.children?.length) {
+      const match = findMenuByRoute(item.children, path);
+      if (match) {
+        return match;
+      }
+    }
+  }
+
+  return null;
+}
+
+const submenuItems = computed(() => {
+  const generalMenu = findMenuByRoute(menuStore.menuTree, route.path);
+
+  if (generalMenu?.children?.length) {
+    return generalMenu.children;
+  }
+
+  const historyState = window.history.state as { submenu?: string };
+  if (!historyState?.submenu) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(historyState.submenu) as MenuItem[];
+  } catch (error) {
+    console.error('Failed to parse submenu data from history state:', error);
+    return [];
+  }
+});
+
+onMounted(async () => {
+  if (!menuStore.menuTree.length) {
+    await menuStore.fetchMenus();
   }
 });
 
 function goTo(path?: string | null) {
-  // 2. **Fix: Handle potential 'null' path**
-  // The path can be `undefined` (which is handled by `?`) or `null`
-  // if `item.route` is defined as `string | null | undefined`.
   if (path)
     router.push(path).catch((err) => {
       console.error('Navigation error:', err);

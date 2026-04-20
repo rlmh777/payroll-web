@@ -49,12 +49,8 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/CalendarSettingPage.vue'),
       },
       {
-        path: '/settings/calendars/define-work-timesheet',
+        path: '/settings/general/working-hours-timesheet',
         component: () => import('pages/DefineWorkTimesheetPage.vue'),
-      },
-      {
-        path: '/settings/calendars/work-shift-departments',
-        component: () => import('pages/WorkShiftDepartmentsPage.vue'),
       },
       {
         path: '/settings/holidays',
@@ -107,16 +103,17 @@ const routes: RouteRecordRaw[] = [
         props: { title: 'Setting Degree' },
       },
       {
+        path: '/settings/general/department',
+        component: () => import('components/settings/department/ManageDepartment.vue'),
+        props: { title: 'Setting Department' },
+      },
+      {
         path: '/settings/general/calendar',
-        component: () => import('pages/CalendarGeneralPage.vue'),
+        redirect: '/settings/general/working-hours-timesheet',
       },
       {
         path: '/settings/general/calendar/define-work-timesheet',
-        redirect: '/payroll/timesheets',
-      },
-      {
-        path: '/settings/general/calendar/work-shift-departments',
-        component: () => import('pages/WorkShiftDepartmentsPage.vue'),
+        redirect: '/settings/general/working-hours-timesheet',
       },
     ],
   },
@@ -160,7 +157,7 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/payroll/timesheets',
-        component: () => import('pages/DefineWorkTimesheetPage.vue'),
+        component: () => import('pages/PayrollPage.vue'),
         props: { title: 'Payroll Timesheets' },
       },
       {

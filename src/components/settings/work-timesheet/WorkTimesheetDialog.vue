@@ -2,7 +2,7 @@
   <q-dialog v-model="dialogModel" position="right" :maximized="false">
     <q-card class="calendar-dialog">
       <q-card-section class="row items-center justify-between dialog-header">
-        <div class="text-h5">Add Work Timesheet</div>
+        <div class="text-h5">{{ title }}</div>
         <q-btn flat round icon="close" class="dialog-close" @click="closeDialog" />
       </q-card-section>
       <q-separator />
@@ -34,12 +34,23 @@
             </q-input>
           </div>
           <div class="col-12">
-            <q-input v-model.number="form.breakMinutes" type="number" label="Break (minutes)" stack-label />
+            <q-input
+              v-model.number="form.breakMinutes"
+              type="number"
+              label="Break (minutes)"
+              stack-label
+            />
           </div>
           <div class="col-12">
             <div class="text-caption text-grey-6 q-mb-xs">Applies to days</div>
             <div class="row q-gutter-sm">
-              <q-checkbox v-for="day in days" :key="day" v-model="form.days" :val="day" :label="day" />
+              <q-checkbox
+                v-for="day in days"
+                :key="day"
+                v-model="form.days"
+                :val="day"
+                :label="day"
+              />
             </div>
           </div>
         </div>
@@ -63,10 +74,18 @@ type WorkTimesheetForm = {
   days: string[];
 };
 
-const props = defineProps<{
-  modelValue: boolean;
-  days: string[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    modelValue: boolean;
+    days: string[];
+    initialValue?: WorkTimesheetForm | null;
+    title?: string;
+  }>(),
+  {
+    initialValue: null,
+    title: 'Add a Working Hours Timesheet',
+  },
+);
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: boolean): void;
@@ -85,6 +104,18 @@ const form = ref<WorkTimesheetForm>({
   breakMinutes: 0,
   days: [],
 });
+
+function applyInitialValue() {
+  form.value = props.initialValue
+    ? { ...props.initialValue, days: [...props.initialValue.days] }
+    : {
+        name: '',
+        startTime: '',
+        endTime: '',
+        breakMinutes: 0,
+        days: [],
+      };
+}
 
 function resetForm() {
   form.value = {
@@ -108,8 +139,19 @@ function submitForm() {
 watch(
   () => props.modelValue,
   (isOpen) => {
-    if (!isOpen) {
+    if (isOpen) {
+      applyInitialValue();
+    } else {
       resetForm();
+    }
+  },
+);
+
+watch(
+  () => props.initialValue,
+  () => {
+    if (props.modelValue) {
+      applyInitialValue();
     }
   },
 );
