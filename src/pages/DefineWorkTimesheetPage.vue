@@ -43,7 +43,6 @@ type WorkTimesheetForm = {
   name: string;
   startTime: string;
   endTime: string;
-  breakMinutes: number;
   days: string[];
 };
 
@@ -52,7 +51,6 @@ type WorkTimesheetRow = {
   name: string;
   start: string;
   end: string;
-  breakMinutes: number;
   days: string[];
 };
 
@@ -80,7 +78,6 @@ const rows = computed(() =>
     name: item.name,
     start: item.start_time,
     end: item.end_time,
-    breakMinutes: item.break_minutes,
     days: Array.isArray(item.days) ? item.days : [],
   })),
 );
@@ -101,7 +98,6 @@ function openEditDialog(row: WorkTimesheetRow) {
     name: row.name,
     startTime: normalizeTime(row.start),
     endTime: normalizeTime(row.end),
-    breakMinutes: row.breakMinutes,
     days: [...row.days],
   };
   showDialog.value = true;
@@ -117,7 +113,6 @@ async function saveTimesheet(formData: WorkTimesheetForm) {
     name: formData.name.trim(),
     start_time: normalizeTime(formData.startTime),
     end_time: normalizeTime(formData.endTime),
-    break_minutes: formData.breakMinutes,
     days: formData.days,
   };
   const result = editingTimesheetId.value

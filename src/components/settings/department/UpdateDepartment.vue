@@ -1,10 +1,10 @@
 <template>
   <q-dialog v-model="isOpen" position="right" :maximized="false">
-    <q-card class="department-dialog">
-      <q-card-section class="row items-center no-wrap dialog-header">
-        <div class="dialog-title">Edit Department</div>
+    <q-card class="department-dialog-card">
+      <q-card-section class="row items-center q-pb-none">
+        <div class="text-h6">Edit Department</div>
         <q-space />
-        <q-btn flat round icon="close" size="lg" class="dialog-close" :disable="store.isSaving" @click="closeDialog" />
+        <q-btn flat round dense icon="close" :disable="store.isSaving" @click="closeDialog" />
       </q-card-section>
 
       <DepartmentForm
@@ -90,40 +90,15 @@ watch(
 </script>
 
 <style scoped>
-.department-dialog {
-  width: min(62vw, 860px);
+.department-dialog-card {
+  width: 30vw;
   height: 100vh;
   max-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.department-dialog :deep(.q-card__section) {
+.department-dialog-card :deep(.q-card__section) {
   overflow-y: auto;
-}
-
-.dialog-header {
-  flex: 0 0 auto;
-  min-height: 112px;
-  padding: 34px 32px 22px;
-  overflow: visible;
-}
-
-.dialog-title {
-  color: #000;
-  font-size: 40px;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  line-height: 1.2;
-}
-
-.dialog-close {
-  color: #000;
-}
-
-@media (max-width: 1023px) {
-  .department-dialog {
-    width: 90vw;
-  }
 }
 </style>

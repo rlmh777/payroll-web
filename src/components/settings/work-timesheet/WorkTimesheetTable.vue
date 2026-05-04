@@ -32,7 +32,6 @@ type WorkTimesheetRow = {
   name: string;
   start: string;
   end: string;
-  breakMinutes: number;
   days: string[];
 };
 

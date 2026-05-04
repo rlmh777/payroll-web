@@ -1,47 +1,37 @@
 <template>
   <q-dialog v-model="dialogModel" position="right" :maximized="false">
-    <q-card class="calendar-dialog">
-      <q-card-section class="row items-center justify-between dialog-header">
-        <div class="text-h5">{{ title }}</div>
-        <q-btn flat round icon="close" class="dialog-close" @click="closeDialog" />
+    <q-card class="work-timesheet-dialog-card">
+      <q-card-section class="row items-center q-pb-none">
+        <div class="text-h6">{{ title }}</div>
+        <q-space />
+        <q-btn flat round dense icon="close" @click="closeDialog" />
       </q-card-section>
-      <q-separator />
-      <q-card-section class="dialog-body">
-        <div class="row q-col-gutter-sm">
-          <div class="col-12">
-            <q-input v-model="form.name" label="Timesheet name" stack-label />
-          </div>
-          <div class="col-12">
-            <q-input v-model="form.startTime" label="Start time" stack-label mask="##:##">
-              <template #append>
-                <q-icon name="access_time" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-time v-model="form.startTime" format24h />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-          <div class="col-12">
-            <q-input v-model="form.endTime" label="End time" stack-label mask="##:##">
-              <template #append>
-                <q-icon name="access_time" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-time v-model="form.endTime" format24h />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-          <div class="col-12">
-            <q-input
-              v-model.number="form.breakMinutes"
-              type="number"
-              label="Break (minutes)"
-              stack-label
-            />
-          </div>
-          <div class="col-12">
+
+      <q-card-section>
+        <q-form class="q-gutter-md" @submit.prevent="submitForm">
+          <q-input v-model="form.name" label="Timesheet name" outlined />
+
+          <q-input v-model="form.startTime" label="Start time" mask="##:##">
+            <template #append>
+              <q-icon name="access_time" class="cursor-pointer">
+                <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-time v-model="form.startTime" format24h />
+                </q-popup-proxy>
+              </q-icon>
+            </template>
+          </q-input>
+
+          <q-input v-model="form.endTime" label="End time" mask="##:##">
+            <template #append>
+              <q-icon name="access_time" class="cursor-pointer">
+                <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-time v-model="form.endTime" format24h />
+                </q-popup-proxy>
+              </q-icon>
+            </template>
+          </q-input>
+
+          <div>
             <div class="text-caption text-grey-6 q-mb-xs">Applies to days</div>
             <div class="row q-gutter-sm">
               <q-checkbox
@@ -53,12 +43,13 @@
               />
             </div>
           </div>
-        </div>
+
+          <div class="row q-gutter-sm justify-end q-mt-lg">
+            <q-btn flat label="Cancel" color="grey" @click="closeDialog" />
+            <q-btn type="submit" color="primary" label="Save" />
+          </div>
+        </q-form>
       </q-card-section>
-      <q-card-actions align="right" class="calendar-dialog-actions">
-        <q-btn flat label="Cancel" class="text-grey-7" @click="closeDialog" />
-        <q-btn color="primary" label="Save" @click="submitForm" />
-      </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
@@ -70,7 +61,6 @@ type WorkTimesheetForm = {
   name: string;
   startTime: string;
   endTime: string;
-  breakMinutes: number;
   days: string[];
 };
 
@@ -101,7 +91,6 @@ const form = ref<WorkTimesheetForm>({
   name: '',
   startTime: '',
   endTime: '',
-  breakMinutes: 0,
   days: [],
 });
 
@@ -112,7 +101,6 @@ function applyInitialValue() {
         name: '',
         startTime: '',
         endTime: '',
-        breakMinutes: 0,
         days: [],
       };
 }
@@ -122,7 +110,6 @@ function resetForm() {
     name: '',
     startTime: '',
     endTime: '',
-    breakMinutes: 0,
     days: [],
   };
 }
@@ -158,7 +145,7 @@ watch(
 </script>
 
 <style scoped>
-.calendar-dialog {
+.work-timesheet-dialog-card {
   width: 30vw;
   height: 100vh;
   max-height: 100vh;
@@ -166,23 +153,7 @@ watch(
   flex-direction: column;
 }
 
-.calendar-dialog :deep(.q-card__section) {
+.work-timesheet-dialog-card :deep(.q-card__section) {
   overflow-y: auto;
-}
-
-.calendar-dialog-actions {
-  padding: 0 24px 24px;
-}
-
-.dialog-header {
-  padding: 18px 24px;
-}
-
-.dialog-body {
-  padding: 20px 24px;
-}
-
-.dialog-close {
-  background: #efefef;
 }
 </style>
