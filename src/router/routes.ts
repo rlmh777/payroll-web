@@ -157,8 +157,18 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/payroll/timesheets',
-        component: () => import('pages/PayrollPage.vue'),
-        props: { title: 'Payroll Timesheets' },
+        component: () => import('pages/AttendanceTimesheetPage.vue'),
+        props: { initialTab: 'timesheets' },
+      },
+      {
+        path: '/payroll/clocking-logs',
+        component: () => import('pages/AttendanceTimesheetPage.vue'),
+        props: { initialTab: 'logs' },
+      },
+      {
+        path: '/payroll/clocking-import',
+        component: () => import('pages/AttendanceTimesheetPage.vue'),
+        props: { initialTab: 'import' },
       },
       {
         path: '/payroll/pay-employees',
