@@ -34,7 +34,7 @@
                 >
                   <q-tooltip>Edit Locality</q-tooltip>
                 </q-btn>
-                <q-btn
+                <!-- <q-btn
                   flat
                   round
                   dense
@@ -45,7 +45,7 @@
                   @click="onDelete(props.row)"
                 >
                   <q-tooltip>Delete Locality</q-tooltip>
-                </q-btn>
+                </q-btn> -->
               </div>
             </q-td>
           </template>
@@ -58,7 +58,6 @@
 </template>
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useQuasar } from 'quasar';
 import { type QTableProps } from 'quasar';
 import { useLocalityStore } from '../../../stores/locality-store';
 import SearchLocality from './SearchLocality.vue';
@@ -67,7 +66,6 @@ import EditLocality from '../../../components/locality/EditLocality.vue';
 
 const store = useLocalityStore();
 const dialogOpen = ref(false);
-const $q = useQuasar();
 
 const pagination = ref({
   page: 1,
@@ -135,41 +133,41 @@ const onRequest = async (props: { pagination: { page: number; rowsPerPage: numbe
 
 const onEdit = (row: Locality) => store.setLocalityToEdit(row);
 
-const onDelete = (row: Locality) => {
-  $q.dialog({
-    title: 'Confirm Delete',
-    message: `Are you sure you want to delete "${row.name}"?`,
-    cancel: true,
-    persistent: true,
-    ok: {
-      label: 'Delete',
-      color: 'negative',
-    },
-  })
-    .onOk(() => {
-      void (async () => {
-        try {
-          await store.deleteLocality(row.id);
+// const onDelete = (row: Locality) => {
+//   $q.dialog({
+//     title: 'Confirm Delete',
+//     message: `Are you sure you want to delete "${row.name}"?`,
+//     cancel: true,
+//     persistent: true,
+//     ok: {
+//       label: 'Delete',
+//       color: 'negative',
+//     },
+//   })
+//     .onOk(() => {
+//       void (async () => {
+//         try {
+//           await store.deleteLocality(row.id);
 
-          $q.notify({
-            color: 'positive',
-            position: 'top',
-            icon: 'warning',
-            message: 'Locality deleted successfully.',
-          });
-        } catch (error) {
-          console.error(error);
-          $q.notify({
-            color: 'negative',
-            position: 'top',
-            icon: 'error',
-            message: 'Failed to delete Locality.',
-          });
-        }
-      })();
-    })
-    .onCancel(() => {});
-};
+//           $q.notify({
+//             color: 'positive',
+//             position: 'top',
+//             icon: 'warning',
+//             message: 'Locality deleted successfully.',
+//           });
+//         } catch (error) {
+//           console.error(error);
+//           $q.notify({
+//             color: 'negative',
+//             position: 'top',
+//             icon: 'error',
+//             message: 'Failed to delete Locality.',
+//           });
+//         }
+//       })();
+//     })
+//     .onCancel(() => {});
+// };
 
 onMounted(async () => {
   await store.fetchLocalities({ page: 1, perPage: pagination.value.rowsPerPage });
