@@ -40,11 +40,6 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', component: () => import('pages/SettingPage.vue'), props: { title: 'Settings' } },
       {
-        path: '/settings/organization',
-        component: () => import('pages/SettingPage.vue'),
-        props: { title: 'Setting Organization' },
-      },
-      {
         path: '/settings/calendars',
         component: () => import('pages/CalendarSettingPage.vue'),
       },
@@ -114,6 +109,9 @@ const routes: RouteRecordRaw[] = [
       {
         path: '/settings/general/calendar/define-work-timesheet',
         redirect: '/settings/general/working-hours-timesheet',
+        path: '/settings/organization',
+        component: () => import('components/settings/organization/ManageOrganization.vue'),
+        props: { title: 'Setting Organizationss' },
       },
     ],
   },
