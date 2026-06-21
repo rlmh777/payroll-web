@@ -21,18 +21,30 @@
             :showAddNew="true"
           />
 
-          <VendorSelect
-            v-model="form.paymentToId"
-            :rules="[(val: string | null | undefined) => !!val || 'Vendor/Creditor is required']"
+          <BankSelect
+            v-model="form.bankId"
+            :rules="[(val: string | null | undefined) => !!val || 'Bank is required']"
             :disable="employeeDefaultDeductionStore.isLoading"
             :showAddNew="true"
             :showEdit="true"
+          />
+
+          <q-input
+            v-model="form.accountNumber"
+            label="Account Number *"
+            outlined
+            maxlength="255"
+            counter
+            :rules="[(val: string | null | undefined) => !!val || 'Account number is required']"
+            :disable="employeeDefaultDeductionStore.isLoading"
           />
 
           <PayRateFrequencySelect
             v-model="form.frequencyId"
             :rules="[(val: number | null | undefined) => !!val || 'Frequency is required']"
             :disable="employeeDefaultDeductionStore.isLoading"
+            :showAddNew="true"
+            :showEdit="true"
           />
 
           <AccountSelect
@@ -68,6 +80,32 @@
             :disable="employeeDefaultDeductionStore.isLoading"
           />
 
+          <q-toggle
+            v-model="form.allowPartialDeduction"
+            label="Allow Partial Deduction"
+            :disable="employeeDefaultDeductionStore.isLoading"
+          />
+
+          <q-input
+            v-model="form.applicationRule"
+            label="Application Rule"
+            outlined
+            maxlength="255"
+            counter
+            :disable="employeeDefaultDeductionStore.isLoading"
+          />
+
+          <q-input
+            v-model.number="form.priority"
+            label="Priority"
+            type="number"
+            min="0"
+            step="1"
+            outlined
+            :rules="[val => val !== null && val !== undefined && val >= 0 || 'Priority must be 0 or greater']"
+            :disable="employeeDefaultDeductionStore.isLoading"
+          />
+
           <div class="row q-gutter-sm justify-end q-mt-lg">
             <q-btn
               flat
@@ -96,7 +134,7 @@ import { useEmployeeDefaultDeductionStore } from '../../../stores/employee-defau
 import { useEmployeeStore } from '../../../stores/employee-store';
 import { useDeductionTypeStore } from '../../../stores/deduction-type-store';
 import DeductionTypeSelect from '../../deduction-type/DeductionTypeSelect.vue';
-import VendorSelect from '../common/VendorSelect.vue';
+import BankSelect from '../../bank/BankSelect.vue';
 import PayRateFrequencySelect from '../common/PayRateFrequencySelect.vue';
 import AccountSelect from '../common/AccountSelect.vue';
 
@@ -124,16 +162,21 @@ const isOpen = computed({
 
 const form = ref({
   deductionTypeId: null as number | null,
-  paymentToId: null as string | null,
+  bankId: null as string | null,
+  accountNumber: null as string | null,
   frequencyId: null as number | null,
   accountId: null as string | null,
   amount: null as number | null,
   note: null as string | null,
+  allowPartialDeduction: false,
+  applicationRule: null as string | null,
+  priority: 0,
 });
 
 const onSubmit = async () => {
-  if (!form.value.deductionTypeId || !form.value.paymentToId || !form.value.frequencyId || 
-      !form.value.accountId || form.value.amount === null || form.value.amount === undefined) {
+  if (!form.value.deductionTypeId || !form.value.bankId || !form.value.accountNumber ||
+      !form.value.frequencyId || !form.value.accountId ||
+      form.value.amount === null || form.value.amount === undefined) {
     return;
   }
 
@@ -150,7 +193,8 @@ const onSubmit = async () => {
   try {
     // Extract values after validation - TypeScript knows they're non-null
     const deductionTypeId = form.value.deductionTypeId;
-    const paymentToId = form.value.paymentToId;
+    const bankId = form.value.bankId;
+    const accountNumber = form.value.accountNumber;
     const frequencyId = form.value.frequencyId;
     const accountId = form.value.accountId;
     const amount = form.value.amount;
@@ -158,11 +202,17 @@ const onSubmit = async () => {
     const newEmployeeDefaultDeduction = await employeeDefaultDeductionStore.createEmployeeDefaultDeduction(
       employeeStore.selectedEmployee.id,
       deductionTypeId,
-      paymentToId,
+      bankId,
+      accountNumber,
       frequencyId,
       accountId,
       form.value.note,
-      amount
+      amount,
+      {
+        allowPartialDeduction: form.value.allowPartialDeduction,
+        applicationRule: form.value.applicationRule,
+        priority: form.value.priority,
+      }
     );
 
     if (newEmployeeDefaultDeduction) {
@@ -196,11 +246,15 @@ const onSubmit = async () => {
 const onClose = () => {
   form.value = {
     deductionTypeId: null,
-    paymentToId: null,
+    bankId: null,
+    accountNumber: null,
     frequencyId: null,
     accountId: null,
     amount: null,
     note: null,
+    allowPartialDeduction: false,
+    applicationRule: null,
+    priority: 0,
   };
   isOpen.value = false;
 };
@@ -221,11 +275,15 @@ watch(isOpen, async (newValue) => {
     // Reset form to ensure clean state
     form.value = {
       deductionTypeId: null,
-      paymentToId: null,
+      bankId: null,
+      accountNumber: null,
       frequencyId: null,
       accountId: null,
       amount: null,
       note: null,
+      allowPartialDeduction: false,
+      applicationRule: null,
+      priority: 0,
     };
     // Fetch required data if not already loaded
     if (deductionTypeStore.deductionTypes.length === 0) {
@@ -233,9 +291,6 @@ watch(isOpen, async (newValue) => {
     }
     if (employeeStore.accounts.length === 0) {
       await employeeStore.fetchAccounts();
-    }
-    if (employeeStore.payrateFrequencies.length === 0) {
-      await employeeStore.fetchPayrateFrequencies();
     }
   }
 });

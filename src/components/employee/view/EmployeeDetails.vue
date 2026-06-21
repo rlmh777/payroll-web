@@ -8,6 +8,7 @@
       <q-tab name="leaves" icon="alarm" label="Leaves" />
       <q-tab name="allowances" icon="movie" label="Default Allowances" />
       <q-tab name="deductions" icon="movie" label="Default Deductions" />
+      <q-tab name="historical-deductions" icon="history" label="Historical Deductions" />
       <!-- <q-tab name="qualifications" icon="mail" label="Qualifications" /> -->
       <q-tab name="contracts" icon="movie" label="Contracts" />
     </q-tabs>
@@ -31,6 +32,10 @@
         <manage-employee-default-deductions />
       </q-tab-panel>
 
+      <q-tab-panel name="historical-deductions">
+        <manage-historical-employee-deductions />
+      </q-tab-panel>
+
       <q-tab-panel name="contracts">
         <div class="text-h6">Movies</div>
         Lorem ipsum dolor sit amet consectetur adipisicing elit.
@@ -44,6 +49,7 @@ import { ref } from 'vue'
 import EmployeeLeaveList from '../leave/EmployeeLeaveList.vue';
 import ManageEmployeeDefaultAllowances from '../default-allowance/ManageEmployeeDefaultAllowances.vue';
 import ManageEmployeeDefaultDeductions from '../default-deduction/ManageEmployeeDefaultDeductions.vue';
+import ManageHistoricalEmployeeDeductions from '../historical-deduction/ManageHistoricalEmployeeDeductions.vue';
 
 const tab = ref('mails');
 </script>

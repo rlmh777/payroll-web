@@ -1,7 +1,5 @@
 <template>
   <div>
-    <search-accounts />
-    
     <q-table
       class="my-sticky-dynamic q-mt-sm"
       flat
@@ -98,7 +96,6 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useAccountStore } from '../../stores/account-store';
-import SearchAccounts from './SearchAccounts.vue';
 import EditAccount from './EditAccount.vue';
 import type { Account } from '../models';
 

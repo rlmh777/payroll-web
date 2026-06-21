@@ -3,6 +3,21 @@ export interface Todo {
   content: string;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  email_verified_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  employee?: {
+    id: string;
+    code: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+}
+
 export interface Meta {
   totalCount: number;
 }
@@ -60,7 +75,7 @@ export interface Country {
 }
 
 export interface PayrateFrequency {
-  id: string;
+  id: number;
   name?: string;
 }
 
@@ -233,15 +248,37 @@ export interface EmployeeDefaultDeduction {
   id: string;
   employeeId: string;
   deductionTypeId: number;
-  paymentToId: string;
+  bankId: string;
+  accountNumber: string;
   frequencyId: number;
   accountId: string;
   note?: string | null;
   amount: number;
+  allowPartialDeduction: boolean;
+  applicationRule?: string | null;
+  priority: number;
   employee?: Employee | null;
   deduction?: DeductionType | null;
   deductionType?: DeductionType | null;
   payrate_frequency?: PayrateFrequency | null;
   chart_of_account?: Account | null;
+  bank?: Bank | null;
+}
+
+export interface HistoricalEmployeeDeduction {
+  id: string;
+  employeeId: string;
+  paymentToId: string;
+  amount: number;
+  note: string;
+  payroll_run_id: string;
+  accountId: string;
+  deductionTypeId: number;
+  carryForwardShortfall: number;
+  priority: number;
+  employee?: Employee | null;
   vendor?: Vendor | null;
+  payroll_run?: { id: string } | null;
+  chart_of_account?: Account | null;
+  deductionType?: DeductionType | null;
 }
