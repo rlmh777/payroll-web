@@ -15,24 +15,38 @@ interface ErrorWithData extends Error {
   errorData?: ApiErrorData;
 }
 
+export interface EmployeeDefaultDeductionFields {
+  allowPartialDeduction?: boolean;
+  applicationRule?: string | null;
+  priority?: number;
+}
+
 interface CreateEmployeeDefaultDeductionBody {
   employeeId: string;
   deductionTypeId: number;
-  paymentToId: string;
+  bankId: string;
+  accountNumber: string;
   frequencyId: number;
   accountId: string;
   note?: string | null;
   amount: number;
+  allowPartialDeduction?: boolean;
+  applicationRule?: string | null;
+  priority?: number;
 }
 
 interface UpdateEmployeeDefaultDeductionBody {
   employeeId?: string;
   deductionTypeId?: number;
-  paymentToId?: string;
+  bankId?: string;
+  accountNumber?: string;
   frequencyId?: number;
   accountId?: string;
   note?: string | null;
   amount?: number;
+  allowPartialDeduction?: boolean;
+  applicationRule?: string | null;
+  priority?: number;
 }
 
 export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDeduction', {
@@ -133,11 +147,13 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
     async createEmployeeDefaultDeduction(
       employeeId: string,
       deductionTypeId: number,
-      paymentToId: string,
+      bankId: string,
+      accountNumber: string,
       frequencyId: number,
       accountId: string,
       note: string | null,
-      amount: number
+      amount: number,
+      fields?: EmployeeDefaultDeductionFields
     ): Promise<EmployeeDefaultDeduction | null> {
       this.isLoading = true;
       this.error = null;
@@ -155,11 +171,15 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
         const body: CreateEmployeeDefaultDeductionBody = {
           employeeId,
           deductionTypeId,
-          paymentToId,
+          bankId,
+          accountNumber,
           frequencyId,
           accountId,
           note,
           amount,
+          allowPartialDeduction: fields?.allowPartialDeduction ?? false,
+          applicationRule: fields?.applicationRule ?? null,
+          priority: fields?.priority ?? 0,
         };
 
         const response = await fetch(`${API_URL}/employee-default-deductions`, {
@@ -210,11 +230,13 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
       id: string,
       employeeId?: string,
       deductionTypeId?: number,
-      paymentToId?: string,
+      bankId?: string,
+      accountNumber?: string,
       frequencyId?: number,
       accountId?: string,
       note?: string | null,
-      amount?: number
+      amount?: number,
+      fields?: EmployeeDefaultDeductionFields
     ): Promise<EmployeeDefaultDeduction | null> {
       this.isLoading = true;
       this.error = null;
@@ -237,8 +259,11 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
         if (deductionTypeId !== undefined) {
           body.deductionTypeId = deductionTypeId;
         }
-        if (paymentToId !== undefined) {
-          body.paymentToId = paymentToId;
+        if (bankId !== undefined) {
+          body.bankId = bankId;
+        }
+        if (accountNumber !== undefined) {
+          body.accountNumber = accountNumber;
         }
         if (frequencyId !== undefined) {
           body.frequencyId = frequencyId;
@@ -251,6 +276,15 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
         }
         if (amount !== undefined) {
           body.amount = amount;
+        }
+        if (fields?.allowPartialDeduction !== undefined) {
+          body.allowPartialDeduction = fields.allowPartialDeduction;
+        }
+        if (fields?.applicationRule !== undefined) {
+          body.applicationRule = fields.applicationRule;
+        }
+        if (fields?.priority !== undefined) {
+          body.priority = fields.priority;
         }
 
         const response = await fetch(`${API_URL}/employee-default-deductions/${id}`, {

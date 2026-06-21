@@ -21,9 +21,14 @@
           {{ props.value?.name || '-' }}
         </q-td>
       </template>
-      <template v-slot:body-cell-vendor="props">
+      <template v-slot:body-cell-bank="props">
         <q-td :props="props">
           {{ props.value?.name || '-' }}
+        </q-td>
+      </template>
+      <template v-slot:body-cell-accountNumber="props">
+        <q-td :props="props">
+          {{ props.value || '-' }}
         </q-td>
       </template>
       <template v-slot:body-cell-payrateFrequency="props">
@@ -39,6 +44,11 @@
       <template v-slot:body-cell-amount="props">
         <q-td :props="props">
           {{ formatCurrency(props.value) }}
+        </q-td>
+      </template>
+      <template v-slot:body-cell-allowPartialDeduction="props">
+        <q-td :props="props">
+          <q-icon :name="props.value ? 'check_circle' : 'cancel'" :color="props.value ? 'positive' : 'grey'" />
         </q-td>
       </template>
       <template v-slot:body-cell-note="props">
@@ -145,9 +155,16 @@ const columns = [
     sortable: true,
   },
   {
-    name: 'vendor',
-    label: 'Vendor',
-    field: (row: EmployeeDefaultDeduction) => row.vendor,
+    name: 'bank',
+    label: 'Bank',
+    field: (row: EmployeeDefaultDeduction) => row.bank,
+    align: 'left' as const,
+    sortable: true,
+  },
+  {
+    name: 'accountNumber',
+    label: 'Account Number',
+    field: 'accountNumber',
     align: 'left' as const,
     sortable: true,
   },
@@ -169,6 +186,27 @@ const columns = [
     name: 'amount',
     label: 'Amount',
     field: 'amount',
+    align: 'right' as const,
+    sortable: true,
+  },
+  {
+    name: 'allowPartialDeduction',
+    label: 'Partial',
+    field: 'allowPartialDeduction',
+    align: 'center' as const,
+    sortable: true,
+  },
+  {
+    name: 'applicationRule',
+    label: 'Application Rule',
+    field: 'applicationRule',
+    align: 'left' as const,
+    sortable: false,
+  },
+  {
+    name: 'priority',
+    label: 'Priority',
+    field: 'priority',
     align: 'right' as const,
     sortable: true,
   },

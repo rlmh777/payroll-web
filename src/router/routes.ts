@@ -50,19 +50,12 @@ const routes: RouteRecordRaw[] = [
         props: { title: 'Setting Holidays' },
       },
       {
-        path: '/settings/roles-menus/roles',
-        component: () => import('pages/SettingPage.vue'),
-        props: { title: 'Setting Roles' },
+        path: '/settings/roles',
+        component: () => import('components/settings/role/ManageRoles.vue')
       },
       {
-        path: '/settings/roles-menus/menu',
-        component: () => import('pages/SettingPage.vue'),
-        props: { title: 'Setting Menus' },
-      },
-      {
-        path: '/settings/roles-menus/permissions',
-        component: () => import('pages/SettingPage.vue'),
-        props: { title: 'Setting Permissions' },
+        path: '/settings/menu',
+        component: () => import('components/settings/menu/ManageMenus.vue'),
       },
       {
         path: '/settings/pay-items',
@@ -95,10 +88,27 @@ const routes: RouteRecordRaw[] = [
         props: { title: 'Setting Degree' },
       },
       {
+      {
         path: '/settings/organization',
         component: () => import('components/settings/organization/ManageOrganization.vue'),
         props: { title: 'Setting Organizationss' },
       },
+      {
+        path: '/settings/users',
+        component: () => import('components/users/ManageUsers.vue')
+      },
+      {
+        path: '/settings/social-security',
+        component: () => import('components/settings/social-security/ManageSocialSecurity.vue')
+      },
+      {
+        path: '/settings/personal-relief',
+        component: () => import('components/settings/personal-relief/ManagePersonalRelief.vue')
+      },
+      {
+        path: '/settings/pay-period',
+        component: () => import('components/settings/pay-period-groups/ManagePayPeriodGroups.vue')
+      }
     ],
   },
   {
@@ -110,7 +120,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/accounts',
     component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, hideDrawer: true },
     children: [{ path: '', component: () => import('pages/AccountsPage.vue') }],
   },
   {
