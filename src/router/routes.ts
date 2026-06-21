@@ -41,8 +41,11 @@ const routes: RouteRecordRaw[] = [
       { path: '', component: () => import('pages/SettingPage.vue'), props: { title: 'Settings' } },
       {
         path: '/settings/calendars',
-        component: () => import('pages/SettingPage.vue'),
-        props: { title: 'Setting Calendars' },
+        component: () => import('pages/CalendarSettingPage.vue'),
+      },
+      {
+        path: '/settings/general/working-hours-timesheet',
+        component: () => import('pages/DefineWorkTimesheetPage.vue'),
       },
       {
         path: '/settings/holidays',
@@ -88,7 +91,17 @@ const routes: RouteRecordRaw[] = [
         props: { title: 'Setting Degree' },
       },
       {
+        path: '/settings/general/department',
+        component: () => import('components/settings/department/ManageDepartment.vue'),
+        props: { title: 'Setting Department' },
+      },
       {
+        path: '/settings/general/calendar',
+        redirect: '/settings/general/working-hours-timesheet',
+      },
+      {
+        path: '/settings/general/calendar/define-work-timesheet',
+        redirect: '/settings/general/working-hours-timesheet',
         path: '/settings/organization',
         component: () => import('components/settings/organization/ManageOrganization.vue'),
         props: { title: 'Setting Organizationss' },
@@ -110,6 +123,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('components/settings/pay-period-groups/ManagePayPeriodGroups.vue')
       }
     ],
+  },
+  {
+    path: '/calendars',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: () => import('pages/CalendarSettingPage.vue') }],
   },
   {
     path: '/dashboard',
@@ -145,8 +164,18 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/payroll/timesheets',
-        component: () => import('pages/PayrollPage.vue'),
-        props: { title: 'Payroll Timesheets' },
+        component: () => import('pages/AttendanceTimesheetPage.vue'),
+        props: { initialTab: 'timesheets' },
+      },
+      {
+        path: '/payroll/clocking-logs',
+        component: () => import('pages/AttendanceTimesheetPage.vue'),
+        props: { initialTab: 'logs' },
+      },
+      {
+        path: '/payroll/clocking-import',
+        component: () => import('pages/AttendanceTimesheetPage.vue'),
+        props: { initialTab: 'import' },
       },
       {
         path: '/payroll/pay-employees',
@@ -181,6 +210,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [{ path: '', component: () => import('pages/ReportsPage.vue') }],
+  },
+  {
+    path: '/leaves',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: () => import('pages/LeaveApprovalPage.vue') }],
   },
   {
     path: '/:catchAll(.*)*',

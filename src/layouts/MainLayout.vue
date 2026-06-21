@@ -5,12 +5,14 @@
     <!-- Side drawer -->
     <SideDrawer v-if="!shouldHideDrawer" />
     <q-page-container class="q-ma-md">
+      <AppBreadcrumbs />
       <router-view />
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup lang="ts">
+import AppBreadcrumbs from 'src/components/navigation/common/AppBreadcrumbs.vue';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import MainHeader from 'src/components/navigation/common/MainHeader.vue';
