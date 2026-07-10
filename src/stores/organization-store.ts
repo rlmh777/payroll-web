@@ -1,5 +1,6 @@
 import { defineStore, acceptHMRUpdate } from 'pinia';
 import { useAuthStore } from './auth';
+import { applyCompanyTheme, saveCompanyTheme } from '../utils/company-theme';
 
 export interface Organization {
   id: number;
@@ -7,17 +8,20 @@ export interface Organization {
   alias?: string;
   email: string;
   phoneNumber1: string;
-  phoneNumber2?: string; // Added
+  phoneNumber2?: string;
   logoPath?: string;
   street?: string;
-  localityId?: string; // Added
-  taxIdentificationNumber?: number; // Changed to number
+  localityId?: string;
+  socialSecurityNumber?: string;
+  taxIdentificationNumber?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 // --- Store Configuration ---
 
-// API base URL from environment variables
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
+const API_URL =
+  import.meta.env.VITE_API_URL || process.env.API_URL || 'http://localhost:3031/api';
 
 export const useOrganizationStore = defineStore('organization', {
   state: () => ({
@@ -88,6 +92,7 @@ export const useOrganizationStore = defineStore('organization', {
         this.currentPage = data.current_page ?? 1;
         this.lastPage = data.last_page ?? 1;
         this.total = data.total ?? 0;
+        this.applyOrganizationTheme();
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Error loading organizations';
         return null;
@@ -101,7 +106,6 @@ export const useOrganizationStore = defineStore('organization', {
     async updateOrganization(id: number, payload: Partial<Organization>) {
       this.isLoading = true;
       this.error = null;
-      console.log('Updating organization with payload:', payload);
       try {
         const authStore = useAuthStore();
 
@@ -130,6 +134,15 @@ export const useOrganizationStore = defineStore('organization', {
     },
     setOrganizationToEdit(organization: Organization | null) {
       this.organizationToEdit = organization ? { ...organization } : null;
+    },
+    applyOrganizationTheme() {
+      const organization = this.organizationToEdit ?? this.organizations[0];
+      if (!organization) {
+        return;
+      }
+
+      const theme = applyCompanyTheme(organization.primaryColor, organization.secondaryColor);
+      saveCompanyTheme(theme);
     },
   },
 });

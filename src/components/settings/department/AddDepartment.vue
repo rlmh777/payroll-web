@@ -43,7 +43,14 @@ function emptyForm(): DepartmentPayload {
   return {
     name: '',
     parentId: null,
-    work_timesheet_id: null,
+    accountId: null,
+    timesheet_template_id: null,
+    totalDailyHoursBeforeOvertime: 9,
+    totalWeeklyHoursBeforeOvertime: 45,
+    overtimeThresholdMode: 'DAILY_AND_WEEKLY',
+    overnightShiftMode: 'SPLIT_AT_MIDNIGHT',
+    includeLunchHour: true,
+    lunchHourHours: 1,
   };
 }
 

@@ -1,8 +1,10 @@
 <template>
   <q-drawer v-if="hasSideMenu" v-model="drawerOpen" show-if-above bordered side="left">
-    <q-scroll-area style="height: calc(100% - 56px)">
+    <q-scroll-area class="drawer-scroll">
       <EmployeeLeftPane v-if="isEmployeeRoute" />
-      <MenuList v-if="selectedChildren.length && !isEmployeeRoute" :items="selectedChildren" />
+      <SchedulerLeftPane v-else-if="isSchedulerRoute" />
+      <TimesheetLeftPane v-else-if="isTimesheetRoute" />
+      <MenuList v-else-if="selectedChildren.length" :items="selectedChildren" />
     </q-scroll-area>
   </q-drawer>
 </template>
@@ -11,23 +13,52 @@
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useMenuStore, type MenuItem } from '../../../stores/menus';
-import MenuList from '../../menu/MenuList.vue';
+import { findTopMenuForPath } from '../../../utils/menu-navigation';
+import MenuList from '../../Menu/MenuList.vue';
 import EmployeeLeftPane from '../../employee/search/EmployeeLeftPane.vue';
+import SchedulerLeftPane from '../../settings/calendar/SchedulerLeftPane.vue';
+import TimesheetLeftPane from '../../timesheet/TimesheetLeftPane.vue';
 
 const menuStore = useMenuStore();
 const route = useRoute();
 const drawerOpen = ref(false);
 const selectedMenu = ref<MenuItem | null>(null);
 
-onMounted(async () => {
-  await menuStore.fetchMenus();
+function isDrawerPaneRoute(path: string) {
+  return path.startsWith('/employees') || path.startsWith('/scheduler') || path.startsWith('/timesheet');
+}
 
-  // default to first top-level menu if present (use null coalescing to avoid `undefined`)
-  if (menuStore.menuTree && menuStore.menuTree.length) {
-    selectedMenu.value = menuStore.menuTree[0] ?? null;
+function shouldOpenDrawerForMenu(item: MenuItem) {
+  if (item.route && isDrawerPaneRoute(item.route)) {
+    return true;
   }
 
-  // listen for header clicks
+  return Boolean(item.children && item.children.length);
+}
+
+function syncSelectedMenuFromRoute() {
+  if (!menuStore.menuTree.length) {
+    return;
+  }
+
+  const match = findTopMenuForPath(route.path, menuStore.menuTree);
+  if (match) {
+    selectedMenu.value = match;
+    return;
+  }
+
+  if (!selectedMenu.value) {
+    selectedMenu.value = menuStore.menuTree[0] ?? null;
+  }
+}
+
+onMounted(async () => {
+  if (!menuStore.menuTree.length) {
+    await menuStore.fetchMenus();
+  }
+
+  syncSelectedMenuFromRoute();
+
   window.addEventListener('open-menu', onOpenMenu as EventListener);
   window.addEventListener('toggle-drawer', onToggleDrawer as EventListener);
 });
@@ -39,10 +70,10 @@ onUnmounted(() => {
 
 function onOpenMenu(e: Event) {
   const id = (e as CustomEvent).detail;
-  const found = menuStore.menuTree?.find((m) => m.id === id) ?? null;
+  const found = menuStore.menuTree.find((m) => m.id === id) ?? null;
   if (found) {
     selectedMenu.value = found;
-    drawerOpen.value = Boolean(found.children && found.children.length);
+    drawerOpen.value = shouldOpenDrawerForMenu(found);
   }
 }
 
@@ -50,18 +81,37 @@ function onToggleDrawer() {
   drawerOpen.value = !drawerOpen.value;
 }
 
+watch(() => route.path, syncSelectedMenuFromRoute, { immediate: true });
+
 watch(
   () => menuStore.menuTree,
-  (tree) => {
-    if (!selectedMenu.value && tree?.length) {
-      selectedMenu.value = tree[0] ?? null;
+  () => {
+    syncSelectedMenuFromRoute();
+  },
+  { deep: true },
+);
+
+const isEmployeeRoute = computed(() => route.path.startsWith('/employees'));
+const isSchedulerRoute = computed(() => route.path.startsWith('/scheduler'));
+const isTimesheetRoute = computed(() => route.path.startsWith('/timesheet'));
+const selectedChildren = computed(() => selectedMenu.value?.children || []);
+const hasSideMenu = computed(
+  () =>
+    isEmployeeRoute.value ||
+    isSchedulerRoute.value ||
+    isTimesheetRoute.value ||
+    selectedChildren.value.length > 0,
+);
+
+watch(
+  () => isDrawerPaneRoute(route.path),
+  (shouldOpen) => {
+    if (shouldOpen) {
+      drawerOpen.value = true;
     }
   },
   { immediate: true },
 );
-const isEmployeeRoute = computed(() => route.path.startsWith('/employees'));
-const selectedChildren = computed(() => selectedMenu.value?.children || []);
-const hasSideMenu = computed(() => isEmployeeRoute.value || selectedChildren.value.length > 0);
 
 watch(
   () => hasSideMenu.value,
@@ -73,4 +123,8 @@ watch(
 );
 </script>
 
-<style scoped></style>
+<style scoped>
+.drawer-scroll {
+  height: 100%;
+}
+</style>

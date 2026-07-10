@@ -20,32 +20,16 @@
 import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMenuStore, type MenuItem } from 'src/stores/menus';
+import { findGeneralSettingsMenu, isGeneralSettingsPath } from 'src/utils/menu-navigation';
 
 const router = useRouter();
 const route = useRoute();
 const menuStore = useMenuStore();
 
-function findMenuByRoute(items: MenuItem[], path: string): MenuItem | null {
-  for (const item of items) {
-    if (item.route === path) {
-      return item;
-    }
-
-    if (item.children?.length) {
-      const match = findMenuByRoute(item.children, path);
-      if (match) {
-        return match;
-      }
-    }
-  }
-
-  return null;
-}
-
 const submenuItems = computed(() => {
-  const generalMenu = findMenuByRoute(menuStore.menuTree, route.path);
+  const generalMenu = findGeneralSettingsMenu(menuStore.menuTree);
 
-  if (generalMenu?.children?.length) {
+  if (isGeneralSettingsPath(route.path, generalMenu) && generalMenu?.children?.length) {
     return generalMenu.children;
   }
 

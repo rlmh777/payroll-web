@@ -45,7 +45,7 @@
             />
           </div>
           <q-badge color="orange" label="Pending" class="q-mb-xs" />
-          <q-badge :color="typeColor(item.type)" :label="item.type" />
+          <q-badge color="orange" :label="item.type" />
         </q-item-section>
       </q-item>
     </q-list>
@@ -63,7 +63,7 @@ const emit = defineEmits<{
 
 type ApprovalItem = {
   id: string;
-  type: 'timesheet' | 'schedule' | 'leave';
+  type: 'leave';
   date: string;
   description: string;
   hours_worked: string | number | null;
@@ -78,16 +78,7 @@ defineProps({
   },
 });
 
-function typeColor(type: 'timesheet' | 'schedule' | 'leave') {
-  if (type === 'leave') return 'orange';
-  if (type === 'schedule') return 'blue-grey';
-  return 'blue';
-}
-
 function itemLabel(item: ApprovalItem) {
-  if (item.type === 'timesheet') {
-    return `Hours: ${item.hours_worked ?? '-'} · ${item.date}`;
-  }
   return item.date;
 }
 </script>

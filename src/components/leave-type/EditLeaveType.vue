@@ -95,7 +95,7 @@ const onSubmit = async () => {
         icon: 'check_circle',
         message: 'Leave type updated successfully!',
       });
-      emit('updated', updatedLeaveType.id);
+      emit('updated', String(updatedLeaveType.id));
       onClose();
     } else if (leaveTypeStore.error) {
       $q.notify({

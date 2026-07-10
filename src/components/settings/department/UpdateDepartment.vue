@@ -42,7 +42,14 @@ function emptyForm(): DepartmentPayload {
   return {
     name: '',
     parentId: null,
-    work_timesheet_id: null,
+    accountId: null,
+    timesheet_template_id: null,
+    totalDailyHoursBeforeOvertime: 9,
+    totalWeeklyHoursBeforeOvertime: 45,
+    overtimeThresholdMode: 'DAILY_AND_WEEKLY',
+    overnightShiftMode: 'SPLIT_AT_MIDNIGHT',
+    includeLunchHour: true,
+    lunchHourHours: 1,
   };
 }
 
@@ -50,10 +57,17 @@ function departmentToForm(department: Department): DepartmentPayload {
   return {
     name: department.name,
     parentId: department.parentId ?? null,
-    work_timesheet_id:
-      department.current_work_timesheet_assignment?.work_timesheet_id ??
-      department.current_work_timesheet_assignment?.work_timesheet?.id ??
+    accountId: department.accountId ?? null,
+    timesheet_template_id:
+      department.current_timesheet_template_assignment?.timesheet_template_id ??
+      department.current_timesheet_template_assignment?.timesheet_template?.id ??
       null,
+    totalDailyHoursBeforeOvertime: department.totalDailyHoursBeforeOvertime ?? 9,
+    totalWeeklyHoursBeforeOvertime: department.totalWeeklyHoursBeforeOvertime ?? 45,
+    overtimeThresholdMode: department.overtimeThresholdMode ?? 'DAILY_AND_WEEKLY',
+    overnightShiftMode: department.overnightShiftMode ?? 'SPLIT_AT_MIDNIGHT',
+    includeLunchHour: department.includeLunchHour ?? true,
+    lunchHourHours: department.lunchHourHours ?? 1,
   };
 }
 

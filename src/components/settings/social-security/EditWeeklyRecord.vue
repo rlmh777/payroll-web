@@ -27,14 +27,16 @@
 
           <q-input
             v-model.number="form.weeklyEarningsEndRange"
-            label="Weekly Earnings End Range *"
+            label="Weekly Earnings End Range"
+            hint="Leave blank for open-ended top bracket"
             type="number"
             step="0.01"
             min="0"
             outlined
+            clearable
             :rules="[
-              val => val !== null && val !== undefined && val >= 0 || 'End range is required',
-              val => form.weeklyEarningsStartRange === null || val >= form.weeklyEarningsStartRange || 'End range must be greater than or equal to start range'
+              val => val === null || val === undefined || val === '' || val >= 0 || 'End range must be zero or greater',
+              val => val === null || val === undefined || val === '' || form.weeklyEarningsStartRange === null || val >= form.weeklyEarningsStartRange || 'End range must be greater than or equal to start range'
             ]"
             :disable="socialSecurityStore.isLoading"
           />
@@ -217,7 +219,7 @@ const onSubmit = async () => {
     const updatedRecord = await socialSecurityStore.updateSocialSecurity(
       props.record.id,
       form.value.weeklyEarningsStartRange ?? undefined,
-      form.value.weeklyEarningsEndRange ?? undefined,
+      form.value.weeklyEarningsEndRange === undefined ? undefined : form.value.weeklyEarningsEndRange,
       form.value.weeklyInsurableEarnings ?? undefined,
       form.value.weeklyEmployeeContributions ?? undefined,
       form.value.weeklyEmployerContributions ?? undefined,

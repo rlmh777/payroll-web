@@ -38,8 +38,17 @@
         <q-item v-else v-bind="scope.itemProps">
           <q-item-section>
             <q-item-label>{{ scope.opt.name }}</q-item-label>
+            <q-item-label v-if="scope.opt.id !== 'add-new'" caption>
+              {{ scope.opt.isPaid === false ? 'Unpaid leave' : 'Paid leave' }}
+            </q-item-label>
           </q-item-section>
-          <q-item-section v-if="showEdit && !readonly" side>
+          <q-item-section v-if="scope.opt.id !== 'add-new'" side>
+            <q-badge
+              :color="scope.opt.isPaid === false ? 'grey-7' : 'positive'"
+              :label="scope.opt.isPaid === false ? 'Unpaid' : 'Paid'"
+            />
+          </q-item-section>
+          <q-item-section v-if="showEdit && !readonly && scope.opt.id !== 'add-new'" side>
             <q-btn
               flat
               round

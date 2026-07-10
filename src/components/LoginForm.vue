@@ -49,13 +49,15 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useAuthStore } from 'src/stores/auth';
+import { useOrganizationStore } from 'src/stores/organization-store';
 import { useRouter } from 'vue-router';
 
-const email = ref('supervisor@example.com');
+const email = ref('johndoe@gmail.com');
 const password = ref('Password123!');
 const loading = ref(false);
 const isPwd = ref(true);
 const authStore = useAuthStore();
+const organizationStore = useOrganizationStore();
 const router = useRouter();
 
 const isValidEmail = (val: string) => {
@@ -69,6 +71,7 @@ async function onSubmit() {
   try {
     const success = await authStore.login(email.value, password.value);
     if (success) {
+      await organizationStore.fetchOrganizations();
       void router.push('/');
     }
   } catch (error) {

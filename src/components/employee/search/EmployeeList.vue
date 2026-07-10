@@ -116,6 +116,13 @@
       </template>
     </q-infinite-scroll>
 
+    <div
+      v-if="!employeeStore.isLoading && employees.length === 0"
+      class="row justify-center q-my-md"
+    >
+      <div class="text-caption text-grey-6">No employees found</div>
+    </div>
+
     <div v-if="!hasMore && employees.length > 0" class="row justify-center q-my-md">
       <div class="text-caption text-grey-6">No more employees to load</div>
     </div>
@@ -124,7 +131,7 @@
 
 <script setup lang="ts">
 import { useEmployeeStore } from '../../../stores/employee-store';
-import { onMounted, computed, watch, ref } from 'vue';
+import { computed, watch, ref } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRouter, useRoute } from 'vue-router';
 import GenderIcon from './GenderIcon.vue';
@@ -136,16 +143,24 @@ const route = useRoute();
 
 const isInitialLoad = ref(true);
 
-onMounted(async () => {
-  try {
-    // Only load first page on mount
-    await employeeStore.fetchEmployees(true);
-    isInitialLoad.value = false;
-  } catch (error) {
-    console.error('Failed to fetch employees:', error);
-    isInitialLoad.value = false;
-  }
-});
+watch(
+  () => employeeStore.isLoading,
+  (loading, wasLoading) => {
+    if (wasLoading && !loading) {
+      isInitialLoad.value = false;
+    }
+  },
+);
+
+watch(
+  () => employeeStore.employees.length,
+  (length) => {
+    if (length > 0) {
+      isInitialLoad.value = false;
+    }
+  },
+  { immediate: true },
+);
 
 const employees = computed(() => employeeStore.employees);
 const hasMore = computed(() => employeeStore.hasMore);

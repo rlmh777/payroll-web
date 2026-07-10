@@ -1,9 +1,17 @@
 <template>
   <q-header elevated class="bg-primary text-white">
     <q-toolbar>
-      <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleDrawer" />
+      <q-btn
+        v-if="showDrawerToggle"
+        flat
+        dense
+        round
+        icon="menu"
+        aria-label="Menu"
+        @click="toggleDrawer"
+      />
 
-      <div class="row items-center q-gutter-sm q-ml-md">
+      <div class="row items-center q-gutter-sm" :class="showDrawerToggle ? 'q-ml-md' : ''">
         <template v-for="(item, idx) in topMenus" :key="item.id">
           <q-btn
             flat
@@ -20,39 +28,68 @@
 
       <q-space />
 
+      <NotificationBell />
       <LogoutCard />
     </q-toolbar>
   </q-header>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useMenuStore, type MenuItem } from '../../../stores/menus';
+import { findTopMenuForPath } from '../../../utils/menu-navigation';
 import LogoutCard from '../common/LogoutCard.vue';
+import NotificationBell from '../common/NotificationBell.vue';
+
+withDefaults(
+  defineProps<{
+    showDrawerToggle?: boolean;
+  }>(),
+  {
+    showDrawerToggle: true,
+  },
+);
 
 const menuStore = useMenuStore();
-const router = useRouter(); // Vue Router instance
-const selectedTopId = ref(null as string | number | null);
+const router = useRouter();
+const route = useRoute();
+const selectedTopId = ref<string | number | null>(null);
 
 onMounted(async () => {
-  await menuStore.fetchMenus();
+  if (!menuStore.menuTree.length) {
+    await menuStore.fetchMenus();
+  }
+  syncSelectedTopFromRoute();
 });
+
+function syncSelectedTopFromRoute() {
+  const match = findTopMenuForPath(route.path, menuStore.menuTree);
+  if (match) {
+    selectedTopId.value = match.id;
+  }
+}
+
+watch(() => route.path, syncSelectedTopFromRoute, { immediate: true });
+
+watch(
+  () => menuStore.menuTree,
+  () => {
+    syncSelectedTopFromRoute();
+  },
+  { deep: true },
+);
 
 const topMenus = computed(() => menuStore.menuTree || []);
 
 function openTopMenu(item: MenuItem) {
   selectedTopId.value = item.id ?? null;
 
-  // Check if the item has a route property
   if (item.route) {
-    // 1. Navigate to the route using Vue Router
     void router.push(item.route);
-    window.dispatchEvent(new CustomEvent('open-menu', { detail: item.id }));
-  } else {
-    // 2. Fallback to the custom event if no route is defined (for sub-menus, etc.)
-    window.dispatchEvent(new CustomEvent('open-menu', { detail: item.id }));
   }
+
+  window.dispatchEvent(new CustomEvent('open-menu', { detail: item.id }));
 }
 
 function toggleDrawer() {

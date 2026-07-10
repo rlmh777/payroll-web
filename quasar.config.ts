@@ -12,7 +12,7 @@ export default defineConfig((ctx) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: ['i18n', 'axios'],
+    boot: ['auth', 'api-client', 'company-theme', 'i18n', 'axios', 'dialog'],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['app.scss'],
@@ -55,6 +55,7 @@ export default defineConfig((ctx) => {
       // analyze: true,
       env: {
         API_URL: 'http://localhost:3031/api',
+        VITE_SESSION_TIMEOUT_MINUTES: '120',
       },
       // rawDefine: {}
       // ignorePublicFolder: true,
@@ -118,7 +119,7 @@ export default defineConfig((ctx) => {
       // directives: [],
 
       // Quasar plugins
-      plugins: ['Notify', 'Dialog'],
+      plugins: ['Notify', 'Dialog', 'Cookies'],
     },
 
     // animations: 'all', // --- includes all animations

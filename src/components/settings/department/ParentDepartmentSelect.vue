@@ -36,7 +36,7 @@
           <q-item-section>
             <q-item-label>{{ scope.opt.name }}</q-item-label>
           </q-item-section>
-          <q-item-section v-if="showEdit && !readonly" side>
+          <q-item-section v-if="showEdit && !readonly && !disable" side>
             <q-btn
               flat
               round
@@ -122,7 +122,7 @@ const departmentOptions = computed(() => {
   );
 
   const mapped: Array<Department | { id: string; name: string }> = [...options];
-  if (props.showAddNew && !props.readonly) {
+  if (props.showAddNew && !props.readonly && !props.disable) {
     mapped.unshift({ id: 'add-new', name: 'Add New Department' });
   }
 
@@ -151,9 +151,9 @@ const selectedDepartmentForm = computed<DepartmentPayload | null>(() => {
   return {
     name: selectedDepartment.value.name,
     parentId: selectedDepartment.value.parentId ?? null,
-    work_timesheet_id:
-      selectedDepartment.value.current_work_timesheet_assignment?.work_timesheet_id ??
-      selectedDepartment.value.current_work_timesheet_assignment?.work_timesheet?.id ??
+    timesheet_template_id:
+      selectedDepartment.value.current_timesheet_template_assignment?.timesheet_template_id ??
+      selectedDepartment.value.current_timesheet_template_assignment?.timesheet_template?.id ??
       null,
   };
 });

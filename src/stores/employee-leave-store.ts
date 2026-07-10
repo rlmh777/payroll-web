@@ -5,6 +5,14 @@ import type { EmployeeLeave } from '../components/models';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 
+let employeeLeavesFetchId = 0;
+
+const defaultSearchFilters = () => ({
+  leaveTypeId: null as number | null,
+  startDate: null as string | null,
+  endDate: null as string | null,
+});
+
 interface ApiErrorData {
   error?: string;
   errors?: Record<string, string[] | string>;
@@ -39,6 +47,7 @@ interface UpdateEmployeeLeaveBody {
   totalDays?: number;
   notes?: string | null;
   multiplier?: number;
+  departmentId?: number | null;
 }
 
 export const useEmployeeLeaveStore = defineStore('employeeLeave', {
@@ -50,33 +59,44 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
     lastPage: 1,
     total: 0,
     error: null as string | null,
-    searchFilters: {
-      leaveTypeId: null as number | null,
-      startDate: null as string | null,
-      endDate: null as string | null,
-    },
+    searchFilters: defaultSearchFilters(),
   }),
 
-  getters: {},
+  getters: {
+    hasActiveSearchFilters(state): boolean {
+      return !!(
+        state.searchFilters.leaveTypeId ||
+        state.searchFilters.startDate ||
+        state.searchFilters.endDate
+      );
+    },
+  },
 
   actions: {
+    resetSearchFilters() {
+      this.searchFilters = defaultSearchFilters();
+    },
+
     async fetchEmployeeLeaves(page?: number, perPage?: number) {
-      if (this.isLoadingEmployeeLeaves) return;
+      const fetchId = ++employeeLeavesFetchId;
+      const employeeStore = useEmployeeStore();
+      const employeeId = employeeStore.selectedEmployee?.id;
+
+      if (!employeeId) {
+        this.employeeLeaves = [];
+        this.total = 0;
+        this.currentPage = 1;
+        this.lastPage = 1;
+        return;
+      }
 
       this.isLoadingEmployeeLeaves = true;
       this.error = null;
 
       try {
         const authStore = useAuthStore();
-        const employeeStore = useEmployeeStore();
         const queryParams = new URLSearchParams();
-        
-        // Get employeeId from selectedEmployee in employee store
-        if (employeeStore.selectedEmployee?.id) {
-          queryParams.append('employeeId', employeeStore.selectedEmployee.id);
-        }
-        
-        // Add search filters
+        queryParams.append('employeeId', employeeId);
         if (this.searchFilters.leaveTypeId) {
           queryParams.append('leaveTypeId', this.searchFilters.leaveTypeId.toString());
         }
@@ -110,6 +130,10 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
         }
 
         const data = await response.json();
+
+        if (fetchId !== employeeLeavesFetchId) {
+          return;
+        }
         
         // Handle paginated response
         if (data.data && Array.isArray(data.data)) {
@@ -124,10 +148,43 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
           this.employeeLeaves = [];
         }
       } catch (error) {
+        if (fetchId !== employeeLeavesFetchId) {
+          return;
+        }
         console.error('Error fetching employee leaves:', error);
         this.error = error instanceof Error ? error.message : 'Error fetching employee leaves';
       } finally {
-        this.isLoadingEmployeeLeaves = false;
+        if (fetchId === employeeLeavesFetchId) {
+          this.isLoadingEmployeeLeaves = false;
+        }
+      }
+    },
+
+    async fetchEmployeeLeaveById(id: string): Promise<EmployeeLeave | null> {
+      this.error = null;
+
+      try {
+        const authStore = useAuthStore();
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        if (authStore.token) {
+          headers['Authorization'] = `Bearer ${authStore.token}`;
+        }
+
+        const response = await fetch(`${API_URL}/employee-leaves/${id}`, { headers });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch employee leave: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        return result.data || result;
+      } catch (error) {
+        console.error('Error fetching employee leave:', error);
+        this.error = error instanceof Error ? error.message : 'Error fetching employee leave';
+        return null;
       }
     },
 
@@ -237,7 +294,8 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
       duration?: string,
       totalDays?: number,
       notes?: string | null,
-      multiplier?: number
+      multiplier?: number,
+      departmentId?: number | null
     ): Promise<EmployeeLeave | null> {
       this.isLoading = true;
       this.error = null;
@@ -283,6 +341,9 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
         }
         if (multiplier !== undefined) {
           body.multiplier = multiplier;
+        }
+        if (departmentId !== undefined) {
+          body.departmentId = departmentId;
         }
 
         const response = await fetch(`${API_URL}/employee-leaves/${id}`, {
@@ -330,6 +391,53 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
       } finally {
         this.isLoading = false;
       }
+    },
+
+    async updateLeaveStatus(
+      id: string,
+      action: 'approve' | 'reject' | 'cancel' | 'submit_for_approval',
+      note?: string | null,
+    ): Promise<EmployeeLeave | null> {
+      this.isLoading = true;
+      this.error = null;
+
+      try {
+        const authStore = useAuthStore();
+        const headers: HeadersInit = { 'Content-Type': 'application/json' };
+        if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`;
+
+        const response = await fetch(`${API_URL}/employee-leaves/${id}/status`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ action, note: note ?? null }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({})) as ApiErrorData;
+          throw new Error(this.extractErrorMessage(errorData) || 'Status update failed');
+        }
+
+        const updatedEmployeeLeave = await response.json() as EmployeeLeave;
+        const index = this.employeeLeaves.findIndex((el) => el.id === id);
+        if (index !== -1) this.employeeLeaves[index] = updatedEmployeeLeave;
+        return updatedEmployeeLeave;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Status update failed';
+        return null;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    extractErrorMessage(body: ApiErrorData): string | null {
+      const errors = body.errors;
+      if (errors && typeof errors === 'object') {
+        const first = Object.values(errors)[0];
+        if (Array.isArray(first) && first[0]) return String(first[0]);
+      }
+      return typeof body.message === 'string'
+        ? body.message
+        : (typeof body.error === 'string' ? body.error : null);
     },
 
     async deleteEmployeeLeave(id: string): Promise<boolean> {

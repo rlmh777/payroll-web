@@ -30,6 +30,7 @@ const leaveRows = computed(() =>
       date: item.date,
       description: item.description,
       type: item.type,
+      status: item.approval_status,
     })),
 );
 
@@ -51,7 +52,7 @@ async function fetchApprovals() {
 async function handleApproval(row: { id: string; type: string }, status: 'approved' | 'rejected') {
   try {
     await calendarStore.updateCalendarApproval({ id: row.id, type: 'leave', status });
-    $q.notify({ type: 'positive', message: `Leave ${status}.` });
+    $q.notify({ type: 'positive', message: `Leave ${status === 'approved' ? 'approved' : 'rejected'}.` });
     await fetchApprovals();
   } catch (storeError) {
     const message = storeError instanceof Error ? storeError.message : 'Failed to update approval.';

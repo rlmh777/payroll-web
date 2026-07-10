@@ -60,27 +60,21 @@
       />
     </div>
     <div class="col-12 col-sm-6 col-lg-2">
-      <q-input
-        :model-value="props.filter.startDate"
-        type="date"
-        outlined
-        dense
-        stack-label
+      <DateField
+        :model-value="props.filter.startDate || null"
         label="Start date"
+        stack-label
         :disable="Boolean(props.filter.payPeriodScheduleId)"
-        @update:model-value="updateFilter('startDate', String($event ?? ''))"
+        @update:model-value="updateFilter('startDate', $event ?? '')"
       />
     </div>
     <div class="col-12 col-sm-6 col-lg-2">
-      <q-input
-        :model-value="props.filter.endDate"
-        type="date"
-        outlined
-        dense
-        stack-label
+      <DateField
+        :model-value="props.filter.endDate || null"
         label="End date"
+        stack-label
         :disable="Boolean(props.filter.payPeriodScheduleId)"
-        @update:model-value="updateFilter('endDate', String($event ?? ''))"
+        @update:model-value="updateFilter('endDate', $event ?? '')"
       />
     </div>
     <div class="col-12 col-sm-6 col-lg-2">
@@ -151,7 +145,7 @@
           Select an employee to see how total hours are built from each workday.
         </div>
       </div>
-      <q-chip outline color="primary" icon="groups" :label="`${props.pagination.rowsNumber} employees`" />
+      <q-chip outline color="primary" icon="groups" :label="`${props.pagination.rowsNumber} assignments`" />
     </q-card-section>
 
     <q-separator />
@@ -160,7 +154,7 @@
       class="attendance-table"
       :rows="props.employeeSummaries"
       :columns="columns"
-      row-key="employeeId"
+      :row-key="summaryRowKey"
       flat
       hide-bottom
       separator="horizontal"
@@ -184,6 +178,9 @@
       <template #body-cell-departmentName="tableProps">
         <q-td :props="tableProps">{{ tableProps.row.departmentName || 'Unassigned' }}</q-td>
       </template>
+      <template #body-cell-employmentContractLabel="tableProps">
+        <q-td :props="tableProps">{{ tableProps.row.employmentContractLabel || 'Unassigned contract' }}</q-td>
+      </template>
       <template #body-cell-hoursWorked="tableProps">
         <q-td :props="tableProps">
           <div class="text-h6 text-weight-bold text-primary">{{ formatHours(tableProps.row.hoursWorked) }}</div>
@@ -195,7 +192,7 @@
       </template>
       <template #body-cell-overtimeHours="tableProps">
         <q-td :props="tableProps" :class="{ 'text-deep-orange text-weight-bold': tableProps.row.overtimeHours > 0 }">
-          {{ formatHours(tableProps.row.overtimeHours) }}
+          {{ formatOvertimeForPayType(tableProps.row.payType, tableProps.row.overtimeHours) }}
         </q-td>
       </template>
       <template #body-cell-holidayHours="tableProps">
@@ -255,7 +252,7 @@
         <div class="full-width column items-center text-grey-6 q-py-xl">
           <q-icon name="groups" size="44px" class="q-mb-sm" />
           <div class="text-subtitle2">No employee timesheets found</div>
-          <div class="text-caption">Adjust the filters or generate timesheets for the selected period.</div>
+          <div class="text-caption">Adjust the filters or wait for automatic timesheet processing to complete.</div>
         </div>
       </template>
     </q-table>
@@ -290,10 +287,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import DateField from 'src/components/common/DateField.vue';
 import AttendanceFilterPanel from './AttendanceFilterPanel.vue';
 import AttendanceMetricCard from './AttendanceMetricCard.vue';
 import type { TimesheetFilterForm } from './types';
-import { approvalIcon, formatDate, formatPayType, humanizeStatus, statusColor } from './utils';
+import { approvalIcon, formatDate, formatOvertimeForPayType, formatPayType, humanizeStatus, statusColor } from './utils';
 import type {
   EmployeeTimesheetSummary,
   PaginationState,
@@ -335,23 +333,31 @@ const workingStatusOptions = [
 ];
 
 const payTypeOptions = [
-  { label: 'Hourly rate', value: 'HOURLY' },
-  { label: 'Base salary', value: 'BASE_SALARY' },
+  { label: 'Hourly (no OT)', value: 'HOURLY_NO_OT' },
+  { label: 'Hourly (OT)', value: 'HOURLY_OT' },
+  { label: 'Base rate (no OT)', value: 'BASE_NO_OT' },
+  { label: 'Base rate (OT)', value: 'BASE_OT' },
 ];
 
 const columns = [
   { name: 'employeeName', label: 'Employee', field: 'employeeName', align: 'left' as const },
+  { name: 'employmentContractLabel', label: 'Contract', field: 'employmentContractLabel', align: 'left' as const },
   { name: 'departmentName', label: 'Department', field: 'departmentName', align: 'left' as const },
   { name: 'hoursWorked', label: 'Total hours', field: 'hoursWorked', align: 'right' as const },
   { name: 'regularHours', label: 'Regular', field: 'regularHours', align: 'right' as const },
   { name: 'overtimeHours', label: 'Overtime', field: 'overtimeHours', align: 'right' as const },
   { name: 'holidayHours', label: 'Holiday', field: 'holidayHours', align: 'right' as const },
+  { name: 'paidHours', label: 'Paid', field: 'paidHours', align: 'right' as const },
   { name: 'unpaidHours', label: 'Unpaid', field: 'unpaidHours', align: 'right' as const },
   { name: 'payType', label: 'Pay type', field: 'payType', align: 'left' as const },
   { name: 'approvalStatus', label: 'Approval progress', field: 'approvalStatus', align: 'left' as const },
   { name: 'issueCount', label: 'Exceptions', field: 'issueCount', align: 'left' as const },
   { name: 'actions', label: '', field: 'actions', align: 'right' as const },
 ];
+
+function summaryRowKey(row: EmployeeTimesheetSummary): string {
+  return `${row.employeeId}:${row.employmentDetailId ?? 'none'}`;
+}
 
 const payPeriodOptions = computed(() =>
   props.payPeriods.map((period) => ({
@@ -384,6 +390,7 @@ const summaryCards = computed(() => [
     tone: 'warning' as const,
   },
   { label: 'Holiday hours', value: formatHours(props.summary.holidayHours), icon: 'beach_access', tone: 'teal' as const },
+  { label: 'Paid hours', value: formatHours(props.summary.paidHours), icon: 'payments', tone: 'positive' as const },
   { label: 'Unpaid hours', value: formatHours(props.summary.unpaidHours), icon: 'money_off', tone: 'negative' as const },
 ]);
 

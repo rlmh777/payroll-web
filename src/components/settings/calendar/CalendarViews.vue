@@ -12,7 +12,12 @@
           :day-min-height="18"
           :day-padding="'2px'"
           :selected-dates="[selectedDate]"
+          :selected-start-end-dates="selectedStartEndDates"
+          :hover="rangeHover"
           @click-day="onClickDay"
+          @mousedown-day="onMouseDownDay"
+          @mouseup-day="onMouseUpDay"
+          @mouseenter-day="onMouseEnterDay"
           class="calendar-view calendar-view--mini"
         >
           <template #day="slotProps">
@@ -20,12 +25,20 @@
               <div
                 v-for="entry in eventsForSlot(slotProps)"
                 :key="entry.id"
-                class="calendar-day-item calendar-day-item--mini"
+                class="calendar-day-item calendar-day-item--mini calendar-day-item--clickable"
+                @mousedown.stop
+                @mouseup.stop
+                @click.stop="emit('select-event', entry)"
               >
-                    <span
-                      class="calendar-dot"
-                      :style="{ backgroundColor: eventColor(entry) }"
-                    ></span>
+                <q-tooltip anchor="top middle" self="bottom middle" :delay="400">
+                  <div class="calendar-event-tooltip">
+                    <div v-for="line in tooltipLines(entry)" :key="line">{{ line }}</div>
+                  </div>
+                </q-tooltip>
+                <span
+                  class="calendar-dot"
+                  :style="{ backgroundColor: eventColor(entry) }"
+                ></span>
               </div>
             </div>
           </template>
@@ -36,14 +49,24 @@
     <div v-else-if="viewMode === 'day'" class="calendar-day-view">
       <div class="text-subtitle1 q-mb-sm">{{ dayLabel }}</div>
       <q-list bordered separator>
-        <q-item v-for="event in eventsForSelected" :key="event.id">
+        <q-item
+          v-for="event in eventsForSelected"
+          :key="event.id"
+          clickable
+          @click="emit('select-event', event)"
+        >
+          <q-tooltip anchor="top middle" self="bottom middle" :delay="400">
+            <div class="calendar-event-tooltip">
+              <div v-for="line in tooltipLines(event)" :key="line">{{ line }}</div>
+            </div>
+          </q-tooltip>
           <q-item-section avatar>
             <q-icon name="event" :color="typeChipColor(event.type)" />
           </q-item-section>
           <q-item-section>
             <q-item-label>{{ event.description }}</q-item-label>
             <q-item-label caption>
-              {{ typeLabels[event.type ?? 'other'] }} · Rate: {{ event.rate }}
+              {{ eventCaption(event) }}
             </q-item-label>
           </q-item-section>
         </q-item>
@@ -51,6 +74,15 @@
           No events for this day.
         </div>
       </q-list>
+      <div class="q-mt-md">
+        <q-btn
+          color="primary"
+          icon="add"
+          label="Create event for this day"
+          unelevated
+          @click="emit('create-day', selectedDate)"
+        />
+      </div>
     </div>
 
     <q-calendar
@@ -60,7 +92,12 @@
       bordered
       animated
       :selected-dates="[selectedDate]"
+      :selected-start-end-dates="selectedStartEndDates"
+      :hover="rangeHover"
       @click-day="onClickDay"
+      @mousedown-day="onMouseDownDay"
+      @mouseup-day="onMouseUpDay"
+      @mouseenter-day="onMouseEnterDay"
       class="calendar-view"
     >
       <template #day="slotProps">
@@ -68,12 +105,20 @@
           <div
             v-for="entry in eventsForSlot(slotProps)"
             :key="entry.id"
-            class="calendar-day-item"
+            class="calendar-day-item calendar-day-item--clickable"
+            @mousedown.stop
+            @mouseup.stop
+            @click.stop="emit('select-event', entry)"
           >
-              <span
-                class="calendar-dot"
-                :style="{ backgroundColor: eventColor(entry) }"
-              ></span>
+            <q-tooltip anchor="top middle" self="bottom middle" :delay="400">
+              <div class="calendar-event-tooltip">
+                <div v-for="line in tooltipLines(entry)" :key="line">{{ line }}</div>
+              </div>
+            </q-tooltip>
+            <span
+              class="calendar-dot"
+              :style="{ backgroundColor: eventColor(entry) }"
+            ></span>
             <span class="calendar-day-text">{{ entry.description }}</span>
           </div>
         </div>
@@ -87,8 +132,14 @@ import type { PropType } from 'vue';
 import { QCalendar } from '@quasar/quasar-ui-qcalendar';
 import type { CalendarEntry } from 'src/stores/calendar-store';
 import type { CalendarType } from './calendarTypes';
+import { eventTooltipLines } from 'src/utils/calendar-event-utils';
 
-defineProps({
+const emit = defineEmits<{
+  (event: 'select-event', value: CalendarEntry): void;
+  (event: 'create-day', value: string): void;
+}>();
+
+const props = defineProps({
   viewMode: {
     type: String as PropType<'day' | 'month' | 'year'>,
     required: true,
@@ -100,6 +151,14 @@ defineProps({
   selectedDate: {
     type: String,
     required: true,
+  },
+  selectedStartEndDates: {
+    type: Array as PropType<string[]>,
+    default: () => [],
+  },
+  rangeHover: {
+    type: Boolean,
+    default: false,
   },
   dayLabel: {
     type: String,
@@ -133,11 +192,31 @@ defineProps({
     type: Function as PropType<(payload: unknown) => void>,
     required: true,
   },
+  onMouseDownDay: {
+    type: Function as PropType<(payload: unknown) => void>,
+    required: true,
+  },
+  onMouseUpDay: {
+    type: Function as PropType<(payload: unknown) => void>,
+    required: true,
+  },
+  onMouseEnterDay: {
+    type: Function as PropType<(payload: unknown) => void>,
+    required: true,
+  },
   typeChipColor: {
     type: Function as PropType<(type?: CalendarType) => string>,
     required: true,
   },
 });
+
+function tooltipLines(event: CalendarEntry) {
+  return eventTooltipLines(event, props.typeLabels);
+}
+
+function eventCaption(event: CalendarEntry) {
+  return props.typeLabels[event.type] ?? event.type;
+}
 </script>
 
 <style scoped>
@@ -168,6 +247,7 @@ defineProps({
   flex-direction: column;
   gap: 4px;
   padding: 2px 0;
+  min-height: 100%;
 }
 
 .calendar-day--mini {
@@ -199,9 +279,19 @@ defineProps({
   border-radius: 999px;
   display: inline-block;
   margin-right: 8px;
+  flex-shrink: 0;
 }
 
-.calendar-day-view {
-  padding: 8px;
+.calendar-day-item--clickable {
+  cursor: pointer;
+}
+
+.calendar-day-item--clickable:hover .calendar-day-text {
+  text-decoration: underline;
+}
+
+.calendar-event-tooltip {
+  white-space: pre-line;
+  max-width: 280px;
 }
 </style>

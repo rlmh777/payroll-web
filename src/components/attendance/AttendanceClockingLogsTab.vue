@@ -2,28 +2,22 @@
   <attendance-filter-panel
     class="q-mb-md"
     title="Clocking log filters"
-    description="Review raw device events, then generate pay-cycle timesheets from punches and employee schedules."
+    description="Review raw device events. Timesheets are built automatically after import and on the nightly schedule."
     :active-filter-count="activeFilterCount"
   >
     <div class="col-12 col-sm-6 col-lg-2">
-      <q-input
-        :model-value="props.filter.startDate"
-        type="date"
-        outlined
-        dense
-        stack-label
+      <DateField
+        :model-value="props.filter.startDate || null"
         label="Start date"
+        stack-label
         @update:model-value="updateFilter('startDate', $event)"
       />
     </div>
     <div class="col-12 col-sm-6 col-lg-2">
-      <q-input
-        :model-value="props.filter.endDate"
-        type="date"
-        outlined
-        dense
-        stack-label
+      <DateField
+        :model-value="props.filter.endDate || null"
         label="End date"
+        stack-label
         @update:model-value="updateFilter('endDate', $event)"
       />
     </div>
@@ -64,7 +58,7 @@
       <div class="col-12 col-sm">
         <div class="text-subtitle1 text-weight-medium">Raw clocking events</div>
         <div class="text-caption text-grey-7">
-          Device punches available for timesheet processing.
+          Device punches used for automatic timesheet processing.
         </div>
       </div>
       <div class="col-12 col-sm-auto">
@@ -155,57 +149,15 @@
       </div>
     </div>
   </q-card>
-
-  <q-card v-if="props.lastProcessResult" flat bordered class="attendance-data-card q-mt-md">
-    <q-card-section>
-      <div class="row items-center q-gutter-sm">
-        <q-icon name="task_alt" color="positive" size="22px" />
-        <div>
-          <div class="text-subtitle1 text-weight-medium">Latest processing result</div>
-          <div class="text-caption text-grey-7">Outcome from the most recent timesheet processing run.</div>
-        </div>
-      </div>
-    </q-card-section>
-    <q-separator />
-    <q-card-section>
-      <div class="row q-col-gutter-md">
-        <div v-for="item in processMetrics" :key="item.label" class="col-12 col-sm-6 col-lg-3">
-          <attendance-metric-card v-bind="item" />
-        </div>
-      </div>
-
-      <q-list
-        v-if="props.lastProcessResult.unresolvedBiometricUsers.length || props.lastProcessResult.warnings.length"
-        bordered
-        separator
-        class="q-mt-md rounded-borders"
-      >
-        <q-item v-for="userId in props.lastProcessResult.unresolvedBiometricUsers" :key="`user-${userId}`">
-          <q-item-section avatar><q-icon name="person_off" color="warning" /></q-item-section>
-          <q-item-section>
-            <q-item-label>Unmapped biometric user</q-item-label>
-            <q-item-label caption>{{ userId }} could not be matched to an employee.</q-item-label>
-          </q-item-section>
-        </q-item>
-        <q-item v-for="(warning, index) in props.lastProcessResult.warnings.slice(0, 10)" :key="`warning-${index}`">
-          <q-item-section avatar><q-icon name="report_problem" color="negative" /></q-item-section>
-          <q-item-section>
-            <q-item-label>{{ warning.employeeName || warning.employeeId }} · {{ warning.date }}</q-item-label>
-            <q-item-label caption>{{ warning.message }}</q-item-label>
-          </q-item-section>
-        </q-item>
-      </q-list>
-    </q-card-section>
-  </q-card>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import DateField from 'src/components/common/DateField.vue';
 import AttendanceFilterPanel from './AttendanceFilterPanel.vue';
-import AttendanceMetricCard from './AttendanceMetricCard.vue';
 import type { ClockingFilterForm } from './types';
 import { formatDateTime } from './utils';
-import type { ClockingLogRow, PaginationState, ProcessClockingResult } from 'src/stores/attendance-store';
+import type { ClockingLogRow, PaginationState } from 'src/stores/attendance-store';
 
 const props = defineProps<{
   filter: ClockingFilterForm;
@@ -213,7 +165,6 @@ const props = defineProps<{
   isLoadingClockingLogs: boolean;
   pagination: PaginationState;
   lastPage: number;
-  lastProcessResult: ProcessClockingResult | null;
 }>();
 
 const emit = defineEmits<{
@@ -226,37 +177,6 @@ const emit = defineEmits<{
 const activeFilterCount = computed(
   () => Object.values(props.filter).filter((value) => String(value ?? '').trim() !== '').length,
 );
-
-const processMetrics = computed(() => {
-  if (!props.lastProcessResult) return [];
-
-  return [
-    {
-      label: 'Punch-driven',
-      value: props.lastProcessResult.clockingTimesheets,
-      icon: 'fingerprint',
-      tone: 'primary' as const,
-    },
-    {
-      label: 'Schedule-driven',
-      value: props.lastProcessResult.scheduledTimesheets,
-      icon: 'calendar_month',
-      tone: 'neutral' as const,
-    },
-    {
-      label: 'Regular hours',
-      value: props.lastProcessResult.regularHours.toFixed(2),
-      icon: 'schedule',
-      tone: 'positive' as const,
-    },
-    {
-      label: 'Overtime hours',
-      value: props.lastProcessResult.overtimeHours.toFixed(2),
-      icon: 'more_time',
-      tone: 'warning' as const,
-    },
-  ];
-});
 
 const clockingColumns = [
   { name: 'biometricUserId', label: 'Employee / Biometric ID', field: 'biometricUserId', align: 'left' as const },

@@ -3,7 +3,7 @@ import { useAuthStore } from './auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 
-export interface WorkTimesheetSummary {
+export interface TimesheetTemplateSummary {
   id: string;
   name: string;
 }
@@ -12,20 +12,40 @@ export interface Department {
   id: number;
   name: string;
   parentId?: number | null;
-  parent?: Department | null;
-  current_work_timesheet_assignment?: {
+  accountId?: string | null;
+  chart_of_account?: {
     id: string;
-    work_timesheet_id: string;
+    name: string;
+    code1?: string | null;
+    code2?: string | null;
+  } | null;
+  parent?: Department | null;
+  totalDailyHoursBeforeOvertime?: number | null;
+  totalWeeklyHoursBeforeOvertime?: number | null;
+  overtimeThresholdMode?: 'DAILY' | 'WEEKLY' | 'DAILY_AND_WEEKLY' | null;
+  overnightShiftMode?: 'SPLIT_AT_MIDNIGHT' | 'ATTRIBUTE_TO_CLOCK_IN_DAY' | 'ATTRIBUTE_TO_CLOCK_OUT_DAY' | null;
+  includeLunchHour?: boolean;
+  lunchHourHours?: number | null;
+  current_timesheet_template_assignment?: {
+    id: string;
+    timesheet_template_id: string;
     effective_date: string;
     notes?: string | null;
-    work_timesheet?: WorkTimesheetSummary | null;
+    timesheet_template?: TimesheetTemplateSummary | null;
   } | null;
 }
 
 export interface DepartmentPayload {
   name: string;
   parentId?: number | null;
-  work_timesheet_id?: string | null;
+  accountId?: string | null;
+  timesheet_template_id?: string | null;
+  totalDailyHoursBeforeOvertime?: number | null;
+  totalWeeklyHoursBeforeOvertime?: number | null;
+  overtimeThresholdMode?: 'DAILY' | 'WEEKLY' | 'DAILY_AND_WEEKLY' | null;
+  overnightShiftMode?: 'SPLIT_AT_MIDNIGHT' | 'ATTRIBUTE_TO_CLOCK_IN_DAY' | 'ATTRIBUTE_TO_CLOCK_OUT_DAY' | null;
+  includeLunchHour?: boolean;
+  lunchHourHours?: number | null;
 }
 
 export const useDepartmentStore = defineStore('department', {

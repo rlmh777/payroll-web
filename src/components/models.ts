@@ -85,8 +85,19 @@ export interface PaymentMethod {
 }
 
 export interface LeaveType {
-  id: string;
-  name?: string;
+  id: number | string;
+  name: string;
+  code?: string;
+  isPaid?: boolean;
+  affectsBalance?: boolean;
+  requiresCertification?: boolean;
+  isActive?: boolean;
+  sortOrder?: number;
+  policy?: {
+    annualEntitlementDays?: number;
+    accrualMethod?: string;
+    isEnabled?: boolean;
+  } | null;
 }
 
 export interface EmployeeLeave {
@@ -101,6 +112,17 @@ export interface EmployeeLeave {
   totalDays: number;
   notes?: string | null;
   multiplier?: number;
+  leaveStatusId?: number;
+  statusCode?: string | null;
+  statusNote?: string | null;
+  leave_status?: {
+    id: number;
+    code: string;
+    name: string;
+  } | null;
+  approvalDate?: string | null;
+  approverId?: string | null;
+  departmentId?: number | null;
   employee?: Employee | null;
   leave_type?: LeaveType | null;
 }
@@ -111,20 +133,44 @@ export interface EmploymentDetail {
   startDate: string;
   endDate?: string | null;
   isActive: boolean;
-  payscalePoint?: number | null;
-  hourlyRate?: number | null;
-  totalRate?: number | null;
-  payrateFrequencyId?: string | null;
+  jobTitle?: string | null;
+  requiresClocking?: boolean | null;
   benefits?: string | null;
   accountId?: string | null;
   contractTypeId?: string | null;
   employmentPolicies?: string | null;
   contractAgreementPath?: string | null;
-  employmentStatusId?: string | null;
   departmentId?: string | null;
   worksiteId?: string | null;
-  employeeStatusId?: string | null;
   department?: Department | null;
+}
+
+export interface EmployeeCompensation {
+  id: string;
+  employeeId: string;
+  employmentDetailId?: string | null;
+  effectiveDate: string;
+  endDate?: string | null;
+  isActive: boolean;
+  compensationMethod: string;
+  requiresClocking?: boolean;
+  hourlyRate?: number | null;
+  yearlyRate?: number | null;
+  standardWeeklyHours?: number | null;
+  payscale?: string | null;
+  payscalePoint?: string | null;
+  reasonType: string;
+  reasonNote?: string | null;
+}
+
+export interface EmployeeStatus {
+  id: number;
+  name: string;
+}
+
+export interface EmploymentStatus {
+  id: number;
+  name: string;
 }
 
 export interface Employee {
@@ -156,13 +202,20 @@ export interface Employee {
   picturePath?: string | null;
   health?: string | null;
   unionMembership?: string | null;
+  employmentStatusId?: number | null;
+  employeeStatusId?: number | null;
+  timesheetTemplateId?: string | null;
   // Relationships
   locality?: Locality | null;
   honorific?: Honorific | null;
   gender?: Gender | null;
   citizenshipStatus?: CitizenshipStatus | null;
   nationality?: Country | null;
+  employmentStatus?: EmploymentStatus | null;
+  employeeStatus?: EmployeeStatus | null;
+  timesheetTemplate?: { id: string; name: string } | null;
   employmentDetails?: EmploymentDetail[];
+  employeeCompensations?: EmployeeCompensation[];
 }
 
 export interface Institution {
@@ -232,6 +285,17 @@ export interface Bank {
   id: string;
   name: string;
   code?: string | null;
+}
+
+export interface EmployeeBank {
+  id: string;
+  employeeId: string;
+  bankId: string;
+  accountNumber: string;
+  isPrimary: boolean;
+  notes?: string | null;
+  employee?: Employee | null;
+  bank?: Bank | null;
 }
 
 export interface Vendor {

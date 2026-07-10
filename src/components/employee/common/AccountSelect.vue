@@ -43,7 +43,7 @@
               ─ {{ scope.opt.accountType.name }}
             </q-item-label>
           </q-item-section>
-          <q-item-section v-if="showEdit && !readonly" side>
+          <q-item-section v-if="showEdit && !readonly && !disable" side>
             <q-btn
               flat
               round
@@ -75,8 +75,8 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useEmployeeStore } from '../../../stores/employee-store';
 import type { Account } from '../../models';
-import AddAccount from '../../account/AddAccount.vue';
-import EditAccount from '../../account/EditAccount.vue';
+import AddAccount from '../../settings/account/AddAccount.vue';
+import EditAccount from '../../settings/account/EditAccount.vue';
 
 interface Props {
   modelValue?: string | null;
@@ -116,7 +116,7 @@ const selectedAccount = ref<Account | null>(null);
 
 const accountOptions = computed((): (Account | { id: string; name: string })[] => {
   const options: (Account | { id: string; name: string })[] = [...employeeStore.accounts];
-  if (props.showAddNew && !props.readonly) {
+  if (props.showAddNew && !props.readonly && !props.disable) {
     options.unshift({ id: 'add-new', name: 'Add New Account' });
   }
   return options;

@@ -17,9 +17,9 @@
           @request="onRequest"
           no-data-label="No departments"
         >
-          <template #body-cell-workTimesheet="props">
+          <template #body-cell-timesheetTemplate="props">
             <q-td :props="props">
-              {{ props.row.current_work_timesheet_assignment?.work_timesheet?.name ?? 'Default Timesheet' }}
+              {{ props.row.current_timesheet_template_assignment?.timesheet_template?.name ?? 'Default Template' }}
             </q-td>
           </template>
 
@@ -65,12 +65,12 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { type QTableProps, useQuasar } from 'quasar';
 import { useDepartmentStore, type Department } from 'src/stores/department-store';
-import { useWorkTimesheetStore } from 'src/stores/work-timesheet-store';
+import { useTimesheetTemplateStore } from 'src/stores/timesheet-template-store';
 import SearchDepartment from './SearchDepartment.vue';
 import UpdateDepartment from './UpdateDepartment.vue';
 
 const store = useDepartmentStore();
-const workTimesheetStore = useWorkTimesheetStore();
+const timesheetTemplateStore = useTimesheetTemplateStore();
 const $q = useQuasar();
 const pagination = ref({
   page: 1,
@@ -89,13 +89,39 @@ const columns: QTableProps['columns'] = [
     align: 'left',
   },
   {
-    name: 'workTimesheet',
-    label: 'Working hour timesheet',
-    field: 'workTimesheet',
+    name: 'timesheetTemplate',
+    label: 'Timesheet template',
+    field: 'timesheetTemplate',
     align: 'left',
+  },
+  {
+    name: 'totalDailyHoursBeforeOvertime',
+    label: 'Daily hrs (pre-OT)',
+    field: (row: Department) => formatHours(row.totalDailyHoursBeforeOvertime, 9),
+    align: 'right',
+  },
+  {
+    name: 'totalWeeklyHoursBeforeOvertime',
+    label: 'Weekly hrs (pre-OT)',
+    field: (row: Department) => formatHours(row.totalWeeklyHoursBeforeOvertime, 45),
+    align: 'right',
+  },
+  {
+    name: 'includeLunchHour',
+    label: 'Include lunch hour',
+    field: (row: Department) => ((row.includeLunchHour ?? true) ? 'Yes' : 'No'),
+    align: 'center',
   },
   { name: 'actions', label: '', field: 'actions', align: 'right', sortable: false },
 ];
+
+function formatHours(value: number | null | undefined, fallback: number) {
+  if (value === null || value === undefined) {
+    return Number(fallback).toFixed(2);
+  }
+
+  return Number(value).toFixed(2);
+}
 
 const departments = computed(() => store.departments);
 
@@ -151,7 +177,7 @@ onMounted(async () => {
   await Promise.all([
     store.fetchDepartments({ page: 1, perPage: pagination.value.rowsPerPage }),
     store.fetchDepartmentOptions(),
-    workTimesheetStore.fetchWorkTimesheets(),
+    timesheetTemplateStore.fetchTimesheetTemplates(),
   ]);
   pagination.value.rowsNumber = store.total;
 });

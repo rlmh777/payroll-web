@@ -77,7 +77,7 @@ const onSubmit = async () => {
   const newLeaveType = await leaveTypeStore.createLeaveType(form.value.name);
 
   if (newLeaveType) {
-    emit('saved', newLeaveType.id);
+    emit('saved', String(newLeaveType.id));
     onClose();
   }
 };

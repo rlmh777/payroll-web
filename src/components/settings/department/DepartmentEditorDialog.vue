@@ -30,15 +30,75 @@
           />
 
           <q-select
-            v-model="form.work_timesheet_id"
+            v-model="form.timesheet_template_id"
             clearable
             emit-value
             map-options
-            label="Working hour timesheet"
+            label="Timesheet template"
             stack-label
-            hint="Leave empty to assign the default timesheet."
+            hint="Leave empty to assign the default template."
             :disable="departmentStore.isSaving"
-            :options="workTimesheetOptions"
+            :options="timesheetTemplateOptions"
+          />
+
+          <q-input
+            v-model.number="form.totalDailyHoursBeforeOvertime"
+            type="number"
+            step="0.25"
+            min="0"
+            max="24"
+            label="Total daily hours before overtime"
+            outlined
+            :disable="departmentStore.isSaving"
+          />
+
+          <q-input
+            v-model.number="form.totalWeeklyHoursBeforeOvertime"
+            type="number"
+            step="0.25"
+            min="0"
+            max="168"
+            label="Total weekly hours before overtime"
+            outlined
+            :disable="departmentStore.isSaving"
+          />
+
+          <q-select
+            v-model="form.overtimeThresholdMode"
+            emit-value
+            map-options
+            label="Overtime threshold mode"
+            hint="Choose whether overtime uses the daily or weekly hour limit."
+            outlined
+            :disable="departmentStore.isSaving"
+            :options="[
+              { label: 'Daily then weekly hours before overtime', value: 'DAILY_AND_WEEKLY' },
+              { label: 'Daily hours before overtime only', value: 'DAILY' },
+              { label: 'Weekly hours before overtime only', value: 'WEEKLY' },
+            ]"
+          />
+
+          <q-select
+            v-model="form.overnightShiftMode"
+            emit-value
+            map-options
+            label="Overnight shift handling"
+            hint="Controls whether overnight work is split at midnight for daily overtime and holiday pay."
+            outlined
+            :disable="departmentStore.isSaving"
+            :options="[
+              { label: 'Split at midnight (separate rows per day)', value: 'SPLIT_AT_MIDNIGHT' },
+              { label: 'Keep on clock-in day (holiday/OT use start day)', value: 'ATTRIBUTE_TO_CLOCK_IN_DAY' },
+              { label: 'Keep on clock-out day (holiday/OT use end day)', value: 'ATTRIBUTE_TO_CLOCK_OUT_DAY' },
+            ]"
+          />
+
+          <IncludeLunchHourFields
+            :include-lunch-hour="form.includeLunchHour ?? true"
+            :lunch-hour-hours="form.lunchHourHours ?? 1"
+            :disable="departmentStore.isSaving"
+            @update:include-lunch-hour="form.includeLunchHour = $event"
+            @update:lunch-hour-hours="form.lunchHourHours = $event"
           />
 
           <div class="row q-gutter-sm justify-end q-mt-lg">
@@ -61,7 +121,8 @@
 import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useDepartmentStore, type Department, type DepartmentPayload } from 'src/stores/department-store';
-import { useWorkTimesheetStore } from 'src/stores/work-timesheet-store';
+import { useTimesheetTemplateStore } from 'src/stores/timesheet-template-store';
+import IncludeLunchHourFields from 'src/components/common/IncludeLunchHourFields.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -85,7 +146,7 @@ const emit = defineEmits<{
 
 const $q = useQuasar();
 const departmentStore = useDepartmentStore();
-const workTimesheetStore = useWorkTimesheetStore();
+const timesheetTemplateStore = useTimesheetTemplateStore();
 
 const dialogModel = computed({
   get: () => props.modelValue,
@@ -100,10 +161,10 @@ const parentOptions = computed(() =>
     .map((department) => ({ label: department.name, value: department.id })),
 );
 
-const workTimesheetOptions = computed(() =>
-  workTimesheetStore.workTimesheets.map((timesheet) => ({
-    label: timesheet.name,
-    value: timesheet.id,
+const timesheetTemplateOptions = computed(() =>
+  timesheetTemplateStore.timesheetTemplates.map((template) => ({
+    label: template.name,
+    value: template.id,
   })),
 );
 
@@ -111,7 +172,13 @@ function emptyForm(): DepartmentPayload {
   return {
     name: '',
     parentId: null,
-    work_timesheet_id: null,
+    timesheet_template_id: null,
+    totalDailyHoursBeforeOvertime: 9,
+    totalWeeklyHoursBeforeOvertime: 45,
+    overtimeThresholdMode: 'DAILY_AND_WEEKLY',
+    overnightShiftMode: 'SPLIT_AT_MIDNIGHT',
+    includeLunchHour: true,
+    lunchHourHours: 1,
   };
 }
 
@@ -120,7 +187,13 @@ function applyInitialValue() {
     ? {
         name: props.initialValue.name ?? '',
         parentId: props.initialValue.parentId ?? null,
-        work_timesheet_id: props.initialValue.work_timesheet_id ?? null,
+        timesheet_template_id: props.initialValue.timesheet_template_id ?? null,
+        totalDailyHoursBeforeOvertime: props.initialValue.totalDailyHoursBeforeOvertime ?? 9,
+        totalWeeklyHoursBeforeOvertime: props.initialValue.totalWeeklyHoursBeforeOvertime ?? 45,
+        overtimeThresholdMode: props.initialValue.overtimeThresholdMode ?? 'DAILY_AND_WEEKLY',
+        overnightShiftMode: props.initialValue.overnightShiftMode ?? 'SPLIT_AT_MIDNIGHT',
+        includeLunchHour: props.initialValue.includeLunchHour ?? true,
+        lunchHourHours: props.initialValue.lunchHourHours ?? 1,
       }
     : emptyForm();
 }
@@ -137,7 +210,7 @@ function closeDialog() {
 async function loadOptions() {
   await Promise.all([
     departmentStore.fetchDepartmentOptions(),
-    workTimesheetStore.fetchWorkTimesheets(),
+    timesheetTemplateStore.fetchTimesheetTemplates(),
   ]);
 }
 

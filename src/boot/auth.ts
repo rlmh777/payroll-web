@@ -1,0 +1,11 @@
+import { boot } from 'quasar/wrappers';
+import { useAuthStore } from 'src/stores/auth';
+
+export default boot(async () => {
+  const authStore = useAuthStore();
+  authStore.checkAuth();
+
+  if (authStore.isAuthenticated) {
+    await authStore.validateSession({ force: true });
+  }
+});

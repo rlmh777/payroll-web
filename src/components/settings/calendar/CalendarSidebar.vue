@@ -1,14 +1,5 @@
 <template>
   <aside class="calendar-sidebar">
-    <q-btn
-      color="primary"
-      icon="add"
-      label="Create"
-      unelevated
-      class="calendar-create"
-      @click="emit('create')"
-    />
-
     <q-card class="calendar-mini-card">
       <div class="row items-center justify-between q-mb-sm">
         <div class="text-subtitle2">{{ miniLabel }}</div>
@@ -25,7 +16,7 @@
       <q-list dense>
         <q-item v-for="group in calendarGroups" :key="group.id" class="calendar-filter-item">
           <q-item-section avatar>
-            <q-checkbox v-model="groupModel" :val="group.id" :disable="!canFilterCalendars" />
+            <q-checkbox v-model="groupModel" :val="group.id" />
           </q-item-section>
           <q-item-section>
             <q-item-label>{{ group.name }}</q-item-label>
@@ -35,9 +26,6 @@
           </q-item-section>
         </q-item>
       </q-list>
-      <div v-if="!canFilterCalendars" class="text-caption text-grey-6 q-mt-sm">
-        Calendar filters are managed by your supervisor.
-      </div>
     </div>
 
     <div v-if="canViewEmployees" class="calendar-filters-panel">
@@ -79,7 +67,6 @@ const props = defineProps<{
   miniLabel: string;
   calendarGroups: CalendarGroup[];
   activeGroupIds: string[];
-  canFilterCalendars: boolean;
   canViewEmployees: boolean;
   employees: Array<{ id: string; firstName: string; lastName: string; code?: string }>;
   selectedEmployeeId: string | null;
@@ -89,7 +76,6 @@ const emit = defineEmits<{
   (event: 'update:selectedDate', value: string): void;
   (event: 'update:activeGroupIds', value: string[]): void;
   (event: 'update:selectedEmployeeId', value: string | null): void;
-  (event: 'create'): void;
   (event: 'mini-prev'): void;
   (event: 'mini-next'): void;
 }>();
@@ -120,13 +106,6 @@ const employeeLabel = (employee: { firstName: string; lastName: string; code?: s
   display: flex;
   flex-direction: column;
   gap: 18px;
-}
-
-.calendar-create {
-  border-radius: 999px;
-  padding: 10px 18px;
-  font-weight: 600;
-  align-self: flex-start;
 }
 
 .calendar-mini-card {

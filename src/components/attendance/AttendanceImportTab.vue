@@ -191,7 +191,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import * as XLSX from 'xlsx';
-import jspreadsheet from 'jspreadsheet-ce';
+import jspreadsheet, { type JspreadsheetInstanceElement, type WorksheetInstance } from 'jspreadsheet-ce';
 import 'jspreadsheet-ce/dist/jspreadsheet.css';
 import 'jsuites/dist/jsuites.css';
 import type { ImportClockingResult } from 'src/stores/attendance-store';
@@ -238,7 +238,7 @@ const sourceRows = ref<unknown[][]>([]);
 const stagingRows = ref<ClockingImportStagingRow[]>([]);
 const previewError = ref('');
 const isPreparingPreview = ref(false);
-let worksheetInstance: jspreadsheet.WorksheetInstance | null = null;
+let worksheetInstance: WorksheetInstance | null = null;
 let previewRequestId = 0;
 let isRenderingGrid = false;
 
@@ -301,7 +301,7 @@ function destroyPreviewSpreadsheet() {
   }
 
   try {
-    jspreadsheet.destroy(previewContainer.value as jspreadsheet.JspreadsheetInstanceElement, true);
+    jspreadsheet.destroy(previewContainer.value as JspreadsheetInstanceElement, true);
   } catch {
     // The container may not have a mounted spreadsheet yet.
   }
@@ -309,7 +309,7 @@ function destroyPreviewSpreadsheet() {
   previewContainer.value.innerHTML = '';
 }
 
-function syncStagingRows(instance: jspreadsheet.WorksheetInstance | null = worksheetInstance) {
+function syncStagingRows(instance: WorksheetInstance | null = worksheetInstance) {
   if (!instance || isRenderingGrid) {
     return;
   }
@@ -395,8 +395,8 @@ function removeSelectedRows() {
     return;
   }
 
-  const selectedRows = worksheetInstance.getSelectedRows().sort((left, right) => right - left);
-  selectedRows.forEach((rowIndex) => worksheetInstance?.deleteRow(rowIndex, 1));
+  const selectedRows = worksheetInstance.getSelectedRows().sort((left: number, right: number) => right - left);
+  selectedRows.forEach((rowIndex: number) => worksheetInstance?.deleteRow(rowIndex, 1));
   syncStagingRows();
 }
 

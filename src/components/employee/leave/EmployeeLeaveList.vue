@@ -1,6 +1,6 @@
 <template>
   <div>
-    <search-employee-leave />
+    <search-employee-leave @saved="reloadLeaves(1, pagination.rowsPerPage)" />
     
     <q-table
       class="my-sticky-dynamic q-mt-sm"
@@ -23,9 +23,64 @@
           </div>
         </q-td>
       </template>
+      <template #body-cell-status="props">
+        <q-td :props="props">
+          <q-badge
+            :color="leaveStatusColor(resolveLeaveStatusCode(props.row))"
+            :label="formatLeaveStatus(resolveLeaveStatusCode(props.row), props.row.leave_status?.name)"
+          />
+        </q-td>
+      </template>
+      <template #body-cell-isPaid="props">
+        <q-td :props="props">
+          <q-badge
+            :color="props.row.leave_type?.isPaid === false ? 'grey-7' : 'positive'"
+            :label="props.row.leave_type?.isPaid === false ? 'Unpaid' : 'Paid'"
+          />
+        </q-td>
+      </template>
       <template v-slot:body-cell-actions="props">
         <q-td :props="props" class="text-right">
           <div class="action-buttons">
+            <q-btn
+              v-if="leaveAllowsSupervisorApproval(resolveLeaveStatusCode(props.row))"
+              flat
+              round
+              dense
+              icon="check"
+              color="positive"
+              size="sm"
+              class="action-btn"
+              @click="handleStatusAction(props.row, 'approve')"
+            >
+              <q-tooltip>Approve</q-tooltip>
+            </q-btn>
+            <q-btn
+              v-if="leaveAllowsSupervisorApproval(resolveLeaveStatusCode(props.row))"
+              flat
+              round
+              dense
+              icon="close"
+              color="negative"
+              size="sm"
+              class="action-btn"
+              @click="handleStatusAction(props.row, 'reject')"
+            >
+              <q-tooltip>Reject</q-tooltip>
+            </q-btn>
+            <q-btn
+              v-if="leaveAllowsCancellation(resolveLeaveStatusCode(props.row))"
+              flat
+              round
+              dense
+              icon="block"
+              color="grey"
+              size="sm"
+              class="action-btn"
+              @click="handleStatusAction(props.row, 'cancel')"
+            >
+              <q-tooltip>Cancel</q-tooltip>
+            </q-btn>
             <q-btn
               flat
               round
@@ -84,31 +139,78 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useEmployeeLeaveStore } from '../../../stores/employee-leave-store';
 import { useEmployeeStore } from '../../../stores/employee-store';
+import { useLeaveBalanceStore } from 'src/stores/leave-balance-store';
 import SearchEmployeeLeave from './SearchEmployeeLeave.vue';
 import EditEmployeeLeave from './EditEmployeeLeave.vue';
 import type { EmployeeLeave } from '../../models';
+import {
+  formatLeaveStatus,
+  leaveAllowsCancellation,
+  leaveAllowsSupervisorApproval,
+  leaveStatusColor,
+} from 'src/utils/leave-status';
 
 const $q = useQuasar();
 const employeeLeaveStore = useEmployeeLeaveStore();
 const employeeStore = useEmployeeStore();
+const leaveBalanceStore = useLeaveBalanceStore();
 
-// Watch for search filter changes and refetch (reset to page 1)
+const pagination = ref({
+  rowsPerPage: 5,
+  page: 1,
+  rowsNumber: 0,
+});
+
+async function reloadLeaves(
+  page = employeeLeaveStore.currentPage,
+  rowsPerPage = pagination.value.rowsPerPage,
+) {
+  await employeeLeaveStore.fetchEmployeeLeaves(page, rowsPerPage);
+  pagination.value.rowsNumber = employeeLeaveStore.total;
+
+  const employeeId = employeeStore.selectedEmployee?.id;
+  if (employeeId) {
+    await leaveBalanceStore.fetchByEmployee(employeeId);
+  }
+}
+
+// Refetch when search filters change (reset to page 1)
 watch(
   () => employeeLeaveStore.searchFilters,
   async () => {
     employeeLeaveStore.currentPage = 1;
-    await employeeLeaveStore.fetchEmployeeLeaves(1, pagination.value.rowsPerPage);
+    await reloadLeaves(1, pagination.value.rowsPerPage);
   },
-  { deep: true }
+  { deep: true },
 );
 
-// Watch for selectedEmployee changes and refetch (reset to page 1)
+// Reset filters and refetch when the selected employee changes
 watch(
   () => employeeStore.selectedEmployee?.id,
-  async () => {
+  async (employeeId, previousEmployeeId) => {
+    if (!employeeId || employeeId === previousEmployeeId) {
+      return;
+    }
+
     employeeLeaveStore.currentPage = 1;
-    await employeeLeaveStore.fetchEmployeeLeaves(1, pagination.value.rowsPerPage);
-  }
+    if (employeeLeaveStore.hasActiveSearchFilters) {
+      employeeLeaveStore.resetSearchFilters();
+      return;
+    }
+
+    await reloadLeaves(1, pagination.value.rowsPerPage);
+  },
+);
+
+// Load when the user opens the Leaves tab
+watch(
+  () => employeeStore.activeDetailsTab,
+  async (tab) => {
+    if (tab !== 'leaves') {
+      return;
+    }
+    await reloadLeaves(pagination.value.page, pagination.value.rowsPerPage);
+  },
 );
 
 const columns = [
@@ -118,6 +220,12 @@ const columns = [
     field: (row: EmployeeLeave) => row.leave_type?.name || '-',
     align: 'left' as const,
     sortable: true,
+  },
+  {
+    name: 'isPaid',
+    label: 'Pay',
+    field: (row: EmployeeLeave) => (row.leave_type?.isPaid === false ? 'Unpaid' : 'Paid'),
+    align: 'left' as const,
   },
   {
     name: 'startDate',
@@ -142,12 +250,18 @@ const columns = [
     },
   },
   {
-    name: 'multiplier',
-    label: 'Multiplier',
-    field: 'multiplier',
-    align: 'center' as const,
+    name: 'totalDays',
+    label: 'Days',
+    field: 'totalDays',
+    align: 'right' as const,
     sortable: true,
-    format: (val: number) => val || 1.0,
+  },
+  {
+    name: 'status',
+    label: 'Status',
+    field: (row: EmployeeLeave) => formatLeaveStatus(resolveLeaveStatusCode(row), row.leave_status?.name),
+    align: 'left' as const,
+    sortable: true,
   },
   {
     name: 'notes',
@@ -172,11 +286,37 @@ const showDeleteDialog = ref(false);
 const selectedEmployeeLeave = ref<EmployeeLeave | null>(null);
 const employeeLeaveToDelete = ref<EmployeeLeave | null>(null);
 
-const pagination = ref({
-  rowsPerPage: 5,
-  page: 1,
-  rowsNumber: 0,
-});
+function resolveLeaveStatusCode(row: EmployeeLeave): string | null {
+  return row.statusCode ?? row.leave_status?.code ?? null;
+}
+
+function handleStatusAction(
+  row: EmployeeLeave,
+  action: 'approve' | 'reject' | 'cancel',
+) {
+  const labels = {
+    approve: 'Approve this leave request?',
+    reject: 'Reject this leave request?',
+    cancel: 'Cancel this leave?',
+  };
+
+  $q.dialog({
+    title: 'Confirm',
+    message: labels[action],
+    cancel: true,
+    ok: { label: action.charAt(0).toUpperCase() + action.slice(1), color: action === 'approve' ? 'positive' : 'negative' },
+  }).onOk(() => {
+    void (async () => {
+      const updated = await employeeLeaveStore.updateLeaveStatus(row.id, action);
+      if (!updated) {
+        $q.notify({ type: 'negative', message: employeeLeaveStore.error || 'Update failed.', position: 'top' });
+        return;
+      }
+      $q.notify({ type: 'positive', message: 'Leave status updated.', position: 'top' });
+      await reloadLeaves(employeeLeaveStore.currentPage, pagination.value.rowsPerPage);
+    })();
+  });
+}
 
 // Sync pagination with store (after fetch completes)
 watch(
@@ -191,7 +331,6 @@ const onRequest = async (props: {
   pagination: { page: number; rowsPerPage: number; sortBy?: string; descending?: boolean };
   filter?: string;
 }) => {
-  console.log('onRequest event:', props);
   const { page, rowsPerPage } = props.pagination;
   
   // Update local pagination
@@ -199,10 +338,7 @@ const onRequest = async (props: {
   pagination.value.rowsPerPage = rowsPerPage;
   
   // Fetch data from server
-  await employeeLeaveStore.fetchEmployeeLeaves(page, rowsPerPage);
-  
-  // Update rowsNumber after fetch
-  pagination.value.rowsNumber = employeeLeaveStore.total;
+  await reloadLeaves(page, rowsPerPage);
 };
 
 const openEditDialog = (employeeLeave: EmployeeLeave) => {
@@ -212,9 +348,9 @@ const openEditDialog = (employeeLeave: EmployeeLeave) => {
 
 const onEmployeeLeaveUpdated = async () => {
   // Refresh the list after a leave is updated (keep current page)
-  await employeeLeaveStore.fetchEmployeeLeaves(
+  await reloadLeaves(
     employeeLeaveStore.currentPage,
-    pagination.value.rowsPerPage
+    pagination.value.rowsPerPage,
   );
 };
 
@@ -236,9 +372,9 @@ const handleDelete = async () => {
     showDeleteDialog.value = false;
     employeeLeaveToDelete.value = null;
     // Refresh the list after deletion (keep current page)
-    await employeeLeaveStore.fetchEmployeeLeaves(
+    await reloadLeaves(
       employeeLeaveStore.currentPage,
-      pagination.value.rowsPerPage
+      pagination.value.rowsPerPage,
     );
   } else {
     $q.notify({
@@ -250,10 +386,9 @@ const handleDelete = async () => {
 };
 
 onMounted(async () => {
-  // Fetch employee leaves with current search filters
-  // employeeId will be taken from employeeStore.selectedEmployee
-  // Start with page 1 and default rows per page
-  await employeeLeaveStore.fetchEmployeeLeaves(1, pagination.value.rowsPerPage);
+  if (employeeStore.activeDetailsTab === 'leaves') {
+    await reloadLeaves(1, pagination.value.rowsPerPage);
+  }
 });
 </script>
 

@@ -3,19 +3,12 @@ import { useAuthStore } from './auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 
-export interface PayrateFrequencyRef {
-  id: number;
-  name?: string;
-}
-
 export interface PayPeriodSchedule {
   id: string;
   start_date: string;
   end_date: string;
   pay_date: string;
   pay_period_group_id?: string | null;
-  payrate_frequency_id?: number | null;
-  payrate_frequency?: PayrateFrequencyRef | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -32,7 +25,6 @@ interface CreatePayPeriodScheduleBody {
   end_date: string;
   pay_date: string;
   pay_period_group_id?: string | null;
-  payrate_frequency_id?: number | null;
 }
 
 interface UpdatePayPeriodScheduleBody {
@@ -40,7 +32,6 @@ interface UpdatePayPeriodScheduleBody {
   end_date?: string;
   pay_date?: string;
   pay_period_group_id?: string | null;
-  payrate_frequency_id?: number | null;
 }
 
 export const usePayPeriodScheduleStore = defineStore('payPeriodSchedule', {
@@ -68,13 +59,11 @@ export const usePayPeriodScheduleStore = defineStore('payPeriodSchedule', {
         const authStore = useAuthStore();
         const queryParams = new URLSearchParams();
 
-        // Add pay_period_group_id filter if provided
         const groupId = payPeriodGroupId ?? this.payPeriodGroupId;
         if (groupId) {
           queryParams.append('pay_period_group_id', groupId);
         }
 
-        // Add pagination parameters
         const currentPage = page ?? this.currentPage;
         const itemsPerPage = perPage ?? 10;
         queryParams.append('page', currentPage.toString());
@@ -98,14 +87,12 @@ export const usePayPeriodScheduleStore = defineStore('payPeriodSchedule', {
 
         const data = await response.json();
 
-        // Handle paginated response
         if (data.data && Array.isArray(data.data)) {
           this.payPeriodSchedules = data.data;
           this.currentPage = data.current_page || 1;
           this.lastPage = data.last_page || 1;
           this.total = data.total || 0;
         } else if (Array.isArray(data)) {
-          // Fallback for non-paginated response
           this.payPeriodSchedules = data;
         } else {
           this.payPeriodSchedules = [];
@@ -124,7 +111,6 @@ export const usePayPeriodScheduleStore = defineStore('payPeriodSchedule', {
       end_date: string,
       pay_date: string,
       pay_period_group_id?: string | null,
-      payrate_frequency_id?: number | null
     ) {
       if (this.isLoading) return false;
 
@@ -139,7 +125,6 @@ export const usePayPeriodScheduleStore = defineStore('payPeriodSchedule', {
           end_date,
           pay_date,
           pay_period_group_id: pay_period_group_id ?? null,
-          payrate_frequency_id: payrate_frequency_id ?? null,
         };
 
         const headers: HeadersInit = {
@@ -179,7 +164,6 @@ export const usePayPeriodScheduleStore = defineStore('payPeriodSchedule', {
       end_date?: string,
       pay_date?: string,
       pay_period_group_id?: string | null,
-      payrate_frequency_id?: number | null
     ) {
       if (this.isLoading) return false;
 
@@ -194,7 +178,6 @@ export const usePayPeriodScheduleStore = defineStore('payPeriodSchedule', {
         if (end_date !== undefined) body.end_date = end_date;
         if (pay_date !== undefined) body.pay_date = pay_date;
         if (pay_period_group_id !== undefined) body.pay_period_group_id = pay_period_group_id;
-        if (payrate_frequency_id !== undefined) body.payrate_frequency_id = payrate_frequency_id;
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',

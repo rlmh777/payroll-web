@@ -1,11 +1,12 @@
 <template>
-  <q-layout view="hHh Lpr lFf">
-    <!-- Top main menu -->
-    <MainHeader />
-    <!-- Side drawer -->
+  <q-layout view="hHh Lpr lFf" class="main-layout" :class="{ 'main-layout--full-height': isFullHeightPage }">
+    <MainHeader :show-drawer-toggle="!shouldHideDrawer" />
     <SideDrawer v-if="!shouldHideDrawer" />
-    <q-page-container class="q-ma-md">
-      <AppBreadcrumbs />
+    <q-page-container
+      class="main-page-container"
+      :class="{ 'main-page-container--full-height': isFullHeightPage }"
+    >
+      <AppBreadcrumbs v-if="!isFullHeightPage" />
       <router-view />
     </q-page-container>
   </q-layout>
@@ -29,11 +30,12 @@ const props = withDefaults(defineProps<Props>(), {
 const route = useRoute();
 
 const shouldHideDrawer = computed(() => {
-  // Check if hideDrawer is passed as prop
   if (props.hideDrawer) {
     return true;
   }
-  // Check if hideDrawer is in route meta
+
   return route.meta.hideDrawer === true;
 });
+
+const isFullHeightPage = computed(() => route.meta.fullHeight === true);
 </script>

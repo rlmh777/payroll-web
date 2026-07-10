@@ -4,6 +4,19 @@ import type { Account, Allowance, CitizenshipStatus, Country, Employee, Gender, 
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api'
 
+let employeesFetchId = 0;
+
+export type EmployeeDetailsTab =
+  | 'attendance'
+  | 'leaves'
+  | 'allowances'
+  | 'deductions'
+  | 'historical-deductions'
+  | 'ss-benefit'
+  | 'contracts'
+  | 'compensation'
+  | 'documents';
+
 export const useEmployeeStore = defineStore('employee', {
   state: () => ({
     employees: [] as Employee[],
@@ -37,15 +50,17 @@ export const useEmployeeStore = defineStore('employee', {
     isLoadingPayrateFrequencies: false,
     hasMore: true,
     selectedEmployee: null as Employee | null,
+    activeDetailsTab: 'attendance' as EmployeeDetailsTab,
   }),
 
   getters: {  },
   actions: {
     async fetchEmployees(reset: boolean = true) {
-      if (this.isLoading) return;
-      
+      const fetchId = ++employeesFetchId;
       this.isLoading = true;
-      
+
+      const pageToFetch = reset ? 1 : this.currentPage;
+
       if (reset) {
         this.currentPage = 1;
         this.employees = [];
@@ -57,27 +72,56 @@ export const useEmployeeStore = defineStore('employee', {
       if (this.sortBy) queryParams.append('sort_by', this.sortBy);
       if (this.sortDirection) queryParams.append('sort_direction', this.sortDirection);
       if (this.perPage) queryParams.append('per_page', this.perPage.toString());
-      queryParams.append('page', this.currentPage.toString());
+      queryParams.append('page', pageToFetch.toString());
 
       try {
         const response = await fetch(`${API_URL}/employees?${queryParams.toString()}`);
-        const data = await response.json();
-        
-        if (reset) {
-          this.employees = data.data;
-        } else {
-          this.employees = [...this.employees, ...data.data];
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch employees: ${response.status}`);
         }
-        
-        this.currentPage = data.current_page;
-        this.lastPage = data.last_page;
-        this.total = data.total;
-        this.hasMore = data.current_page < data.last_page;
+
+        const data = await response.json();
+
+        if (fetchId !== employeesFetchId) {
+          return;
+        }
+
+        const pageEmployees = Array.isArray(data.data) ? data.data : [];
+
+        if (reset) {
+          this.employees = pageEmployees;
+        } else {
+          this.employees = [...this.employees, ...pageEmployees];
+        }
+
+        this.currentPage = data.current_page ?? pageToFetch;
+        this.lastPage = data.last_page ?? 1;
+        this.total = data.total ?? this.employees.length;
+        this.hasMore = this.currentPage < this.lastPage;
       } catch (error) {
-        console.error('Error fetching employees:', error);
+        if (fetchId === employeesFetchId) {
+          console.error('Error fetching employees:', error);
+        }
       } finally {
-        this.isLoading = false;
+        if (fetchId === employeesFetchId) {
+          this.isLoading = false;
+        }
       }
+    },
+
+    async ensureEmployeesLoaded(options?: { resetSearch?: boolean }) {
+      if (options?.resetSearch) {
+        this.searchName = '';
+        await this.fetchEmployees(true);
+        return;
+      }
+
+      if (this.employees.length > 0 && !this.searchName && !this.isLoading) {
+        return;
+      }
+
+      await this.fetchEmployees(true);
     },
     
     async loadMoreEmployees() {
@@ -92,6 +136,7 @@ export const useEmployeeStore = defineStore('employee', {
     },
     
     resetEmployees() {
+      employeesFetchId += 1;
       this.currentPage = 1;
       this.employees = [];
       this.hasMore = true;
@@ -158,6 +203,7 @@ export const useEmployeeStore = defineStore('employee', {
       this.isLoadingNationalities = true;
       try {
         const queryParams = new URLSearchParams();
+        queryParams.append('per_page', '1000');
         if (search) {
           queryParams.append('search', search);
         }
@@ -192,6 +238,7 @@ export const useEmployeeStore = defineStore('employee', {
       this.isLoadingHonorifics = true;
       try {
         const queryParams = new URLSearchParams();
+        queryParams.append('per_page', '1000');
         if (search) {
           queryParams.append('search', search);
         }
@@ -295,6 +342,45 @@ export const useEmployeeStore = defineStore('employee', {
       } finally {
         this.isLoadingPayrateFrequencies = false;
       }
+    },
+
+    async updateEmployee(id: string, payload: Partial<Employee>) {
+      const authStore = useAuthStore();
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (authStore.token) {
+        headers['Authorization'] = `Bearer ${authStore.token}`;
+      }
+
+      const response = await fetch(`${API_URL}/employees/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        const errors = body.errors;
+        if (errors && typeof errors === 'object') {
+          const firstField = Object.values(errors)[0];
+          if (Array.isArray(firstField) && firstField[0]) {
+            throw new Error(String(firstField[0]));
+          }
+        }
+        throw new Error(body.message || 'Failed to update employee');
+      }
+
+      const data = await response.json();
+      const updated = data.data ?? data;
+      this.selectedEmployee = updated;
+
+      const index = this.employees.findIndex((employee) => employee.id === id);
+      if (index >= 0) {
+        this.employees[index] = { ...this.employees[index], ...updated };
+      }
+
+      return updated;
     },
   },
 });

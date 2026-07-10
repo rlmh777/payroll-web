@@ -23,24 +23,20 @@
             @change="onLeaveTypeChange"
           />
 
-          <q-input
+          <DateField
             v-model="form.startDate"
             label="Start Date *"
-            type="date"
-            outlined
-            :rules="[val => !!val || 'Start date is required']"
+            required
             :disable="employeeLeaveStore.isLoading"
             @update:model-value="onDateChange"
           />
 
-          <q-input
+          <DateField
             v-model="form.endDate"
             label="End Date *"
-            type="date"
-            outlined
+            required
             :rules="[
-              val => !!val || 'End date is required',
-              val => !form.startDate || val >= form.startDate || 'End date must be after start date'
+              val => !form.startDate || (val !== null && val >= form.startDate) || 'End date must be after start date'
             ]"
             :disable="employeeLeaveStore.isLoading"
             @update:model-value="onDateChange"
@@ -121,6 +117,7 @@ import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useEmployeeLeaveStore } from '../../../stores/employee-leave-store';
 import { useEmployeeStore } from '../../../stores/employee-store';
+import DateField from 'src/components/common/DateField.vue';
 import LeaveTypeSelect from '../common/LeaveTypeSelect.vue';
 import LeaveDurationSelect from '../common/LeaveDurationSelect.vue';
 

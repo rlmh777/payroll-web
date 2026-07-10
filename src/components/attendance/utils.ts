@@ -1,3 +1,5 @@
+import { compensationAllowsOvertime } from 'src/utils/compensation-pay-utils';
+
 export function formatDateTime(value?: string | null) {
   if (!value) return '-';
 
@@ -38,10 +40,31 @@ export function humanizeStatus(value?: string | null) {
 export function formatPayType(value?: string | null) {
   if (!value) return '-';
 
-  if (value.toUpperCase() === 'HOURLY') return 'Hourly rate';
-  if (value.toUpperCase() === 'BASE_SALARY') return 'Base salary';
+  const normalized = value.toUpperCase();
+  if (normalized === 'HOURLY_NO_OT' || normalized === 'HOURLY') return 'Hourly (no OT)';
+  if (normalized === 'HOURLY_OT') return 'Hourly (OT)';
+  if (normalized === 'BASE_NO_OT' || normalized === 'SALARY_NO_CLOCK' || normalized === 'BASE_SALARY' || normalized === 'WEEKLY_SALARY') {
+    return 'Base rate (no OT)';
+  }
+  if (normalized === 'BASE_OT' || normalized === 'WEEKLY_SALARY_OT') return 'Base rate (OT)';
 
   return humanizeStatus(value);
+}
+
+export function formatHours(value?: number | null) {
+  if (value == null || Number.isNaN(Number(value))) {
+    return '0.00';
+  }
+
+  return Number(value).toFixed(2);
+}
+
+export function formatOvertimeForPayType(payType?: string | null, hours?: number | null) {
+  if (!compensationAllowsOvertime(payType)) {
+    return '—';
+  }
+
+  return formatHours(hours);
 }
 
 export function approvalIcon(status: string) {

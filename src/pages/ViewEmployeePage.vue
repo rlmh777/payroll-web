@@ -33,16 +33,20 @@ const isLoading = ref(true);
 const error = ref<string | null>(null);
 
 const fetchEmployee = async (employeeId: string) => {
-  console.log('fetchEmployee', employeeId);
   if (!employeeId) {
     error.value = 'Employee ID is required';
     isLoading.value = false;
+    employee.value = null;
     return;
   }
 
-  isLoading.value = true;
+  const isSwitchingEmployee = Boolean(employee.value);
+  if (!isSwitchingEmployee) {
+    isLoading.value = true;
+    employee.value = null;
+  }
+
   error.value = null;
-  employee.value = null;
 
   try {
     const data = await employeeStore.fetchEmployeeById(employeeId);

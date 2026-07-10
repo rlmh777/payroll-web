@@ -9,6 +9,14 @@
     </div>
 
     <q-table :rows="rows" :columns="columns" row-key="id" flat bordered>
+      <template #body-cell-status="props">
+        <q-td :props="props">
+          <q-badge
+            :color="leaveStatusColor(props.row.status)"
+            :label="formatLeaveStatus(props.row.status)"
+          />
+        </q-td>
+      </template>
       <template #body-cell-actions="props">
         <q-td :props="props">
           <q-btn dense flat color="primary" icon="check" @click="emit('approve', props.row)" />
@@ -24,6 +32,7 @@
 
 <script setup lang="ts">
 import type { PropType } from 'vue';
+import { formatLeaveStatus, leaveStatusColor } from 'src/utils/leave-status';
 
 type LeaveApprovalRow = {
   id: string;
@@ -31,6 +40,7 @@ type LeaveApprovalRow = {
   date: string;
   description: string;
   type: string;
+  status?: string | null;
 };
 
 defineProps({
@@ -50,6 +60,7 @@ const columns = [
   { name: 'employee', label: 'Employee', field: 'employee', align: 'left' as const },
   { name: 'date', label: 'Date', field: 'date', align: 'left' as const },
   { name: 'description', label: 'Description', field: 'description', align: 'left' as const },
+  { name: 'status', label: 'Status', field: 'status', align: 'left' as const },
   { name: 'actions', label: '', field: 'actions', align: 'right' as const },
 ];
 </script>

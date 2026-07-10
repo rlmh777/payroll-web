@@ -7,6 +7,10 @@ import {
 } from 'vue-router';
 import { useAuthStore } from 'src/stores/auth';
 import routes from './routes';
+import {
+  prepareSchedulerEmployees,
+  resetSchedulerEmployeesIfLeaving,
+} from 'src/utils/scheduler-bootstrap';
 
 /*
  * If not building with SSR mode, you can
@@ -32,22 +36,49 @@ export default route(function (/* { store } */) {
     history: createHistory(process.env.VUE_ROUTER_BASE),
   });
 
-  Router.beforeEach((to, from, next) => {
-    const authStore = useAuthStore();
-    
-    // Check if the route requires authentication
-    if (to.matched.some(record => record.meta.requiresAuth)) {
+  const authStore = useAuthStore();
+
+  authStore.setUnauthorizedHandler((redirectPath) => {
+    const target = redirectPath && redirectPath !== '/login'
+      ? { path: '/login', query: { redirect: redirectPath, reason: 'session-expired' } }
+      : { path: '/login', query: { reason: 'session-expired' } };
+
+    void Router.push(target);
+  });
+
+  Router.beforeEach(async (to, from) => {
+    authStore.checkAuth();
+
+    resetSchedulerEmployeesIfLeaving(from.path, to.path);
+
+    if (to.matched.some((record) => record.meta.requiresAuth)) {
       if (!authStore.isAuthenticated) {
-        // Redirect to login if not authenticated
-        next({
+        return {
           path: '/login',
-          query: { redirect: to.fullPath }
-        });
-      } else {
-        next();
+          query: { redirect: to.fullPath },
+        };
       }
-    } else {
-      next();
+
+      const isValid = await authStore.validateSession();
+      if (!isValid) {
+        return {
+          path: '/login',
+          query: { redirect: to.fullPath, reason: 'session-expired' },
+        };
+      }
+    }
+
+    if (to.path === '/login' && authStore.isAuthenticated) {
+      const isValid = await authStore.validateSession();
+      if (isValid) {
+        return { path: '/' };
+      }
+    }
+
+    if (to.path.startsWith('/scheduler') || to.path.startsWith('/timesheet')) {
+      const enteringScheduler =
+        !from.path.startsWith('/scheduler') && !from.path.startsWith('/timesheet');
+      await prepareSchedulerEmployees({ force: enteringScheduler });
     }
   });
 

@@ -13,7 +13,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: '',
-        component: () => import('pages/IndexPage.vue'),
+        component: () => import('pages/DashboardPage.vue'),
       },
       {
         path: 'employee/:id',
@@ -22,7 +22,7 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/settings/general',
+    path: '/settings',
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
@@ -31,27 +31,41 @@ const routes: RouteRecordRaw[] = [
         name: 'general-settings',
         component: () => import('pages/GeneralSettingPage.vue'),
       },
-    ],
-  },
-  {
-    path: '/settings',
-    component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true },
-    children: [
-      { path: '', component: () => import('pages/SettingPage.vue'), props: { title: 'Settings' } },
+      { path: '/settings/general', redirect: '/settings' },
       {
         path: '/settings/calendars',
-        component: () => import('pages/CalendarSettingPage.vue'),
+        redirect: '/scheduler',
       },
       {
-        path: '/settings/general/working-hours-timesheet',
-        component: () => import('pages/DefineWorkTimesheetPage.vue'),
+        path: '/settings/timesheet-templates',
+        component: () => import('pages/DefineTimesheetTemplatePage.vue'),
       },
+      { path: '/settings/working-hours-timesheet', redirect: '/settings/timesheet-templates' },
+      { path: '/settings/general/working-hours-timesheet', redirect: '/settings/timesheet-templates' },
       {
         path: '/settings/holidays',
-        component: () => import('pages/SettingPage.vue'),
-        props: { title: 'Setting Holidays' },
+        component: () => import('components/settings/holiday/ManagePublicHolidays.vue'),
+        props: { title: 'Public Holidays' },
       },
+      { path: '/settings/general/holidays', redirect: '/settings/holidays' },
+      {
+        path: '/settings/attendance',
+        component: () => import('components/settings/attendance/ManageAttendanceSettings.vue'),
+        props: { title: 'Attendance Settings' },
+      },
+      { path: '/settings/general/attendance', redirect: '/settings/attendance' },
+      {
+        path: '/settings/leave-types',
+        component: () => import('components/settings/leave/ManageLeaveTypes.vue'),
+        props: { title: 'Leave Types' },
+      },
+      { path: '/settings/general/leave-types', redirect: '/settings/leave-types' },
+      {
+        path: '/settings/department-heads',
+        component: () => import('components/settings/department-head/ManageDepartmentHead.vue'),
+        props: { title: 'Department Heads' },
+      },
+      { path: '/settings/general/department-heads', redirect: '/settings/department-heads' },
       {
         path: '/settings/roles',
         component: () => import('components/settings/role/ManageRoles.vue')
@@ -66,45 +80,85 @@ const routes: RouteRecordRaw[] = [
         props: { title: 'Setting Pay Items' },
       },
       {
-        path: '/settings/general/country',
+        path: '/settings/country',
         component: () => import('components/settings/country/ManageCountry.vue'),
         props: { title: 'Setting Country' },
       },
+      { path: '/settings/general/country', redirect: '/settings/country' },
       {
-        path: '/settings/general/institution',
+        path: '/settings/institution',
         component: () => import('components/settings/institution/ManageInstitution.vue'),
         props: { title: 'Setting Institution' },
       },
+      { path: '/settings/general/institution', redirect: '/settings/institution' },
       {
-        path: '/settings/general/degree',
+        path: '/settings/relationship',
+        component: () => import('components/settings/relationship/ManageRelationship.vue'),
+        props: { title: 'Setting Relationship' },
+      },
+      { path: '/settings/general/relationship', redirect: '/settings/relationship' },
+      {
+        path: '/settings/document-tags',
+        component: () => import('components/settings/document-tag/ManageDocumentTags.vue'),
+        props: { title: 'Document Tags' },
+      },
+      { path: '/settings/general/document-tags', redirect: '/settings/document-tags' },
+      {
+        path: '/settings/degree',
         component: () => import('components/settings/degree/ManageDegree.vue'),
         props: { title: 'Setting Degree' },
       },
+      { path: '/settings/general/degree', redirect: '/settings/degree' },
       {
-        path: '/settings/general/district',
+        path: '/settings/district',
         component: () => import('components/settings/district/ManageDistrict.vue'),
         props: { title: 'Setting Degree' },
       },
+      { path: '/settings/general/district', redirect: '/settings/district' },
       {
-        path: '/settings/general/locality',
+        path: '/settings/locality',
         component: () => import('components/settings/locality/ManageLocality.vue'),
         props: { title: 'Setting Degree' },
       },
+      { path: '/settings/general/locality', redirect: '/settings/locality' },
       {
-        path: '/settings/general/department',
+        path: '/settings/department',
         component: () => import('components/settings/department/ManageDepartment.vue'),
         props: { title: 'Setting Department' },
       },
+      { path: '/settings/general/department', redirect: '/settings/department' },
       {
-        path: '/settings/general/calendar',
-        redirect: '/settings/general/working-hours-timesheet',
+        path: '/settings/worksite',
+        component: () => import('components/settings/worksite/ManageWorksite.vue'),
+        props: { title: 'Setting Work Site' },
       },
+      { path: '/settings/general/worksite', redirect: '/settings/worksite' },
+      {
+        path: '/settings/bank-account-type',
+        component: () => import('components/settings/bank-account-type/ManageBankAccountType.vue'),
+        props: { title: 'Setting Bank Account Type' },
+      },
+      { path: '/settings/general/bank-account-type', redirect: '/settings/bank-account-type' },
+      {
+        path: '/settings/payroll-earning-codes',
+        component: () => import('components/settings/payroll-earning-code/ManagePayrollEarningCode.vue'),
+        props: { title: 'Payroll Earning Codes' },
+      },
+      { path: '/settings/general/payroll-earning-codes', redirect: '/settings/payroll-earning-codes' },
+      { path: '/settings/general/calendar', redirect: '/settings/timesheet-templates' },
       {
         path: '/settings/general/calendar/define-work-timesheet',
-        redirect: '/settings/general/working-hours-timesheet',
+        redirect: '/settings/timesheet-templates',
+      },
+      {
         path: '/settings/organization',
         component: () => import('components/settings/organization/ManageOrganization.vue'),
-        props: { title: 'Setting Organizationss' },
+        props: { title: 'Organization' },
+      },
+      {
+        path: '/settings/accounts',
+        component: () => import('components/settings/account/ManageAccounts.vue'),
+        props: { title: 'Accounts' },
       },
       {
         path: '/settings/users',
@@ -119,28 +173,45 @@ const routes: RouteRecordRaw[] = [
         component: () => import('components/settings/personal-relief/ManagePersonalRelief.vue')
       },
       {
-        path: '/settings/pay-period',
-        component: () => import('components/settings/pay-period-groups/ManagePayPeriodGroups.vue')
-      }
+        path: '/settings/payroll-settings',
+        component: () => import('components/settings/payroll-settings/ManagePayrollSettings.vue')
+      },
+      { path: '/settings/pay-period', redirect: '/payroll/pay-period' },
+    ],
+  },
+  {
+    path: '/scheduler',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true, fullHeight: true },
+    children: [
+      {
+        path: '',
+        component: () => import('pages/CalendarSettingPage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/timesheet',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true, fullHeight: true },
+    children: [
+      {
+        path: '',
+        component: () => import('pages/TimesheetPage.vue'),
+      },
     ],
   },
   {
     path: '/calendars',
-    component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true },
-    children: [{ path: '', component: () => import('pages/CalendarSettingPage.vue') }],
+    redirect: '/scheduler',
   },
   {
     path: '/dashboard',
-    component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true },
-    children: [{ path: '', component: () => import('pages/DashboardPage.vue') }],
+    redirect: '/',
   },
   {
     path: '/accounts',
-    component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true, hideDrawer: true },
-    children: [{ path: '', component: () => import('pages/AccountsPage.vue') }],
+    redirect: '/settings/accounts',
   },
   {
     path: '/payroll',
@@ -158,30 +229,18 @@ const routes: RouteRecordRaw[] = [
         props: { title: 'Payroll Overview' },
       },
       {
-        path: '/payroll/leave',
-        component: () => import('pages/PayrollPage.vue'),
-        props: { title: 'Payroll Leave' },
+        path: '/payroll/pay-period',
+        component: () => import('components/payroll/pay-period-groups/ManagePayPeriodGroups.vue'),
       },
       {
-        path: '/payroll/timesheets',
+        path: '/payroll/payroll-run',
         component: () => import('pages/AttendanceTimesheetPage.vue'),
-        props: { initialTab: 'timesheets' },
       },
       {
-        path: '/payroll/clocking-logs',
-        component: () => import('pages/AttendanceTimesheetPage.vue'),
-        props: { initialTab: 'logs' },
+        path: '/payroll/generate-payslip',
+        component: () => import('pages/GeneratePayslipPage.vue'),
       },
-      {
-        path: '/payroll/clocking-import',
-        component: () => import('pages/AttendanceTimesheetPage.vue'),
-        props: { initialTab: 'import' },
-      },
-      {
-        path: '/payroll/pay-employees',
-        component: () => import('pages/PayrollPage.vue'),
-        props: { title: 'Payroll Pay Employees' },
-      },
+      { path: '/payroll/timesheets', redirect: '/payroll/payroll-run' },
       {
         path: '/payroll/taxes-filing',
         component: () => import('pages/PayrollPage.vue'),

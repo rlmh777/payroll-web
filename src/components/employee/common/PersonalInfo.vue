@@ -20,7 +20,7 @@
                 <q-input v-model="maidenName" label="Maiden Name" />
             </div>
             <div class="col-3 col-md-2">
-                <q-input v-model="birthdate" label="Birthdate" type="date" />
+                <SsBenefitDateField v-model="birthdate" label="Birthdate" clearable />
             </div>
             <div class="col-3 col-md-2">
                 <q-input v-model="socialSecurityNumber" label="Social Security Number" />
@@ -65,6 +65,7 @@ import GenderSelect from './GenderSelect.vue';
 import HonorificSelect from './HonorificSelect.vue';
 import NationalitySelect from './NationalitySelect.vue';
 import CitizenshipStatusSelect from './CitizenshipStatusSelect.vue';
+import SsBenefitDateField from '../ss-benefit/SsBenefitDateField.vue';
 
 const employeeStore = useEmployeeStore();
 
@@ -106,8 +107,8 @@ const maidenName = computed({
 });
 
 const birthdate = computed({
-    get: () => employeeStore.selectedEmployee?.birthdate || '',
-    set: (value: string) => {
+    get: () => employeeStore.selectedEmployee?.birthdate || null,
+    set: (value: string | null) => {
         if (employeeStore.selectedEmployee) {
             employeeStore.selectedEmployee.birthdate = value || '';
         }

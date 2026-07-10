@@ -3,7 +3,7 @@
     v-model="selectedNationalityId"
     :options="nationalityOptions"
     option-value="id"
-    option-label="nationalityName"
+    :option-label="nationalityLabel"
     use-input
     fill-input
     hide-selected
@@ -46,8 +46,25 @@ const employeeStore = useEmployeeStore();
 
 const filterTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
 
+const nationalityLabel = (country: Country): string =>
+  country.nationalityName || country.name || '';
+
+const isCountryInOptions = (countries: Country[], id: string | null): boolean =>
+  Boolean(id && countries.some((country) => country.id === id));
+
 const nationalityOptions = computed((): Country[] => {
-  return employeeStore.nationalities;
+  const options = [...employeeStore.nationalities];
+  const selectedNationality = employeeStore.selectedEmployee?.nationality;
+
+  if (
+    props.modelValue &&
+    selectedNationality?.id === props.modelValue &&
+    !isCountryInOptions(options, props.modelValue)
+  ) {
+    return [selectedNationality, ...options];
+  }
+
+  return options;
 });
 
 const filterNationalities = (val: string, update: (callback: () => void) => void) => {

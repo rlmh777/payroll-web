@@ -32,7 +32,8 @@
       </template>
       <template v-slot:body-cell-weeklyEarningsEndRange="props">
         <q-td :props="props" class="text-right">
-          {{ formatCurrency(props.value) }}
+          <span v-if="props.value === null || props.value === undefined" class="text-grey-6">No limit</span>
+          <span v-else>{{ formatCurrency(props.value) }}</span>
         </q-td>
       </template>
       <template v-slot:body-cell-weeklyInsurableEarnings="props">
@@ -276,7 +277,8 @@ const onRequest = async (props: {
   pagination.value.rowsNumber = socialSecurityStore.total;
 };
 
-const formatCurrency = (value: number): string => {
+const formatCurrency = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return '—';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',

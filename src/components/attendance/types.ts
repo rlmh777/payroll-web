@@ -1,5 +1,3 @@
-export type AttendanceTab = 'logs' | 'import' | 'timesheets';
-
 export type TimesheetApprovalAction = 'APPROVED' | 'REJECTED';
 
 export interface ClockingFilterForm {

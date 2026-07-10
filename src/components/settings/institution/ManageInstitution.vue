@@ -16,7 +16,7 @@
           :rows-per-page-options="[10, 15, 20]"
           server-side
           @request="onRequest"
-          no-data-label="No countries"
+          no-data-label="No institutions"
         >
           <template v-slot:body-cell-actions="props">
             <q-td :props="props" class="text-right">

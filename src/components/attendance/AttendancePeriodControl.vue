@@ -37,23 +37,8 @@
         </div>
       </div>
       <div class="col-12 col-lg-auto">
-        <q-chip
-          v-if="props.activeTab === 'import'"
-          color="blue-1"
-          text-color="primary"
-          icon="upload_file"
-          label="Upload file below"
-        />
         <q-btn
-          v-else-if="props.activeTab === 'logs'"
-          unelevated
-          color="primary"
-          icon="auto_fix_high"
-          label="Generate timesheets"
-          @click="emit('generate')"
-        />
-        <q-btn
-          v-else-if="props.issueCount > 0"
+          v-if="props.issueCount > 0"
           unelevated
           color="warning"
           text-color="white"
@@ -69,12 +54,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { AttendanceTab } from './types';
 import type { PayPeriodSchedule } from 'src/stores/attendance-store';
 import { formatDate } from './utils';
 
 const props = defineProps<{
-  activeTab: AttendanceTab;
   payPeriods: PayPeriodSchedule[];
   selectedPayPeriodId: string | null;
   isLoadingPayPeriods: boolean;
@@ -83,7 +66,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'update:selectedPayPeriodId', value: string | null): void;
-  (event: 'generate'): void;
   (event: 'reviewIssues'): void;
 }>();
 

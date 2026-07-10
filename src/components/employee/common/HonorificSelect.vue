@@ -3,7 +3,7 @@
     v-model="selectedHonorificId"
     :options="honorificOptions"
     option-value="id"
-    option-label="name"
+    :option-label="honorificLabel"
     use-input
     fill-input
     hide-selected
@@ -46,8 +46,25 @@ const employeeStore = useEmployeeStore();
 
 const filterTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
 
+const honorificLabel = (honorific: Honorific): string => honorific.name || '';
+
+const isHonorificInOptions = (honorifics: Honorific[], id: number | null): boolean =>
+  Boolean(id != null && honorifics.some((honorific) => String(honorific.id) === String(id)));
+
 const honorificOptions = computed((): Honorific[] => {
-  return employeeStore.honorifics;
+  const options = [...employeeStore.honorifics];
+  const selectedHonorific = employeeStore.selectedEmployee?.honorific;
+
+  if (
+    props.modelValue != null &&
+    selectedHonorific &&
+    String(selectedHonorific.id) === String(props.modelValue) &&
+    !isHonorificInOptions(options, props.modelValue)
+  ) {
+    return [selectedHonorific, ...options];
+  }
+
+  return options;
 });
 
 const filterHonorifics = (val: string, update: (callback: () => void) => void) => {

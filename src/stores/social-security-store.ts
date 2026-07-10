@@ -6,7 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 export interface SocialSecurity {
   id: string;
   weeklyEarningsStartRange: number;
-  weeklyEarningsEndRange: number;
+  weeklyEarningsEndRange: number | null;
   weeklyInsurableEarnings: number;
   weeklyEmployeeContributions: number;
   weeklyEmployerContributions: number;
@@ -28,7 +28,7 @@ interface ApiErrorData {
 
 interface CreateSocialSecurityBody {
   weeklyEarningsStartRange: number;
-  weeklyEarningsEndRange: number;
+  weeklyEarningsEndRange: number | null;
   weeklyInsurableEarnings: number;
   weeklyEmployeeContributions: number;
   weeklyEmployerContributions: number;
@@ -42,7 +42,7 @@ interface CreateSocialSecurityBody {
 
 interface UpdateSocialSecurityBody {
   weeklyEarningsStartRange?: number;
-  weeklyEarningsEndRange?: number;
+  weeklyEarningsEndRange?: number | null;
   weeklyInsurableEarnings?: number;
   weeklyEmployeeContributions?: number;
   weeklyEmployerContributions?: number;
@@ -136,7 +136,7 @@ export const useSocialSecurityStore = defineStore('socialSecurity', {
 
     async createSocialSecurity(
       weeklyEarningsStartRange: number,
-      weeklyEarningsEndRange: number,
+      weeklyEarningsEndRange: number | null,
       weeklyInsurableEarnings: number,
       weeklyEmployeeContributions: number,
       weeklyEmployerContributions: number,
@@ -220,7 +220,7 @@ export const useSocialSecurityStore = defineStore('socialSecurity', {
     async updateSocialSecurity(
       id: string,
       weeklyEarningsStartRange?: number,
-      weeklyEarningsEndRange?: number,
+      weeklyEarningsEndRange?: number | null,
       weeklyInsurableEarnings?: number,
       weeklyEmployeeContributions?: number,
       weeklyEmployerContributions?: number,

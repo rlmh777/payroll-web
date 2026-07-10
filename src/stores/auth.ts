@@ -1,19 +1,54 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import { Notify } from 'quasar';
+import {
+  clearAuthCookies,
+  getAuthTokenFromCookie,
+  getAuthUserFromCookie,
+  migrateLegacyAuthToken,
+  setAuthCookies,
+} from '../utils/auth-cookies';
 
 interface User {
-  id: number;
+  id: string | number;
   email: string;
   name: string;
   role: string;
 }
 
-const API_URL = process.env.API_URL || 'http://localhost:3031/api';
+type UnauthorizedHandler = (redirectPath?: string) => void;
+
+const API_URL = import.meta.env.VITE_API_URL || process.env.API_URL || 'http://localhost:3031/api';
+const SESSION_VALIDATION_TTL_MS = 60 * 1000;
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null);
   const user = ref<User | null>(null);
   const isAuthenticated = ref(false);
+  const lastValidatedAt = ref(0);
+
+  let unauthorizedHandler: UnauthorizedHandler | null = null;
+  let handlingUnauthorized = false;
+
+  function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
+    unauthorizedHandler = handler;
+  }
+
+  function setSession(tokenValue: string, userValue: User) {
+    token.value = tokenValue;
+    user.value = userValue;
+    isAuthenticated.value = true;
+    lastValidatedAt.value = Date.now();
+    setAuthCookies(tokenValue, JSON.stringify(userValue));
+  }
+
+  function clearSession() {
+    token.value = null;
+    user.value = null;
+    isAuthenticated.value = false;
+    lastValidatedAt.value = 0;
+    clearAuthCookies();
+  }
 
   async function login(email: string, password: string) {
     try {
@@ -30,12 +65,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       const data = await response.json();
-      token.value = data.token;
-      user.value = data.user;
-      isAuthenticated.value = true;
-
-      // Store token in localStorage
-      localStorage.setItem('auth_token', data.token);
+      setSession(data.token, data.user);
 
       return true;
     } catch (error) {
@@ -44,19 +74,129 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function logout() {
-    token.value = null;
-    user.value = null;
-    isAuthenticated.value = false;
-    localStorage.removeItem('auth_token');
+  async function logout() {
+    if (token.value) {
+      try {
+        await fetch(`${API_URL}/logout`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token.value}`,
+          },
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+
+    clearSession();
   }
 
   function checkAuth() {
-    const storedToken = localStorage.getItem('auth_token');
-    if (storedToken) {
-      token.value = storedToken;
+    const storedToken = getAuthTokenFromCookie() ?? migrateLegacyAuthToken();
+
+    if (!storedToken) {
+      clearSession();
+      return;
+    }
+
+    token.value = storedToken;
+    isAuthenticated.value = true;
+
+    const storedUser = getAuthUserFromCookie();
+    if (storedUser) {
+      try {
+        user.value = JSON.parse(storedUser) as User;
+      } catch {
+        user.value = null;
+      }
+    }
+  }
+
+  function handleUnauthorized(message = 'Your session has expired. Please sign in again.') {
+    if (handlingUnauthorized || !isAuthenticated.value) {
+      clearSession();
+      return;
+    }
+
+    handlingUnauthorized = true;
+    const redirectPath = unauthorizedHandler
+      ? window.location.hash.replace(/^#/, '') || '/'
+      : undefined;
+
+    clearSession();
+
+    Notify.create({
+      type: 'warning',
+      message,
+      position: 'top',
+      timeout: 4000,
+    });
+
+    unauthorizedHandler?.(redirectPath);
+    handlingUnauthorized = false;
+  }
+
+  function handleSessionTimeout() {
+    handleUnauthorized('Your session timed out due to inactivity. Please sign in again.');
+  }
+
+  async function validateSession(options: { force?: boolean } = {}): Promise<boolean> {
+    checkAuth();
+
+    if (!token.value) {
+      return false;
+    }
+
+    const isFresh = Date.now() - lastValidatedAt.value < SESSION_VALIDATION_TTL_MS;
+    if (!options.force && isFresh) {
+      return true;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/user`, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token.value}`,
+        },
+      });
+
+      if (response.status === 401) {
+        handleUnauthorized();
+        return false;
+      }
+
+      if (!response.ok) {
+        return isAuthenticated.value;
+      }
+
+      const data = await response.json();
+      const hydrated: User = {
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        role: data.role ?? 'employee',
+      };
+      user.value = hydrated;
       isAuthenticated.value = true;
-      // TODO: Validate token with backend
+      lastValidatedAt.value = Date.now();
+      setAuthCookies(token.value, JSON.stringify(hydrated));
+
+      return true;
+    } catch (error) {
+      console.error('Failed to validate user session:', error);
+      return isAuthenticated.value;
+    }
+  }
+
+  async function ensureUser() {
+    const isValid = await validateSession();
+
+    if (!isValid) {
+      return;
+    }
+
+    if (!user.value?.role && token.value) {
+      await validateSession({ force: true });
     }
   }
 
@@ -67,5 +207,10 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     logout,
     checkAuth,
+    ensureUser,
+    validateSession,
+    handleUnauthorized,
+    handleSessionTimeout,
+    setUnauthorizedHandler,
   };
 });
