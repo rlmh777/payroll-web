@@ -6,11 +6,14 @@ import {
   createWebHistory,
 } from 'vue-router';
 import { useAuthStore } from 'src/stores/auth';
+import { useMenuStore } from '@core/stores/menus';
+import { isPathAllowedByMenus, collectMenuRoutes } from '@core/utils/menu-navigation';
+import { routeViewPermission } from '@core/utils/permissions';
 import routes from './routes';
 import {
   prepareSchedulerEmployees,
   resetSchedulerEmployeesIfLeaving,
-} from 'src/utils/scheduler-bootstrap';
+} from '@hr/utils/scheduler-bootstrap';
 
 /*
  * If not building with SSR mode, you can
@@ -37,6 +40,40 @@ export default route(function (/* { store } */) {
   });
 
   const authStore = useAuthStore();
+  const menuStore = useMenuStore();
+
+  function userRoles(): string[] {
+    const user = authStore.user;
+    if (!user) {
+      return [];
+    }
+
+    if (user.roles?.length) {
+      return user.roles;
+    }
+
+    return user.role ? [user.role] : [];
+  }
+
+  function canAccessPath(path: string): boolean {
+    if (userRoles().includes('super-admin')) {
+      return true;
+    }
+
+    if (menuStore.menuTree.length > 0) {
+      const menuRoutes = collectMenuRoutes(menuStore.menuTree);
+      if (isPathAllowedByMenus(path, menuRoutes)) {
+        return true;
+      }
+    }
+
+    const requiredPermission = routeViewPermission(path);
+    if (!requiredPermission) {
+      return true;
+    }
+
+    return (authStore.user?.permissions ?? []).includes(requiredPermission);
+  }
 
   authStore.setUnauthorizedHandler((redirectPath) => {
     const target = redirectPath && redirectPath !== '/login'
@@ -59,12 +96,20 @@ export default route(function (/* { store } */) {
         };
       }
 
-      const isValid = await authStore.validateSession();
+      const isValid = await authStore.ensureHydratedPermissions();
       if (!isValid) {
         return {
           path: '/login',
           query: { redirect: to.fullPath, reason: 'session-expired' },
         };
+      }
+
+      if (!menuStore.menuTree.length && authStore.token) {
+        await menuStore.fetchMenus();
+      }
+
+      if (!canAccessPath(to.path)) {
+        return { path: '/' };
       }
     }
 

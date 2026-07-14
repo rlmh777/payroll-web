@@ -1,0 +1,75 @@
+import type { RouteRecordRaw } from 'vue-router';
+
+export const payrollRoutes: RouteRecordRaw[] = [
+  {
+    path: '/payroll',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('@payroll/pages/PayrollPage.vue'),
+        props: { title: 'Payroll Page' },
+      },
+      {
+        path: '/payroll/overview',
+        component: () => import('@payroll/pages/PayrollPage.vue'),
+        props: { title: 'Payroll Overview' },
+      },
+      {
+        path: '/payroll/pay-period',
+        component: () => import('@payroll/components/payroll/pay-period-groups/ManagePayPeriodGroups.vue'),
+      },
+      {
+        path: '/payroll/payroll-run',
+        component: () => import('@payroll/pages/AttendanceTimesheetPage.vue'),
+      },
+      {
+        path: '/payroll/generate-payslip',
+        component: () => import('@payroll/pages/GeneratePayslipPage.vue'),
+      },
+      { path: '/payroll/timesheets', redirect: '/payroll/payroll-run' },
+      {
+        path: '/payroll/taxes-filing',
+        component: () => import('@payroll/pages/PayrollPage.vue'),
+        props: { title: 'Payroll Taxes Filing' },
+      },
+    ],
+  },
+  {
+    path: '/reports',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [{ path: '', component: () => import('@payroll/pages/ReportsPage.vue') }],
+  },
+  {
+    path: '/settings',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '/settings/payroll-earning-codes',
+        component: () => import('@payroll/components/settings/payroll-earning-code/ManagePayrollEarningCode.vue'),
+        props: { title: 'Payroll Earning Codes' },
+      },
+      { path: '/settings/general/payroll-earning-codes', redirect: '/settings/payroll-earning-codes' },
+      {
+        path: '/settings/accounts',
+        component: () => import('@payroll/components/settings/account/ManageAccounts.vue'),
+        props: { title: 'Accounts' },
+      },
+      {
+        path: '/settings/social-security',
+        component: () => import('@payroll/components/settings/social-security/ManageSocialSecurity.vue'),
+      },
+      {
+        path: '/settings/personal-relief',
+        component: () => import('@payroll/components/settings/personal-relief/ManagePersonalRelief.vue'),
+      },
+      {
+        path: '/settings/payroll-settings',
+        component: () => import('@payroll/components/settings/payroll-settings/ManagePayrollSettings.vue'),
+      },
+    ],
+  },
+];

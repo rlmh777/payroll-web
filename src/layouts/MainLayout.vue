@@ -13,11 +13,11 @@
 </template>
 
 <script setup lang="ts">
-import AppBreadcrumbs from 'src/components/navigation/common/AppBreadcrumbs.vue';
+import AppBreadcrumbs from '@core/components/navigation/common/AppBreadcrumbs.vue';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import MainHeader from 'src/components/navigation/common/MainHeader.vue';
-import SideDrawer from 'src/components/navigation/common/SideDrawer.vue';
+import MainHeader from '@core/components/navigation/common/MainHeader.vue';
+import SideDrawer from '@core/components/navigation/common/SideDrawer.vue';
 
 interface Props {
   hideDrawer?: boolean;

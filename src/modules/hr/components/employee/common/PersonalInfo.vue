@@ -1,0 +1,281 @@
+<template>
+    <div>
+        <div class="row q-gutter-x-lg q-gutter-y-md">
+            <div class="col-3 col-md-2">
+                <q-input
+                    v-model="employeeCode"
+                    label="Employee Code"
+                    :readonly="isCreating"
+                    :hint="isCreating ? 'Auto-generated from name and date' : undefined"
+                    persistent-hint
+                >
+                    <template v-if="isCreating" #append>
+                        <q-btn
+                            flat
+                            dense
+                            round
+                            icon="refresh"
+                            color="primary"
+                            @click="regenerateCode"
+                        >
+                            <q-tooltip>Regenerate code</q-tooltip>
+                        </q-btn>
+                    </template>
+                </q-input>
+            </div>
+            <div class="col-3 col-md-2">
+                <HonorificSelect 
+                    v-model="honorific" 
+                    :employeeHonorific="employeeStore.selectedEmployee?.honorific?.name || ''"
+                />
+            </div>
+            <div class="col-3 col-md-2">
+                <q-input v-model="firstName" label="First Name" />
+            </div>
+            <div class="col-3 col-md-2">
+                <q-input v-model="lastName" label="Last Name" />
+            </div>
+            <div class="col-3 col-md-2">
+                <q-input v-model="middleName" label="Middle Name" />
+            </div>
+            <div class="col-3 col-md-2">
+                <q-input v-model="maidenName" label="Maiden Name" />
+            </div>
+            <div class="col-3 col-md-2">
+                <SsBenefitDateField v-model="birthdate" label="Birthdate" clearable />
+            </div>
+            <div class="col-3 col-md-2">
+                <q-input v-model="socialSecurityNumber" label="Social Security Number" />
+            </div>
+            <div class="col-3 col-md-2">
+                <SsBenefitDateField
+                    v-model="socialSecurityExpirationDate"
+                    label="SS Expiration Date"
+                    clearable
+                />
+            </div>
+                <div class="col-3 col-md-2">
+                <q-input v-model="passportNumber" label="Passport Number" />
+            </div>
+            <div class="col-3 col-md-2">
+                <q-input v-model="votersId" label="Voters ID" />
+            </div>
+            <div class="col-3 col-md-2">
+                <q-input v-model="taxIdentificationNumber" label="Tax Identification Number" />
+            </div>
+            <div class="col-3 col-md-2">
+                <q-input v-model="phone" label="Phone" />
+            </div>
+            <div class="col-3 col-md-2">
+                <q-input v-model="email" label="Email" type="email" />
+            </div>
+            <div class="col-3 col-md-2">
+                <GenderSelect v-model="gender" />
+            </div>
+            <div class="col-3 col-md-2">
+                <NationalitySelect 
+                    v-model="nationality" 
+                    :employeeNationality="employeeStore.selectedEmployee?.nationality?.nationalityName || ''"
+                />
+            </div>
+            <div class="col-3 col-md-2">
+                <CitizenshipStatusSelect    v-model="citizenshipStatus"
+                    :employeeCitizenshipStatus="employeeStore.selectedEmployee?.citizenshipStatus?.name || ''"
+                />
+            </div>
+        </div>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { computed, watch } from 'vue';
+import { useEmployeeStore } from '@/stores/employee-store';
+import { generateEmployeeCode } from '@hr/utils/employee-code';
+import GenderSelect from './GenderSelect.vue';
+import HonorificSelect from './HonorificSelect.vue';
+import NationalitySelect from './NationalitySelect.vue';
+import CitizenshipStatusSelect from './CitizenshipStatusSelect.vue';
+import SsBenefitDateField from '@payroll/components/employee/ss-benefit/SsBenefitDateField.vue';
+
+const employeeStore = useEmployeeStore();
+const isCreating = computed(() => !employeeStore.selectedEmployee?.id);
+
+const employeeCode = computed({
+    get: () => employeeStore.selectedEmployee?.code || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee && !isCreating.value) {
+            employeeStore.selectedEmployee.code = value;
+        }
+    }
+});
+
+function regenerateCode() {
+    if (!employeeStore.selectedEmployee || !isCreating.value) {
+        return;
+    }
+    employeeStore.selectedEmployee.code = generateEmployeeCode(
+        employeeStore.selectedEmployee.firstName || '',
+        employeeStore.selectedEmployee.lastName || '',
+    );
+}
+
+// Computed properties with getters and setters for two-way binding
+const firstName = computed({
+    get: () => employeeStore.selectedEmployee?.firstName || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.firstName = value;
+        }
+    }
+});
+
+const lastName = computed({
+    get: () => employeeStore.selectedEmployee?.lastName || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.lastName = value;
+        }
+    }
+});
+
+watch([firstName, lastName], ([nextFirst, nextLast]) => {
+    if (!isCreating.value || !employeeStore.selectedEmployee) {
+        return;
+    }
+    if (!nextFirst.trim() && !nextLast.trim()) {
+        employeeStore.selectedEmployee.code = '';
+        return;
+    }
+    employeeStore.selectedEmployee.code = generateEmployeeCode(nextFirst, nextLast);
+});
+
+const middleName = computed({
+    get: () => employeeStore.selectedEmployee?.middleName || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.middleName = value || null;
+        }
+    }
+});
+
+const maidenName = computed({
+    get: () => employeeStore.selectedEmployee?.maidenName || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.maidenName = value || null;
+        }
+    }
+});
+
+const birthdate = computed({
+    get: () => employeeStore.selectedEmployee?.birthdate || null,
+    set: (value: string | null) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.birthdate = value || '';
+        }
+    }
+});
+
+const socialSecurityNumber = computed({
+    get: () => employeeStore.selectedEmployee?.socialSecurityNumber || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.socialSecurityNumber = value || '';
+        }
+    }
+});
+
+const socialSecurityExpirationDate = computed({
+    get: () => employeeStore.selectedEmployee?.socialSecurityExpirationDate || null,
+    set: (value: string | null) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.socialSecurityExpirationDate = value || null;
+        }
+    }
+});
+
+const passportNumber = computed({
+    get: () => employeeStore.selectedEmployee?.passportNumber || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.passportNumber = value || null;
+        }
+    }
+});
+
+const taxIdentificationNumber = computed({
+    get: () => employeeStore.selectedEmployee?.taxIdentificationNumber || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.taxIdentificationNumber = value || null;
+        }
+    }
+});
+
+const votersId = computed({
+    get: () => employeeStore.selectedEmployee?.votersId || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.votersId = value || null;
+        }
+    }
+});
+
+const phone = computed({
+    get: () => employeeStore.selectedEmployee?.phone || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.phone = value || null;
+        }
+    }
+});
+
+const email = computed({
+    get: () => employeeStore.selectedEmployee?.email || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.email = value || null;
+        }
+    }
+});
+
+const gender = computed({
+    get: () => employeeStore.selectedEmployee?.genderId || null,
+    set: (value: number) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.genderId = value || null;
+        }
+    }
+});
+
+const honorific = computed({
+    get: () => employeeStore.selectedEmployee?.honorificId || null,
+    set: (value: number | null) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.honorificId = value || null;
+        }
+    }
+});
+
+const nationality = computed({
+    get: () => employeeStore.selectedEmployee?.nationalityId || '',
+    set: (value: string) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.nationalityId = value || null;
+        }
+    }
+});
+
+const citizenshipStatus = computed({
+    get: () => employeeStore.selectedEmployee?.citizenshipStatusId || null,
+    set: (value: number | null) => {
+        if (employeeStore.selectedEmployee) {
+            employeeStore.selectedEmployee.citizenshipStatusId = value || null;
+        }
+    }
+});
+</script>
+
+<style scoped>
+
+</style>

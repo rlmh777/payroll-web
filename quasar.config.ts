@@ -12,7 +12,7 @@ export default defineConfig((ctx) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: ['auth', 'api-client', 'company-theme', 'i18n', 'axios', 'dialog'],
+    boot: ['auth', 'api-client', 'company-theme', 'i18n', 'axios', 'dialog', 'permissions'],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['app.scss'],
@@ -41,7 +41,45 @@ export default defineConfig((ctx) => {
       typescript: {
         strict: true,
         vueShim: true,
-        // extendTsConfig (tsConfig) {}
+        extendTsConfig(tsConfig) {
+          tsConfig.compilerOptions = tsConfig.compilerOptions ?? {};
+          // Paths resolve relative to project root (baseUrl = '..' from .quasar/tsconfig.json).
+          tsConfig.compilerOptions.baseUrl = '..';
+          tsConfig.compilerOptions.paths = {
+            ...(tsConfig.compilerOptions.paths ?? {}),
+            src: ['src'],
+            'src/*': ['src/*'],
+            stores: ['src/stores'],
+            'stores/*': ['src/stores/*'],
+            components: ['src/components'],
+            'components/*': ['src/components/*'],
+            layouts: ['src/layouts'],
+            'layouts/*': ['src/layouts/*'],
+            pages: ['src/pages'],
+            'pages/*': ['src/pages/*'],
+            assets: ['src/assets'],
+            'assets/*': ['src/assets/*'],
+            boot: ['src/boot'],
+            'boot/*': ['src/boot/*'],
+            app: ['.'],
+            'app/*': ['./*'],
+            '#q-app': ['node_modules/@quasar/app-vite/types/index.d.ts'],
+            '#q-app/wrappers': ['node_modules/@quasar/app-vite/types/app-wrappers.d.ts'],
+            '#q-app/bex/background': [
+              'node_modules/@quasar/app-vite/types/bex/entrypoints/background.d.ts',
+            ],
+            '#q-app/bex/content': [
+              'node_modules/@quasar/app-vite/types/bex/entrypoints/content.d.ts',
+            ],
+            '#q-app/bex/private/bex-bridge': [
+              'node_modules/@quasar/app-vite/types/bex/bex-bridge.d.ts',
+            ],
+            '@/*': ['src/*'],
+            '@core/*': ['src/modules/core/*'],
+            '@hr/*': ['src/modules/hr/*'],
+            '@payroll/*': ['src/modules/payroll/*'],
+          };
+        },
       },
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'
@@ -63,7 +101,16 @@ export default defineConfig((ctx) => {
       // polyfillModulePreload: true,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf (viteConf) {
+        viteConf.resolve = viteConf.resolve ?? {};
+        viteConf.resolve.alias = {
+          ...(viteConf.resolve.alias as Record<string, string> | undefined),
+          '@': fileURLToPath(new URL('./src', import.meta.url)),
+          '@hr': fileURLToPath(new URL('./src/modules/hr', import.meta.url)),
+          '@payroll': fileURLToPath(new URL('./src/modules/payroll', import.meta.url)),
+          '@core': fileURLToPath(new URL('./src/modules/core', import.meta.url)),
+        };
+      },
       // viteVuePluginOptions: {},
 
       vitePlugins: [

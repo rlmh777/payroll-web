@@ -1,5 +1,5 @@
 import { boot } from 'quasar/wrappers';
-import { applyCompanyTheme, loadStoredCompanyTheme } from 'src/utils/company-theme';
+import { applyCompanyTheme, loadStoredCompanyTheme } from '@core/utils/company-theme';
 import { useAuthStore } from 'src/stores/auth';
 import { useOrganizationStore } from 'src/stores/organization-store';
 
