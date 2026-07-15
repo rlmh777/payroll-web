@@ -1,14 +1,14 @@
 <template>
   <q-dialog v-model="dialogModel" position="right" :maximized="false">
     <q-card class="timesheet-template-dialog-card">
-      <q-card-section class="row items-center q-pb-none">
+      <q-card-section class="timesheet-template-dialog-header row items-center q-pb-none">
         <div class="text-h6">{{ title }}</div>
         <q-space />
         <q-btn flat round dense icon="close" @click="closeDialog" />
       </q-card-section>
 
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="submitForm">
+      <q-card-section class="timesheet-template-dialog-body">
+        <q-form id="timesheet-template-form" class="q-gutter-md" @submit.prevent="submitForm">
           <q-input v-model="form.name" label="Template name" outlined dense />
 
           <div>
@@ -139,12 +139,12 @@
               </div>
             </div>
           </div>
-
-          <div class="row q-gutter-sm justify-end q-mt-lg">
-            <q-btn flat label="Cancel" color="grey" @click="closeDialog" />
-            <q-btn type="submit" color="primary" label="Save" />
-          </div>
         </q-form>
+      </q-card-section>
+
+      <q-card-section class="timesheet-template-dialog-actions row justify-end q-mb-lg">
+        <q-btn flat label="Cancel" color="grey" @click="closeDialog" />
+        <q-btn form="timesheet-template-form" type="submit" color="primary" label="Save" />
       </q-card-section>
     </q-card>
   </q-dialog>
@@ -290,10 +290,20 @@ watch(
   overflow: hidden;
 }
 
-.timesheet-template-dialog-card :deep(.q-card__section) {
+.timesheet-template-dialog-header {
+  flex-shrink: 0;
+}
+
+.timesheet-template-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  min-width: 0;
+}
+
+.timesheet-template-dialog-actions {
+  flex-shrink: 0;
 }
 
 .day-group {

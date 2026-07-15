@@ -52,7 +52,7 @@ export interface CalendarEmployee {
     endDate?: string | null;
     departmentId?: number | null;
     worksiteId?: number | null;
-    jobTitle?: string | null;
+    jobTitle?: string | { id?: number; name?: string | null } | null;
     contractType?: { id: number | string; name: string } | null;
     defaultPayPeriodGroup?: { id: string; name: string } | null;
     department?: {

@@ -1,43 +1,51 @@
 <template>
-  <q-dialog v-model="isOpen" persistent @hide="emit('close')">
+  <q-dialog v-model="isOpen" position="right" :maximized="false" @hide="emit('close')">
     <q-card class="calendar-create-dialog">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6">{{ dialogTitle }}</div>
         <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
+        <q-btn icon="close" flat round dense v-close-popup :disable="calendarStore.isLoading" />
       </q-card-section>
 
-      <q-card-section class="q-pt-sm">
-        <CalendarEventFormFields
-          v-model:kind="form.kind"
-          v-model:event-subtype="form.eventSubtype"
-          v-model:description="form.description"
-          v-model:start-date="form.startDate"
-          v-model:end-date="form.endDate"
-          v-model:start-time="form.startTime"
-          v-model:end-time="form.endTime"
-          v-model:department-id="form.departmentId"
-          v-model:employee-id="form.employeeId"
-          v-model:employment-detail-id="form.employmentDetailId"
-          v-model:worksite-id="form.worksiteId"
-          v-model:include-lunch-hour="form.includeLunchHour"
-          v-model:lunch-hour-hours="form.lunchHourHours"
-          :employees="employees ?? []"
-          :show-employee-picker="showEmployeePicker ?? true"
-          :show-kind-picker="!workOnly"
-          :is-series="isSeries"
-        />
-      </q-card-section>
+      <q-card-section>
+        <div class="q-gutter-md">
+          <CalendarEventFormFields
+            v-model:kind="form.kind"
+            v-model:event-subtype="form.eventSubtype"
+            v-model:description="form.description"
+            v-model:start-date="form.startDate"
+            v-model:end-date="form.endDate"
+            v-model:start-time="form.startTime"
+            v-model:end-time="form.endTime"
+            v-model:department-id="form.departmentId"
+            v-model:employee-id="form.employeeId"
+            v-model:employment-detail-id="form.employmentDetailId"
+            v-model:worksite-id="form.worksiteId"
+            v-model:include-lunch-hour="form.includeLunchHour"
+            v-model:lunch-hour-hours="form.lunchHourHours"
+            :employees="employees ?? []"
+            :show-employee-picker="showEmployeePicker ?? true"
+            :show-kind-picker="!workOnly"
+            :is-series="isSeries"
+          />
 
-      <q-card-actions align="right" class="q-px-md q-pb-md">
-        <q-btn flat label="Cancel" v-close-popup />
-        <q-btn
-          color="primary"
-          :label="saveLabel"
-          :loading="calendarStore.isLoading"
-          @click="save"
-        />
-      </q-card-actions>
+          <div class="row q-gutter-sm justify-end q-mt-lg">
+            <q-btn
+              flat
+              label="Cancel"
+              color="grey"
+              :disable="calendarStore.isLoading"
+              v-close-popup
+            />
+            <q-btn
+              color="primary"
+              :label="saveLabel"
+              :loading="calendarStore.isLoading"
+              @click="save"
+            />
+          </div>
+        </div>
+      </q-card-section>
     </q-card>
   </q-dialog>
 </template>
@@ -240,6 +248,14 @@ async function save() {
 
 <style scoped>
 .calendar-create-dialog {
-  width: min(640px, 92vw);
+  width: 30vw;
+  height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-create-dialog :deep(.q-card__section) {
+  overflow-y: auto;
 }
 </style>

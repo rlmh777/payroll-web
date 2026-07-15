@@ -95,7 +95,6 @@ const onDelete = (row: PayrollEarningCode) => {
     title: 'Confirm Delete',
     message: `Delete earning code "${row.code}"?`,
     cancel: true,
-    persistent: true,
     ok: { label: 'Delete', color: 'negative' },
   }).onOk(() => {
     void (async () => {

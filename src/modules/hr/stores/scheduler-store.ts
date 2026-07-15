@@ -120,6 +120,10 @@ export const useSchedulerStore = defineStore('scheduler', {
         queryParams.append('search', search);
       }
 
+      if (this.filterDepartmentId != null) {
+        queryParams.append('department_id', String(this.filterDepartmentId));
+      }
+
       try {
         const authStore = useAuthStore();
         const headers: HeadersInit = {
@@ -168,17 +172,26 @@ export const useSchedulerStore = defineStore('scheduler', {
       }
     },
 
-    async loadMoreEmployees() {
+    async loadMoreEmployees(): Promise<CalendarEmployee[]> {
       if (
         this.employeesMode !== 'paginated' ||
         !this.employeesHasMore ||
         this.isLoadingEmployees
       ) {
-        return;
+        return [];
       }
 
-      this.employeesCurrentPage += 1;
+      const previousCount = this.employees.length;
+      const nextPage = this.employeesCurrentPage + 1;
+      this.employeesCurrentPage = nextPage;
       await this.fetchEmployees(false);
+
+      if (this.employeesError) {
+        this.employeesCurrentPage = Math.max(1, nextPage - 1);
+        return [];
+      }
+
+      return this.employees.slice(previousCount);
     },
 
     async fetchSubordinates(employeeId: string) {

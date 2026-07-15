@@ -81,7 +81,7 @@ const columns: QTableProps['columns'] = [
     align: 'left',
   },
   { name: 'contractType', label: 'Contract', field: (r) => r.contractType?.name ?? '—', align: 'left' },
-  { name: 'jobTitle', label: 'Job title', field: (r) => r.jobTitle ?? '—', align: 'left' },
+  { name: 'jobTitle', label: 'Job title', field: (r) => r.jobTitle?.name ?? '—', align: 'left' },
   { name: 'actions', label: '', field: 'actions', align: 'right' },
 ];
 

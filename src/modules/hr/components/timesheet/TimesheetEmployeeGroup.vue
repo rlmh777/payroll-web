@@ -19,10 +19,23 @@
         </div>
       </div>
       <div class="col-12 col-md-auto text-right">
-        <div class="text-caption text-grey-7">Payable hours</div>
-        <div class="text-h6 text-weight-bold text-primary">{{ formatHours(group.totalHours) }}</div>
-        <div v-if="groupOvertimeHours > 0" class="text-caption text-deep-orange text-weight-medium q-mt-xs">
-          {{ formatHours(groupOvertimeHours) }} OT
+        <div class="row items-center justify-end q-gutter-sm">
+          <q-btn
+            v-if="canCreateTimesheet"
+            dense
+            outline
+            color="primary"
+            icon="add"
+            label="Add record"
+            @click="showAddDialog = true"
+          />
+          <div>
+            <div class="text-caption text-grey-7">Payable hours</div>
+            <div class="text-h6 text-weight-bold text-primary">{{ formatHours(group.totalHours) }}</div>
+            <div v-if="groupOvertimeHours > 0" class="text-caption text-deep-orange text-weight-medium q-mt-xs">
+              {{ formatHours(groupOvertimeHours) }} OT
+            </div>
+          </div>
         </div>
       </div>
     </q-card-section>
@@ -40,9 +53,26 @@
       :pagination="{ rowsPerPage: 0 }"
       :row-class="timesheetRowClass"
     >
+      <template #no-data>
+        <div class="full-width row flex-center q-gutter-sm text-grey-7 q-py-lg">
+          <q-icon name="event_busy" size="24px" />
+          <span>No timesheet records for this period.</span>
+        </div>
+      </template>
+
       <template #body-cell-date="tableProps">
         <q-td :props="tableProps" :class="timesheetRowClass(tableProps.row)">
-          <div class="text-weight-medium">{{ formatDate(tableProps.row.date) }}</div>
+          <div class="row items-center no-wrap q-gutter-xs">
+            <q-icon
+              v-if="isDateLocked(tableProps.row)"
+              name="lock"
+              size="16px"
+              color="grey-8"
+            >
+              <q-tooltip>{{ lockTooltip(tableProps.row) }}</q-tooltip>
+            </q-icon>
+            <div class="text-weight-medium">{{ formatDate(tableProps.row.date) }}</div>
+          </div>
           <q-tooltip
             v-if="rowTooltipText(tableProps.row)"
             anchor="top middle"
@@ -176,8 +206,8 @@
             <q-tooltip>
               {{
                 tableProps.row.hasBeenPaid
-                  ? `Included in a posted payroll run${tableProps.row.payrollPayment?.payDate ? ` (pay date ${tableProps.row.payrollPayment.payDate})` : ''}.`
-                  : 'Not included in a posted payroll run with payment method set.'
+                  ? `Included in a posted payroll run${tableProps.row.payrollPayment?.payDate ? ` (pay date ${tableProps.row.payrollPayment.payDate})` : ''}. Hours are marked paid.`
+                  : 'Not included in a posted payroll run yet.'
               }}
             </q-tooltip>
           </q-chip>
@@ -220,7 +250,7 @@
               :label="humanizeStatus(tableProps.row.approvalStatus)"
             />
             <q-chip
-              v-if="isPayDateLocked(tableProps.row)"
+              v-if="isDateLocked(tableProps.row)"
               dense
               square
               color="grey-3"
@@ -228,18 +258,7 @@
               icon="lock"
               label="Locked"
             >
-              <q-tooltip>{{ tableProps.row.lockReason || 'Locked after pay date' }}</q-tooltip>
-            </q-chip>
-            <q-chip
-              v-else-if="tableProps.row.isDateUnlocked"
-              dense
-              square
-              color="amber-1"
-              text-color="amber-10"
-              icon="lock_open"
-              label="Unlocked"
-            >
-              <q-tooltip>{{ tableProps.row.lockReason || 'Unlocked via Payroll settings date range' }}</q-tooltip>
+              <q-tooltip>{{ lockTooltip(tableProps.row) }}</q-tooltip>
             </q-chip>
           </div>
           <q-tooltip
@@ -263,7 +282,7 @@
             outlined
             hide-bottom-space
             placeholder="Add comment"
-            :disable="isPayDateLocked(tableProps.row) || isSaving(tableProps.row.id)"
+            :disable="isRowLocked(tableProps.row) || isSaving(tableProps.row.id)"
             @update:model-value="setCommentDraft(tableProps.row.id, $event)"
             @blur="saveComment(tableProps.row)"
           >
@@ -293,39 +312,62 @@
 
       <template #body-cell-actions="tableProps">
         <q-td :props="tableProps" :class="timesheetRowClass(tableProps.row)">
-          <q-btn
-            v-if="tableProps.row.approvalStatus !== 'APPROVED'"
-            dense
-            flat
-            color="positive"
-            icon="check"
-            label="Approve"
-            :loading="isUpdatingApproval(tableProps.row.id)"
-            :disable="isApprovalBusy(tableProps.row.id) || isPayDateLocked(tableProps.row)"
-            @click="updateApproval(tableProps.row, 'APPROVED')"
-          >
-            <q-tooltip v-if="isPayDateLocked(tableProps.row)">
-              {{ tableProps.row.lockReason || 'Locked after pay date. Unlock work dates under Payroll settings.' }}
-            </q-tooltip>
-          </q-btn>
-          <q-btn
-            v-else
-            dense
-            flat
-            color="grey-8"
-            icon="undo"
-            label="Mark pending"
-            :loading="isUpdatingApproval(tableProps.row.id)"
-            :disable="isApprovalBusy(tableProps.row.id) || isPayDateLocked(tableProps.row)"
-            @click="updateApproval(tableProps.row, 'PENDING')"
-          >
-            <q-tooltip v-if="isPayDateLocked(tableProps.row)">
-              {{ tableProps.row.lockReason || 'Locked after pay date. Unlock work dates under Payroll settings.' }}
-            </q-tooltip>
-          </q-btn>
+          <div class="row items-center no-wrap q-gutter-xs justify-end">
+            <q-btn
+              v-if="canEditTimesheet(tableProps.row)"
+              dense
+              flat
+              color="primary"
+              icon="edit"
+              label="Edit"
+              :disable="isSaving(tableProps.row.id)"
+              @click="openEditDialog(tableProps.row)"
+            />
+            <q-btn
+              v-if="tableProps.row.approvalStatus !== 'APPROVED'"
+              dense
+              flat
+              color="positive"
+              icon="check"
+              label="Approve"
+              :loading="isUpdatingApproval(tableProps.row.id)"
+              :disable="isApprovalBusy(tableProps.row.id) || isDateLocked(tableProps.row)"
+              @click="updateApproval(tableProps.row, 'APPROVED')"
+            >
+              <q-tooltip v-if="isDateLocked(tableProps.row)">
+                {{ lockTooltip(tableProps.row) }}
+              </q-tooltip>
+            </q-btn>
+            <q-btn
+              v-else
+              dense
+              flat
+              color="grey-8"
+              icon="undo"
+              label="Mark pending"
+              :loading="isUpdatingApproval(tableProps.row.id)"
+              :disable="isApprovalBusy(tableProps.row.id) || isDateLocked(tableProps.row)"
+              @click="updateApproval(tableProps.row, 'PENDING')"
+            >
+              <q-tooltip v-if="isDateLocked(tableProps.row)">
+                {{ lockTooltip(tableProps.row) }}
+              </q-tooltip>
+            </q-btn>
+          </div>
         </q-td>
       </template>
     </q-table>
+
+    <AddTimesheetDialog
+      v-model="showAddDialog"
+      :group="group"
+    />
+
+    <EditTimesheetDialog
+      v-model="showEditDialog"
+      :group="group"
+      :timesheet="editingTimesheet"
+    />
   </q-card>
 </template>
 
@@ -333,10 +375,13 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useQuasar } from 'quasar';
+import { usePermissions } from '@core/composables/usePermissions';
 import { useAttendanceStore, type TimesheetRow } from '@payroll/stores/attendance-store';
 import { useAttendanceSettingStore } from 'src/stores/attendance-setting-store';
 import { useTimesheetStore } from '@hr/stores/timesheet-store';
 import type { TimesheetEmployeeGroup } from '@hr/stores/timesheet-store';
+import AddTimesheetDialog from './AddTimesheetDialog.vue';
+import EditTimesheetDialog from './EditTimesheetDialog.vue';
 import { TIMESHEET_TABLE_COLUMNS } from '@hr/utils/timesheet-table-columns';
 import { formatDate, formatDateTime, formatOvertimeForPayType, formatPayType, humanizeStatus, workingStatusColor } from '@payroll/components/attendance/utils';
 import {
@@ -354,11 +399,17 @@ const groupOvertimeHours = computed(() =>
 );
 
 const $q = useQuasar();
+const { can } = usePermissions();
 const attendanceStore = useAttendanceStore();
 const attendanceSettingStore = useAttendanceSettingStore();
 const timesheetStore = useTimesheetStore();
 const { visibleTableColumns } = storeToRefs(timesheetStore);
 const { usesRoundedScheduleComparison } = storeToRefs(attendanceSettingStore);
+
+const canCreateTimesheet = computed(() => can('timesheets-crud'));
+const showAddDialog = ref(false);
+const showEditDialog = ref(false);
+const editingTimesheet = ref<TimesheetRow | null>(null);
 
 const drafts = reactive<Record<string, { in: string; out: string }>>({});
 const lunchDrafts = reactive<Record<string, number>>({});
@@ -411,7 +462,7 @@ function setCommentDraft(id: string, value: string | number | null) {
 }
 
 async function saveComment(row: TimesheetRow) {
-  if (isPayDateLocked(row)) {
+  if (isRowLocked(row)) {
     return;
   }
 
@@ -472,11 +523,27 @@ function shouldHighlightClockTimes(row: TimesheetRow) {
 }
 
 function isRowLocked(row: TimesheetRow) {
-  return Boolean(row.isLocked) || row.approvalStatus === 'APPROVED';
+  return isDateLocked(row) || String(row.approvalStatus || '').toUpperCase() === 'APPROVED';
 }
 
-function isPayDateLocked(row: TimesheetRow) {
+function isDateLocked(row: TimesheetRow) {
   return Boolean(row.isLocked);
+}
+
+function lockTooltip(row: TimesheetRow) {
+  return row.lockReason
+    || (row.lockBeforeDate
+      ? `Locked because work date is before ${row.lockBeforeDate}. Change the lock date under Payroll.`
+      : 'This timesheet is locked and cannot be edited.');
+}
+
+function canEditTimesheet(row: TimesheetRow) {
+  return canCreateTimesheet.value && !isRowLocked(row);
+}
+
+function openEditDialog(row: TimesheetRow) {
+  editingTimesheet.value = row;
+  showEditDialog.value = true;
 }
 
 function isSaving(id: string) {

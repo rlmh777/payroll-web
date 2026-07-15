@@ -93,7 +93,7 @@ async function save() {
       startDate: form.startDate,
       endDate: form.endDate || null,
       isActive: form.isActive,
-      jobTitle: form.jobTitle.trim() || null,
+      jobTitleId: form.jobTitleId,
       requiresClocking: form.requiresClocking,
       benefits: form.benefits?.trim() || null,
       accountId: form.accountId,

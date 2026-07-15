@@ -9,7 +9,7 @@ export interface EmploymentDetail {
   startDate: string;
   endDate: string | null;
   isActive: boolean;
-  jobTitle?: string | null;
+  jobTitleId?: number | null;
   requiresClocking?: boolean;
   benefits?: string | null;
   accountId: string;
@@ -22,12 +22,14 @@ export interface EmploymentDetail {
   department?: { id: number; name: string } | null;
   worksite?: { id: number; name: string } | null;
   contractType?: { id: number; name: string } | null;
+  jobTitle?: { id: number; name: string; payScale?: string | null; jobDescriptionUrl?: string | null } | null;
   chartOfAccount?: { id: string; name: string } | null;
   defaultPayPeriodGroup?: { id: string; name: string } | null;
 }
 
 type EmploymentDetailApiRecord = EmploymentDetail & {
   contract_type?: EmploymentDetail['contractType'];
+  job_title?: EmploymentDetail['jobTitle'];
   chart_of_account?: EmploymentDetail['chartOfAccount'];
   default_pay_period_group?: EmploymentDetail['defaultPayPeriodGroup'];
 };
@@ -36,6 +38,7 @@ function normalizeEmploymentDetail(record: EmploymentDetailApiRecord): Employmen
   return {
     ...record,
     contractType: record.contractType ?? record.contract_type ?? null,
+    jobTitle: record.jobTitle ?? record.job_title ?? null,
     chartOfAccount: record.chartOfAccount ?? record.chart_of_account ?? null,
     defaultPayPeriodGroup: record.defaultPayPeriodGroup ?? record.default_pay_period_group ?? null,
   };
@@ -46,7 +49,7 @@ export interface EmploymentDetailPayload {
   startDate: string;
   endDate: string | null;
   isActive?: boolean;
-  jobTitle?: string | null;
+  jobTitleId?: number | null;
   requiresClocking?: boolean;
   benefits?: string | null;
   accountId: string;
@@ -91,7 +94,11 @@ export const useEmploymentDetailStore = defineStore('employmentDetail', {
 
       const formData = new FormData();
       Object.entries(payload).forEach(([key, value]) => {
-        if (value === undefined || value === null) return;
+        if (value === undefined) return;
+        if (value === null) {
+          formData.append(key, '');
+          return;
+        }
         if (typeof value === 'boolean') {
           formData.append(key, value ? '1' : '0');
           return;

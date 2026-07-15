@@ -17,14 +17,7 @@
 
     <q-toggle v-model="model.isActive" label="Active contract" :disable="props.disable" />
 
-    <q-input
-      v-model="model.jobTitle"
-      label="Job title"
-      dense
-      outlined
-      maxlength="255"
-      :disable="props.disable"
-    />
+    <JobTitleSelect v-model="model.jobTitleId" :disable="props.disable" />
 
     <q-toggle
       v-model="model.requiresClocking"
@@ -95,6 +88,7 @@ import { computed } from 'vue';
 import SsBenefitDateField from '@payroll/components/employee/ss-benefit/SsBenefitDateField.vue';
 import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
 import ContractTypeSelect from '@hr/components/shared/contract-type/ContractTypeSelect.vue';
+import JobTitleSelect from '@hr/components/shared/job-title/JobTitleSelect.vue';
 import DepartmentSelect from '@hr/components/department/DepartmentSelect.vue';
 import WorksiteSelect from '@hr/components/worksite/WorksiteSelect.vue';
 import PayPeriodGroupSelect from '@payroll/components/payroll/pay-period-groups/PayPeriodGroupSelect.vue';

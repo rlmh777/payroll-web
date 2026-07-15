@@ -207,7 +207,8 @@ export interface EmploymentDetail {
   startDate: string;
   endDate?: string | null;
   isActive: boolean;
-  jobTitle?: string | null;
+  jobTitleId?: number | null;
+  jobTitle?: { id: number; name: string; payScale?: string | null } | string | null;
   requiresClocking?: boolean | null;
   benefits?: string | null;
   accountId?: string | null;

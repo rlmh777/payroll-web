@@ -7,6 +7,7 @@ export * from './district-store';
 export * from './document-tag-store';
 export * from './gender-store';
 export * from './institution-store';
+export * from './job-title-store';
 export * from './locality-store';
 export {
   useMenuStore as useSettingsMenuStore,

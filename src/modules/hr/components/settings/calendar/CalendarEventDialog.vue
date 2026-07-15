@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="isOpen" persistent @hide="emit('close')">
+  <q-dialog v-model="isOpen" @hide="emit('close')">
     <q-card class="calendar-event-dialog">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6">{{ dialogTitle }}</div>
@@ -454,7 +454,6 @@ function deleteScheduledWorkEntry() {
     title: 'Delete shift',
     message: 'Delete this scheduled work series?',
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void confirmDeleteScheduledWorkEntry();
   });

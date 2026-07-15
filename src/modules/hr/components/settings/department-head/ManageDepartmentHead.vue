@@ -133,7 +133,6 @@ const onDelete = (row: DepartmentHeadAssignment) => {
     title: 'Confirm Delete',
     message: `Delete the ended assignment for ${row.employeeName ?? 'this employee'}?`,
     cancel: true,
-    persistent: true,
     ok: {
       label: 'Delete',
       color: 'negative',

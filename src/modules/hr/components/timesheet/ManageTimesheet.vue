@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { date } from 'quasar';
 import { storeToRefs } from 'pinia';
 import TimesheetTopbar from './TimesheetTopbar.vue';
@@ -123,6 +123,18 @@ async function handleLoadMoreEmployees() {
   await timesheetStore.loadMoreTimesheetEmployees(roleLabel.value);
 }
 
+async function fillViewportIfNeeded() {
+  await nextTick();
+  const element = timesheetSurfaceRef.value;
+  if (!element || !canLoadMoreEmployees.value || isLoadingMore.value) {
+    return;
+  }
+
+  if (element.scrollHeight <= element.clientHeight + LOAD_MORE_OFFSET_PX) {
+    await handleLoadMoreEmployees();
+  }
+}
+
 function onSurfaceScroll() {
   const element = timesheetSurfaceRef.value;
   if (!element || !canLoadMoreEmployees.value || isLoadingMore.value) {
@@ -135,11 +147,19 @@ function onSurfaceScroll() {
   }
 }
 
+watch(
+  () => [groupedTimesheets.value.length, canLoadMoreEmployees.value, isLoadingMore.value] as const,
+  () => {
+    void fillViewportIfNeeded();
+  },
+);
+
 onMounted(async () => {
   syncWeekRange();
   await attendanceSettingStore.fetchSettings();
   await prepareSchedulerEmployees({ force: true });
   await refreshTimesheets(true);
+  await fillViewportIfNeeded();
 });
 </script>
 

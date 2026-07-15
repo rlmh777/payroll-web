@@ -71,3 +71,24 @@ body {
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
 }
+
+/* Right/left drawer dialogs: flush edges and full viewport height (no Quasar 24px gap). */
+.q-dialog__inner--minimized.q-dialog__inner--right,
+.q-dialog__inner--minimized.q-dialog__inner--left {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.q-dialog__inner--minimized.q-dialog__inner--right > div,
+.q-dialog__inner--minimized.q-dialog__inner--left > div {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+}
+
+body.platform-ios .q-dialog__inner--minimized.q-dialog__inner--right > div,
+body.platform-ios .q-dialog__inner--minimized.q-dialog__inner--left > div,
+body.platform-android:not(.native-mobile) .q-dialog__inner--minimized.q-dialog__inner--right > div,
+body.platform-android:not(.native-mobile) .q-dialog__inner--minimized.q-dialog__inner--left > div {
+  max-height: 100vh !important;
+}

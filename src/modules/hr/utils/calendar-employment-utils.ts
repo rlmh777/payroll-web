@@ -19,8 +19,8 @@ type EmploymentDetailLike = {
   start_date?: string;
   endDate?: string | null;
   end_date?: string | null;
-  jobTitle?: string | null;
-  job_title?: string | null;
+  jobTitle?: string | { id?: number; name?: string | null } | null;
+  job_title?: string | { id?: number; name?: string | null } | null;
   contractType?: { name?: string | null } | null;
   contract_type?: { name?: string | null } | null;
   defaultPayPeriodGroup?: { name?: string | null } | null;
@@ -207,9 +207,19 @@ export function normalizeCalendarEmployees(
   return raw.map((item) => normalizeCalendarEmployee(item as RawCalendarEmployee));
 }
 
+function resolvedJobTitleName(detail: EmploymentDetailLike): string | null {
+  const value = detail.jobTitle ?? detail.job_title;
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+  if (value && typeof value === 'object' && typeof value.name === 'string' && value.name.trim()) {
+    return value.name.trim();
+  }
+  return null;
+}
+
 export function employmentContractLabel(detail: EmploymentDetailLike): string {
-  const title = detail.jobTitle
-    ?? detail.job_title
+  const title = resolvedJobTitleName(detail)
     ?? detail.contractType?.name
     ?? detail.contract_type?.name
     ?? 'Contract';

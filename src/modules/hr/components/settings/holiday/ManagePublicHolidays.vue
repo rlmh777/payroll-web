@@ -50,31 +50,45 @@
       </q-card-section>
     </q-card>
 
-    <q-dialog v-model="showDialog" persistent>
-      <q-card style="min-width: 420px">
+    <q-dialog v-model="showDialog" position="right" :maximized="false" @hide="resetForm">
+      <q-card class="holiday-dialog-card">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">{{ dialogTitle }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup :disable="saving" />
+        </q-card-section>
+
         <q-card-section>
-          <div class="text-h6">{{ editingId ? 'Edit holiday' : 'Add holiday' }}</div>
+          <q-form class="q-gutter-md" @submit.prevent="save">
+            <q-input
+              v-model="form.name"
+              label="Name"
+              outlined
+              dense
+              :disable="saving"
+              :rules="[(val) => !!String(val ?? '').trim() || 'Name is required']"
+            />
+            <DateField v-model="form.startDate" label="Start date" required :disable="saving" />
+            <DateField v-model="form.endDate" label="End date" required :disable="saving" />
+            <q-input
+              v-model.number="form.payMultiplier"
+              type="number"
+              label="Pay multiplier"
+              hint="1.5 = time and a half (default), 2 = double time"
+              outlined
+              dense
+              min="0"
+              step="0.01"
+              :disable="saving"
+            />
+            <q-toggle v-model="form.isActive" label="Active" :disable="saving" />
+
+            <div class="row q-gutter-sm justify-end q-mt-lg">
+              <q-btn flat label="Cancel" color="grey" :disable="saving" @click="onClose" />
+              <q-btn type="submit" color="primary" label="Save" :loading="saving" />
+            </div>
+          </q-form>
         </q-card-section>
-        <q-card-section class="q-gutter-md">
-          <q-input v-model="form.name" label="Name" outlined dense />
-          <DateField v-model="form.startDate" label="Start date" required />
-          <DateField v-model="form.endDate" label="End date" required />
-          <q-input
-            v-model.number="form.payMultiplier"
-            type="number"
-            label="Pay multiplier"
-            hint="1.5 = time and a half (default), 2 = double time"
-            outlined
-            dense
-            min="0"
-            step="0.01"
-          />
-          <q-toggle v-model="form.isActive" label="Active" />
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="primary" label="Save" :loading="saving" @click="save" />
-        </q-card-actions>
       </q-card>
     </q-dialog>
   </q-page>
@@ -97,6 +111,7 @@ const search = ref('');
 const showDialog = ref(false);
 const saving = ref(false);
 const editingId = ref<string | null>(null);
+const dialogTitle = ref('Add holiday');
 
 const form = ref<PublicHolidayPayload & { isActive: boolean }>({
   name: '',
@@ -154,15 +169,22 @@ function resetForm() {
     isActive: true,
   };
   editingId.value = null;
+  dialogTitle.value = 'Add holiday';
+}
+
+function onClose() {
+  showDialog.value = false;
 }
 
 function openCreate() {
   resetForm();
+  dialogTitle.value = 'Add holiday';
   showDialog.value = true;
 }
 
 function openEdit(row: PublicHoliday) {
   editingId.value = row.id;
+  dialogTitle.value = 'Edit holiday';
   form.value = {
     name: row.name,
     startDate: row.startDate.slice(0, 10),
@@ -226,3 +248,17 @@ function onDelete(row: PublicHoliday) {
 
 onMounted(refresh);
 </script>
+
+<style scoped>
+.holiday-dialog-card {
+  width: 30vw;
+  height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.holiday-dialog-card :deep(.q-card__section) {
+  overflow-y: auto;
+}
+</style>

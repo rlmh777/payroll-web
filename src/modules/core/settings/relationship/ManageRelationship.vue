@@ -111,7 +111,6 @@ const onDelete = (row: Relationship) => {
     title: 'Confirm Delete',
     message: `Are you sure you want to delete "${row.name}"?`,
     cancel: true,
-    persistent: true,
     ok: {
       label: 'Delete',
       color: 'negative',

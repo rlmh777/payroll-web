@@ -2,7 +2,7 @@ export interface EmploymentDetailFormModel {
   startDate: string;
   endDate: string | null;
   isActive: boolean;
-  jobTitle: string;
+  jobTitleId: number | null;
   requiresClocking: boolean;
   benefits: string;
   accountId: string;
@@ -20,7 +20,7 @@ export function createDefaultEmploymentDetailForm(): EmploymentDetailFormModel {
     startDate: new Date().toISOString().slice(0, 10),
     endDate: null,
     isActive: true,
-    jobTitle: '',
+    jobTitleId: null,
     requiresClocking: true,
     benefits: '',
     accountId: null as unknown as string,
@@ -57,7 +57,7 @@ interface EmploymentDetailRecordSource {
   startDate?: string;
   endDate?: string | null;
   isActive: boolean;
-  jobTitle?: string | null;
+  jobTitleId?: number | null;
   requiresClocking?: boolean | null;
   benefits?: string | null;
   accountId?: string | null;
@@ -71,6 +71,8 @@ interface EmploymentDetailRecordSource {
   chart_of_account?: { id: string } | null;
   contractType?: { id: number } | null;
   contract_type?: { id: number } | null;
+  jobTitle?: { id: number } | null;
+  job_title?: { id: number } | null;
   department?: { id: number } | null;
   worksite?: { id: number } | null;
   defaultPayPeriodGroup?: { id: string } | null;
@@ -84,7 +86,7 @@ export function mapEmploymentDetailRecordToForm(
     startDate: record.startDate?.slice(0, 10) ?? '',
     endDate: record.endDate?.slice(0, 10) ?? null,
     isActive: record.isActive,
-    jobTitle: record.jobTitle ?? '',
+    jobTitleId: record.jobTitleId ?? record.jobTitle?.id ?? record.job_title?.id ?? null,
     requiresClocking: record.requiresClocking !== false,
     benefits: record.benefits ?? '',
     accountId: record.accountId ?? record.chartOfAccount?.id ?? record.chart_of_account?.id ?? null as unknown as string,

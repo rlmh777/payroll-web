@@ -72,6 +72,12 @@ export const coreRoutes: RouteRecordRaw[] = [
       },
       { path: '/settings/general/degree', redirect: '/settings/degree' },
       {
+        path: '/settings/job-titles',
+        component: () => import('@core/settings/job-title/ManageJobTitle.vue'),
+        props: { title: 'Job Titles' },
+      },
+      { path: '/settings/general/job-titles', redirect: '/settings/job-titles' },
+      {
         path: '/settings/district',
         component: () => import('@core/settings/district/ManageDistrict.vue'),
         props: { title: 'Setting Degree' },

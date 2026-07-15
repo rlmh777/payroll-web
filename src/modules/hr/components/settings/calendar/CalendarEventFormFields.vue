@@ -53,6 +53,8 @@
       clearable
       emit-value
       map-options
+      option-value="id"
+      option-label="label"
       :disable="props.disable"
       :hint="employmentContractOptions.length > 1 ? 'Required when the employee has multiple active contracts' : undefined"
       @update:model-value="handleEmploymentContractChange"

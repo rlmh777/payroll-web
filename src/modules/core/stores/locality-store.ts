@@ -151,9 +151,13 @@ export const useLocalityStore = defineStore('locality', {
         const result = await response.json();
         const newLocality = result.data || result;
 
-        // Add to localities list
-        this.localities = [...this.localities, newLocality];
-        await this.fetchLocalities({});
+        // Insert the fully loaded record (includes district/country) at the top.
+        this.localities = [
+          newLocality,
+          ...this.localities.filter((locality) => locality.id !== newLocality.id),
+        ];
+        this.total += 1;
+
         return newLocality;
       } catch (error) {
         console.error('Error creating locality:', error);

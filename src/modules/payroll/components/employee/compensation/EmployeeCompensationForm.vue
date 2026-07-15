@@ -381,7 +381,9 @@ function onCompensationMethodChange(value: CompensationMethod) {
 }
 
 function formatEmploymentDetailLabel(detail: EmploymentDetail): string {
-  const title = detail.jobTitle || detail.contractType?.name || 'Contract';
+  const title = (typeof detail.jobTitle === 'object' ? detail.jobTitle?.name : detail.jobTitle)
+    || detail.contractType?.name
+    || 'Contract';
   const department = detail.department?.name ?? 'No department';
   const payPeriodGroup = detail.defaultPayPeriodGroup?.name ?? 'No pay period group';
   const dates = `${detail.startDate}${detail.endDate ? ` to ${detail.endDate}` : ' onward'}`;

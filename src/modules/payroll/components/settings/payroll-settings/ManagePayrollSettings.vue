@@ -4,7 +4,7 @@
       <q-card-section>
         <div class="text-h6">Payroll settings</div>
         <div class="text-body2 text-grey-7 q-mt-xs">
-          Company-wide payroll calculation defaults and timesheet edit unlock rules.
+          Company-wide payroll calculation defaults.
         </div>
       </q-card-section>
 
@@ -50,35 +50,14 @@
             ]"
           />
 
-          <q-separator class="q-mt-md" />
-
-          <div>
-            <div class="text-subtitle1 text-weight-medium">Timesheet edit unlock</div>
-            <div class="text-body2 text-grey-7 q-mt-xs">
-              After a pay date is reached, timesheets for those work dates are locked.
-              Set a date range here to unlock all timesheet rows whose work date falls in that range.
-              Clear both dates to keep everything locked after pay date.
-            </div>
-          </div>
-
-          <div class="row q-col-gutter-md">
-            <div class="col-12 col-sm-6">
-              <DateField
-                v-model="form.timesheetUnlockStartDate"
-                label="Unlock work dates from"
-                clearable
-                :disable="store.isLoading || store.isSaving"
-              />
-            </div>
-            <div class="col-12 col-sm-6">
-              <DateField
-                v-model="form.timesheetUnlockEndDate"
-                label="Unlock work dates to"
-                clearable
-                :disable="store.isLoading || store.isSaving"
-              />
-            </div>
-          </div>
+          <q-banner rounded class="bg-blue-1 text-grey-9">
+            <template #avatar>
+              <q-icon name="lock" color="primary" />
+            </template>
+            Timesheet date locks are managed on the
+            <router-link to="/payroll" class="text-primary text-weight-medium">Payroll</router-link>
+            page.
+          </q-banner>
 
           <div class="row q-gutter-sm">
             <q-btn
@@ -87,12 +66,6 @@
               type="submit"
               :loading="store.isSaving"
               :disable="store.isLoading"
-            />
-            <q-btn
-              flat
-              label="Clear unlock dates"
-              :disable="store.isLoading || store.isSaving || (!form.timesheetUnlockStartDate && !form.timesheetUnlockEndDate)"
-              @click="clearUnlockDates"
             />
             <q-btn
               flat
@@ -111,7 +84,6 @@
 import { onMounted, reactive, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { storeToRefs } from 'pinia';
-import DateField from '@core/components/common/DateField.vue';
 import { usePayrollSettingStore } from 'src/stores/payroll-setting-store';
 
 const $q = useQuasar();
@@ -121,8 +93,6 @@ const { settings } = storeToRefs(store);
 const form = reactive({
   incomeTaxRatePercent: 25,
   secondReliefAmount: 100,
-  timesheetUnlockStartDate: null as string | null,
-  timesheetUnlockEndDate: null as string | null,
 });
 
 function syncFormFromStore() {
@@ -132,45 +102,17 @@ function syncFormFromStore() {
 
   form.incomeTaxRatePercent = settings.value.incomeTaxRatePercent;
   form.secondReliefAmount = settings.value.secondReliefAmount;
-  form.timesheetUnlockStartDate = settings.value.timesheetUnlockStartDate;
-  form.timesheetUnlockEndDate = settings.value.timesheetUnlockEndDate;
 }
 
 function resetForm() {
   syncFormFromStore();
 }
 
-function clearUnlockDates() {
-  form.timesheetUnlockStartDate = null;
-  form.timesheetUnlockEndDate = null;
-}
-
 async function save() {
-  const unlockStart = form.timesheetUnlockStartDate?.trim() || null;
-  const unlockEnd = form.timesheetUnlockEndDate?.trim() || null;
-
-  if ((unlockStart && !unlockEnd) || (!unlockStart && unlockEnd)) {
-    $q.notify({
-      type: 'warning',
-      message: 'Provide both unlock start and end dates, or clear both.',
-    });
-    return;
-  }
-
-  if (unlockStart && unlockEnd && unlockEnd < unlockStart) {
-    $q.notify({
-      type: 'warning',
-      message: 'Unlock end date must be on or after the start date.',
-    });
-    return;
-  }
-
   try {
     await store.updateSettings({
       incomeTaxRate: Number((Number(form.incomeTaxRatePercent) / 100).toFixed(4)),
       secondReliefAmount: Number(form.secondReliefAmount),
-      timesheetUnlockStartDate: unlockStart,
-      timesheetUnlockEndDate: unlockEnd,
     });
 
     $q.notify({

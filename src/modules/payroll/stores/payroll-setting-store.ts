@@ -5,8 +5,7 @@ export interface PayrollSettings {
   incomeTaxRate: number;
   incomeTaxRatePercent: number;
   secondReliefAmount: number;
-  timesheetUnlockStartDate: string | null;
-  timesheetUnlockEndDate: string | null;
+  timesheetLockBeforeDate: string | null;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
@@ -18,11 +17,8 @@ function normalizeSettings(data: Partial<PayrollSettings> | null | undefined): P
     incomeTaxRate: rate,
     incomeTaxRatePercent: Number(data?.incomeTaxRatePercent ?? rate * 100),
     secondReliefAmount: Number(data?.secondReliefAmount ?? 100),
-    timesheetUnlockStartDate: data?.timesheetUnlockStartDate
-      ? String(data.timesheetUnlockStartDate)
-      : null,
-    timesheetUnlockEndDate: data?.timesheetUnlockEndDate
-      ? String(data.timesheetUnlockEndDate)
+    timesheetLockBeforeDate: data?.timesheetLockBeforeDate
+      ? String(data.timesheetLockBeforeDate)
       : null,
   };
 }
@@ -76,10 +72,9 @@ export const usePayrollSettingStore = defineStore('payrollSetting', {
     },
 
     async updateSettings(payload: {
-      incomeTaxRate: number;
-      secondReliefAmount: number;
-      timesheetUnlockStartDate: string | null;
-      timesheetUnlockEndDate: string | null;
+      incomeTaxRate?: number;
+      secondReliefAmount?: number;
+      timesheetLockBeforeDate?: string | null;
     }) {
       this.isSaving = true;
       this.error = null;
@@ -111,7 +106,7 @@ export const usePayrollSettingStore = defineStore('payrollSetting', {
         }
 
         const data = await response.json();
-        this.settings = normalizeSettings(data.data ?? payload);
+        this.settings = normalizeSettings(data.data ?? { ...this.settings, ...payload });
 
         return this.settings;
       } catch (error) {

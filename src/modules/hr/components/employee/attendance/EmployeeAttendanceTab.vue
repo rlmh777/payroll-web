@@ -408,7 +408,6 @@ function confirmRecalculateEmployee() {
     message:
       'This refreshes pay type, rates, regular hours, and overtime for this employee in the current view. Past payroll periods are not changed.',
     cancel: true,
-    persistent: true,
     ok: {
       label: 'Recalculate',
       color: 'primary',

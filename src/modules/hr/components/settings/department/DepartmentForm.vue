@@ -133,7 +133,7 @@
         @update:model-value="updateField('accountId', $event ?? null)"
       />
 
-      <div class="row q-gutter-sm justify-end q-mt-lg">
+      <div class="row q-gutter-sm justify-end q-mt-lg q-mb-lg">
         <q-btn flat label="Cancel" color="grey" :disable="saving" @click="$emit('cancel')" />
         <q-btn
           color="primary"

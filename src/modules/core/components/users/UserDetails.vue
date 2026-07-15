@@ -230,7 +230,6 @@ const onSendPasswordResetEmail = () => {
     title: 'Send Password Reset Email',
     message: `Are you sure you want to send a password reset email to ${props.user?.email || 'this user'}?`,
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
       if (!props.user) return;
@@ -348,7 +347,6 @@ const onUnlinkEmployee = () => {
     title: 'Confirm Unlink',
     message: 'Are you sure you want to unlink this employee from the user?',
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
     isLinkingEmployee.value = true;

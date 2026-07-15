@@ -190,7 +190,7 @@
                     :label="humanizeStatus(tableProps.row.approvalStatus)"
                   />
                   <q-chip
-                    v-if="isPayDateLocked(tableProps.row)"
+                    v-if="isDateLocked(tableProps.row)"
                     dense
                     square
                     color="grey-3"
@@ -198,18 +198,7 @@
                     icon="lock"
                     label="Locked"
                   >
-                    <q-tooltip>{{ tableProps.row.lockReason || 'Locked after pay date' }}</q-tooltip>
-                  </q-chip>
-                  <q-chip
-                    v-else-if="tableProps.row.isDateUnlocked"
-                    dense
-                    square
-                    color="amber-1"
-                    text-color="amber-10"
-                    icon="lock_open"
-                    label="Unlocked"
-                  >
-                    <q-tooltip>{{ tableProps.row.lockReason || 'Unlocked via Payroll settings date range' }}</q-tooltip>
+                    <q-tooltip>{{ lockTooltip(tableProps.row) }}</q-tooltip>
                   </q-chip>
                 </div>
               </q-td>
@@ -258,11 +247,11 @@
                     color="positive"
                     icon="check"
                     label="Approve"
-                    :disable="props.isUpdatingApproval || tableProps.row.hasLeaveConflict || isPayDateLocked(tableProps.row)"
+                    :disable="props.isUpdatingApproval || tableProps.row.hasLeaveConflict || isDateLocked(tableProps.row)"
                     @click="emitApproval(tableProps.row, 'APPROVED')"
                   >
-                    <q-tooltip v-if="isPayDateLocked(tableProps.row)">
-                      {{ tableProps.row.lockReason || 'Locked after pay date. Unlock work dates under Payroll settings.' }}
+                    <q-tooltip v-if="isDateLocked(tableProps.row)">
+                      {{ lockTooltip(tableProps.row) }}
                     </q-tooltip>
                     <q-tooltip v-else-if="tableProps.row.hasLeaveConflict">
                       Resolve the leave conflict before approving.
@@ -273,16 +262,16 @@
                     flat
                     color="negative"
                     icon="close"
-                    :disable="props.isUpdatingApproval || isPayDateLocked(tableProps.row)"
+                    :disable="props.isUpdatingApproval || isDateLocked(tableProps.row)"
                     @click="emitApproval(tableProps.row, 'REJECTED')"
                   >
-                    <q-tooltip v-if="isPayDateLocked(tableProps.row)">
-                      {{ tableProps.row.lockReason || 'Locked after pay date. Unlock work dates under Payroll settings.' }}
+                    <q-tooltip v-if="isDateLocked(tableProps.row)">
+                      {{ lockTooltip(tableProps.row) }}
                     </q-tooltip>
                     <q-tooltip v-else>Reject day</q-tooltip>
                   </q-btn>
                 </div>
-                <div v-else-if="isPayDateLocked(tableProps.row)" class="text-caption text-grey-6">
+                <div v-else-if="isDateLocked(tableProps.row)" class="text-caption text-grey-6">
                   Locked
                 </div>
                 <span v-else class="text-caption text-grey-6">Reviewed</span>
@@ -455,7 +444,7 @@ function emitApproval(row: TimesheetRow, action: TimesheetApprovalAction) {
 }
 
 function canAuthorizeLeaveWork(row: TimesheetRow) {
-  return row.approvalStatus === 'PENDING' && Boolean(row.hasLeaveConflict) && !isPayDateLocked(row);
+  return row.approvalStatus === 'PENDING' && Boolean(row.hasLeaveConflict) && !isDateLocked(row);
 }
 
 function authorizeWorkOnLeave(row: TimesheetRow) {
@@ -470,7 +459,6 @@ function authorizeWorkOnLeave(row: TimesheetRow) {
       isValid: (value: string) => value.trim().length >= 3,
     },
     cancel: true,
-    persistent: true,
   }).onOk((note: string) => {
     void submitLeaveAuthorization(row, note.trim());
   });
@@ -499,11 +487,18 @@ async function submitLeaveAuthorization(row: TimesheetRow, note: string) {
 }
 
 function isRowLocked(row: TimesheetRow) {
-  return Boolean(row.isLocked) || row.approvalStatus === 'APPROVED';
+  return isDateLocked(row) || row.approvalStatus === 'APPROVED';
 }
 
-function isPayDateLocked(row: TimesheetRow) {
+function isDateLocked(row: TimesheetRow) {
   return Boolean(row.isLocked);
+}
+
+function lockTooltip(row: TimesheetRow) {
+  return row.lockReason
+    || (row.lockBeforeDate
+      ? `Locked because work date is before ${row.lockBeforeDate}. Change the lock date under Payroll.`
+      : 'This timesheet is locked and cannot be edited.');
 }
 
 function isSaving(id: string) {

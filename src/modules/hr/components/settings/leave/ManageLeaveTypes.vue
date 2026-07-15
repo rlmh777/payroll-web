@@ -56,7 +56,7 @@
       </q-card-section>
     </q-card>
 
-    <q-dialog v-model="showDialog" persistent>
+    <q-dialog v-model="showDialog">
       <q-card style="min-width: 520px; max-width: 640px">
         <q-card-section>
           <div class="text-h6">{{ editingId ? 'Edit leave type' : 'Add leave type' }}</div>

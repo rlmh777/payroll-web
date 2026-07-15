@@ -55,6 +55,8 @@
               :options="employmentContractOptions"
               emit-value
               map-options
+              option-value="id"
+              option-label="label"
               outlined
               dense
               clearable

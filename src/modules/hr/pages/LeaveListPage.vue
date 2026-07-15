@@ -422,7 +422,6 @@ function promptAction(row: TeamLeaveRow, action: 'approve' | 'reject' | 'cancel'
       autogrow: true,
     },
     cancel: true,
-    persistent: true,
     ok: {
       label: labels[action],
       color: action === 'approve' ? 'positive' : action === 'reject' ? 'negative' : 'primary',

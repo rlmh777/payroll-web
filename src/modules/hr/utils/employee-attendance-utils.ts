@@ -198,6 +198,7 @@ export function buildEmployeeTimesheetGroup(
     employmentContractLabel: firstRow?.employmentContractLabel ?? null,
     employeeName,
     employeeCode,
+    departmentId: firstRow?.departmentId == null ? null : Number(firstRow.departmentId),
     departmentName,
     totalHours: rows.reduce((sum, row) => sum + (row.hoursWorked ?? 0), 0),
     rows: [...rows].sort((left, right) => left.date.localeCompare(right.date)),

@@ -128,7 +128,9 @@ function formatEmploymentDetailLabel(record: EmployeeCompensation): string {
   const detail = record.employmentDetail;
   if (!detail) return '—';
 
-  const title = detail.jobTitle || detail.contractType?.name || 'Contract';
+  const title = (typeof detail.jobTitle === 'object' ? detail.jobTitle?.name : detail.jobTitle)
+    || detail.contractType?.name
+    || 'Contract';
   const department = detail.department?.name ?? 'No department';
   const payPeriodGroup = detail.defaultPayPeriodGroup?.name ?? 'No pay period group';
 

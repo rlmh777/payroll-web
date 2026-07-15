@@ -10,14 +10,22 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useAuthStore } from '@core/stores/auth';
+import { useCalendarStore } from '@hr/stores/calendar-store';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
 import { useTimesheetStore } from '@hr/stores/timesheet-store';
+import { canViewAllSchedulerEmployees } from '@hr/utils/scheduler-access';
 import SchedulerMiniSearch from '../settings/calendar/SchedulerMiniSearch.vue';
 import TimesheetFilterOptions from './TimesheetFilterOptions.vue';
 
+const authStore = useAuthStore();
+const calendarStore = useCalendarStore();
 const schedulerStore = useSchedulerStore();
 const timesheetStore = useTimesheetStore();
+
+const roleLabel = computed(() => authStore.user?.role?.toLowerCase() ?? '');
+const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null);
 
 watch(
   () => [
@@ -26,9 +34,42 @@ watch(
     timesheetStore.filterApprovalStatus,
   ],
   () => {
-    void timesheetStore.fetchTimesheetRows(true);
+    void (async () => {
+      if (
+        canViewAllSchedulerEmployees(roleLabel.value)
+        && schedulerStore.employeesMode === 'paginated'
+      ) {
+        await schedulerStore.fetchEmployees(true);
+      }
+      await timesheetStore.fetchTimesheetRows(true);
+    })();
   },
   { deep: true },
+);
+
+watch(
+  () => schedulerStore.employeeSearch,
+  () => {
+    if (!schedulerStore.hasLoadedEmployees) {
+      return;
+    }
+
+    if (searchDebounce.value) {
+      clearTimeout(searchDebounce.value);
+    }
+
+    searchDebounce.value = setTimeout(() => {
+      void (async () => {
+        if (canViewAllSchedulerEmployees(roleLabel.value)) {
+          await schedulerStore.reloadEmployeesForSearch(
+            calendarStore.currentEmployee,
+            roleLabel.value,
+          );
+        }
+        await timesheetStore.fetchTimesheetRows(true);
+      })();
+    }, 300);
+  },
 );
 </script>
 

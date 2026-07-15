@@ -72,6 +72,7 @@ export interface TimesheetRow {
   isPayDatePassed?: boolean;
   isDateUnlocked?: boolean;
   lockReason?: string | null;
+  lockBeforeDate?: string | null;
   payDate?: string | null;
 }
 
@@ -827,9 +828,13 @@ export const useAttendanceStore = defineStore('attendance', {
 
         const payload = await response.json();
         const pageRows = Array.isArray(payload.data) ? payload.data : [];
-        this.timesheets = options.append
-          ? [...this.timesheets, ...pageRows]
-          : pageRows;
+        if (options.append) {
+          const existingIds = new Set(this.timesheets.map((row) => row.id));
+          const uniqueRows = pageRows.filter((row: TimesheetRow) => !existingIds.has(row.id));
+          this.timesheets = [...this.timesheets, ...uniqueRows];
+        } else {
+          this.timesheets = pageRows;
+        }
         this.timesheetSummary = {
           timesheetCount: payload.summary?.timesheetCount ?? 0,
           employeeCount: payload.summary?.employeeCount ?? 0,
@@ -1047,6 +1052,94 @@ export const useAttendanceStore = defineStore('attendance', {
         return null;
       } finally {
         this.isRecalculatingCompensation = false;
+      }
+    },
+
+    async createTimesheet(payload: {
+      employeeId: string;
+      date: string;
+      roundOffClockInTime: string;
+      roundOffClockOutTime: string;
+      employmentDetailId?: string | null;
+      departmentId?: number | null;
+      slotIndex?: number;
+      lunchHourHours?: number;
+      comment?: string | null;
+    }) {
+      this.isLoadingTimesheets = true;
+      this.error = null;
+
+      try {
+        const response = await fetch(`${API_URL}/timesheets`, {
+          method: 'POST',
+          headers: this.buildJsonHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(await this.parseError(response, 'Failed to create timesheet record.'));
+        }
+
+        const body = await response.json();
+        const created = body.data as TimesheetRow;
+        const affected = Array.isArray(body.affected) ? (body.affected as TimesheetRow[]) : [created];
+
+        this.mergeAffectedTimesheets(affected);
+
+        if (!this.timesheets.some((row) => row.id === created.id)) {
+          this.timesheets.push(created);
+        }
+
+        return created;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to create timesheet record.';
+        return null;
+      } finally {
+        this.isLoadingTimesheets = false;
+      }
+    },
+
+    async updateTimesheet(
+      id: string,
+      payload: {
+        date: string;
+        roundOffClockInTime: string;
+        roundOffClockOutTime: string;
+        clockInTime?: string | null;
+        clockOutTime?: string | null;
+        clockInDeviceId?: string | null;
+        clockOutDeviceId?: string | null;
+        employmentDetailId?: string | null;
+        departmentId?: number | null;
+        worksiteId?: number | null;
+        lunchHourHours?: number;
+        isPaid?: boolean;
+        comment?: string | null;
+      },
+    ) {
+      this.error = null;
+
+      try {
+        const response = await fetch(`${API_URL}/timesheets/${id}`, {
+          method: 'PATCH',
+          headers: this.buildJsonHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(await this.parseError(response, 'Failed to update timesheet record.'));
+        }
+
+        const body = await response.json();
+        const updated = body.data as TimesheetRow;
+        const affected = Array.isArray(body.affected) ? (body.affected as TimesheetRow[]) : [updated];
+
+        this.mergeAffectedTimesheets(affected);
+
+        return updated;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to update timesheet record.';
+        return null;
       }
     },
 

@@ -51,6 +51,21 @@ watch(
   },
 );
 
+watch(
+  () => schedulerStore.filterDepartmentId,
+  () => {
+    if (
+      !schedulerStore.hasLoadedEmployees
+      || !canViewAllSchedulerEmployees(roleLabel.value)
+      || schedulerStore.employeesMode !== 'paginated'
+    ) {
+      return;
+    }
+
+    void schedulerStore.fetchEmployees(true);
+  },
+);
+
 onMounted(async () => {
   if (!schedulerStore.hasLoadedEmployees || schedulerStore.employees.length === 0) {
     await prepareSchedulerEmployees({ force: true });

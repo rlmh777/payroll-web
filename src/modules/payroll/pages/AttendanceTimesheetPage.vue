@@ -1303,7 +1303,6 @@ function confirmRecalculateAll() {
     message:
       'This refreshes pay type, rates, regular hours, and overtime for all employees with active compensation in the selected pay period. Past payroll periods are not changed.',
     cancel: true,
-    persistent: true,
     ok: {
       label: 'Recalculate all',
       color: 'primary',
@@ -1323,7 +1322,6 @@ function confirmRecalculateSelectedEmployee() {
     title: 'Recalculate employee compensation?',
     message: `Refresh pay type, rates, regular hours, and overtime for ${selectedEmployeeSummary.value.employeeName ?? 'this employee'} in the selected pay period.`,
     cancel: true,
-    persistent: true,
     ok: {
       label: 'Recalculate employee',
       color: 'primary',
@@ -1380,7 +1378,6 @@ function approveCleanPending(timesheetIds: string[]) {
     title: 'Approve clean timesheets?',
     message: `${timesheetIds.length} clean pending timesheet${timesheetIds.length === 1 ? '' : 's'} on this page will be approved for payroll.`,
     cancel: true,
-    persistent: true,
     ok: {
       label: `Approve ${timesheetIds.length}`,
       color: 'positive',
@@ -1466,7 +1463,6 @@ function confirmProcessPayrollRun() {
     title: 'Process payroll run?',
     message: `This will finalize payroll for ${employeeCount} employee${employeeCount === 1 ? '' : 's'} and mark this pay period as posted.`,
     cancel: true,
-    persistent: true,
     ok: {
       label: 'Process payroll',
       color: 'primary',
@@ -1828,7 +1824,6 @@ function deleteImportRow(detail: { rowNumber: number }) {
     title: 'Remove imported row?',
     message: 'This removes the row from the staged import preview. It will not be posted.',
     cancel: true,
-    persistent: true,
     ok: {
       label: 'Remove row',
       color: 'negative',
@@ -1865,7 +1860,6 @@ function confirmAllowanceDeductionImport() {
     title: 'Post imported allowances and deductions?',
     message: `This will insert ${importPreview.value?.recordCount ?? importRows.value.length} allowance/deduction records into the selected draft payroll run.`,
     cancel: true,
-    persistent: true,
     ok: {
       label: 'Post import',
       color: 'primary',

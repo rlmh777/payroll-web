@@ -135,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import type { CalendarEntry, CalendarEmployee } from '@hr/stores/calendar-store';
 import {
   employeeInitials,
@@ -268,6 +268,25 @@ async function triggerLoadMore() {
   }
 }
 
+async function fillViewportIfNeeded() {
+  await nextTick();
+  const element = bodyScrollRef.value;
+  if (
+    !element ||
+    isLoadingMore.value ||
+    props.loading ||
+    props.loadingMore ||
+    !props.hasMore ||
+    props.rows.length === 0
+  ) {
+    return;
+  }
+
+  if (element.scrollHeight <= element.clientHeight + LOAD_MORE_OFFSET_PX) {
+    await triggerLoadMore();
+  }
+}
+
 function onBodyScroll() {
   syncHeaderScroll();
 
@@ -281,6 +300,13 @@ function onBodyScroll() {
     void triggerLoadMore();
   }
 }
+
+watch(
+  () => [props.rows.length, props.hasMore, props.loading, props.loadingMore] as const,
+  () => {
+    void fillViewportIfNeeded();
+  },
+);
 
 function cellShifts(row: SchedulerGridRow, day: string) {
   return eventsForCell(props.events, row, day);

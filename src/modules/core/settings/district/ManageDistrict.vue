@@ -21,7 +21,7 @@
           <template v-slot:body-cell-actions="props">
             <q-td :props="props" class="text-right">
               <div class="action-buttons">
-                <Can permission="district-crud">
+                <CanAccess permission="district-crud">
                   <q-btn
                     flat
                     round
@@ -34,7 +34,7 @@
                   >
                     <q-tooltip>Edit District</q-tooltip>
                   </q-btn>
-                </Can>
+                </CanAccess>
                 <!-- <q-btn
                   flat
                   round
@@ -67,7 +67,7 @@ import { useDistrictStore } from '../../stores/district-store';
 import type { District } from '@core/types/models';
 import SearchDistrict from './SearchDistrict.vue';
 import EditDistrict from '@core/components/shared/district/EditDistrict.vue';
-import Can from '@core/components/shared/Can.vue';
+import CanAccess from '@core/components/shared/CanAccess.vue';
 
 const store = useDistrictStore();
 const showEditDialog = ref(false);

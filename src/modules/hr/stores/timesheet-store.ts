@@ -3,6 +3,7 @@ import { date } from 'quasar';
 import { useAttendanceStore, type TimesheetRow } from '@payroll/stores/attendance-store';
 import { useSchedulerStore } from './scheduler-store';
 import { canViewAllSchedulerEmployees } from '@hr/utils/scheduler-access';
+import { getActiveEmploymentDetail } from '@hr/utils/calendar-employment-utils';
 import { getDateRangeForView } from '@hr/utils/scheduler-utils';
 import {
   DEFAULT_TIMESHEET_VISIBLE_COLUMNS,
@@ -23,6 +24,7 @@ export interface TimesheetEmployeeGroup {
   employmentContractLabel: string | null;
   employeeName: string | null;
   employeeCode: string | null;
+  departmentId: number | null;
   departmentName: string | null;
   totalHours: number;
   rows: TimesheetRow[];
@@ -128,9 +130,54 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
           employmentContractLabel: row.employmentContractLabel ?? null,
           employeeName: row.employeeName ?? null,
           employeeCode: row.employeeCode ?? null,
+          departmentId: row.departmentId == null ? null : Number(row.departmentId),
           departmentName: row.departmentName ?? null,
           totalHours: Number(row.hoursWorked || 0),
           rows: [row],
+        });
+      }
+
+      for (const employee of schedulerStore.employees) {
+        if (search) {
+          const haystack = `${employee.firstName ?? ''} ${employee.lastName ?? ''} ${employee.code ?? ''}`.toLowerCase();
+          if (!haystack.includes(search)) {
+            continue;
+          }
+        }
+
+        if (schedulerStore.filterEmployeeId && employee.id !== schedulerStore.filterEmployeeId) {
+          continue;
+        }
+
+        const activeEmployment = getActiveEmploymentDetail(employee);
+        if (schedulerStore.filterDepartmentId != null) {
+          const departmentId = activeEmployment?.departmentId ?? null;
+          if (departmentId !== schedulerStore.filterDepartmentId) {
+            continue;
+          }
+        }
+
+        const employmentDetailId = activeEmployment?.id ?? null;
+        const groupKey = `${employee.id}:${employmentDetailId ?? 'none'}`;
+        if (groups.has(groupKey)) {
+          continue;
+        }
+
+        const activeDetailRecord = employee.employmentDetails?.find(
+          (detail) => detail.id === employmentDetailId,
+        );
+
+        groups.set(groupKey, {
+          key: groupKey,
+          employeeId: employee.id,
+          employmentDetailId,
+          employmentContractLabel: activeEmployment?.label ?? null,
+          employeeName: `${employee.firstName ?? ''} ${employee.lastName ?? ''}`.trim() || null,
+          employeeCode: employee.code ?? null,
+          departmentId: activeEmployment?.departmentId ?? null,
+          departmentName: activeDetailRecord?.department?.name ?? null,
+          totalHours: 0,
+          rows: [],
         });
       }
 
@@ -219,7 +266,6 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
         return;
       }
 
-      const page = reset ? 1 : this.employeePage;
       const employeeIds = schedulerStore.employees.map((employee) => employee.id);
 
       if (employeeIds.length === 0) {
@@ -235,10 +281,10 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
         },
         1,
         500,
-        { append: !reset },
+        { append: false },
       );
 
-      this.employeePage = page;
+      this.employeePage = 1;
       this.employeesHasMore = schedulerStore.employeesHasMore;
     },
 
@@ -260,9 +306,24 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
       this.isLoadingMoreEmployees = true;
 
       try {
-        await schedulerStore.loadMoreEmployees();
-        this.employeePage += 1;
-        await this.fetchTimesheetRows(false);
+        const newEmployees = await schedulerStore.loadMoreEmployees();
+        const employeeIds = newEmployees.map((employee) => employee.id);
+
+        if (employeeIds.length > 0) {
+          const attendanceStore = useAttendanceStore();
+          await attendanceStore.fetchTimesheets(
+            {
+              ...this.activeFilters,
+              employeeIds,
+            },
+            1,
+            500,
+            { append: true },
+          );
+          this.employeePage += 1;
+        }
+
+        this.employeesHasMore = schedulerStore.employeesHasMore;
       } finally {
         this.isLoadingMoreEmployees = false;
       }

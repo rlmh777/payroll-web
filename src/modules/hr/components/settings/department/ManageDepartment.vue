@@ -134,7 +134,6 @@ function confirmDelete(department: Department) {
     title: 'Delete Department',
     message: `Delete "${department.name}"?`,
     cancel: true,
-    persistent: true,
     ok: { label: 'Delete', color: 'negative' },
   }).onOk(() => {
     void deleteDepartment(department);
