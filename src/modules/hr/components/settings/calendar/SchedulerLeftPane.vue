@@ -10,9 +10,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useCalendarStore } from '@hr/stores/calendar-store';
-import { useAuthStore } from '@core/stores/auth';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
 import { prepareSchedulerEmployees } from '@hr/utils/scheduler-bootstrap';
 import { canViewAllSchedulerEmployees } from '@hr/utils/scheduler-access';
@@ -21,9 +20,6 @@ import SchedulerFilterOptions from './SchedulerFilterOptions.vue';
 
 const schedulerStore = useSchedulerStore();
 const calendarStore = useCalendarStore();
-const authStore = useAuthStore();
-
-const roleLabel = computed(() => authStore.user?.role?.toLowerCase() ?? '');
 
 const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null);
 
@@ -39,14 +35,11 @@ watch(
     }
 
     searchDebounce.value = setTimeout(() => {
-      if (!canViewAllSchedulerEmployees(roleLabel.value)) {
+      if (!canViewAllSchedulerEmployees()) {
         return;
       }
 
-      void schedulerStore.reloadEmployeesForSearch(
-        calendarStore.currentEmployee,
-        roleLabel.value,
-      );
+      void schedulerStore.reloadEmployeesForSearch(calendarStore.currentEmployee);
     }, 300);
   },
 );
@@ -56,7 +49,7 @@ watch(
   () => {
     if (
       !schedulerStore.hasLoadedEmployees
-      || !canViewAllSchedulerEmployees(roleLabel.value)
+      || !canViewAllSchedulerEmployees()
       || schedulerStore.employeesMode !== 'paginated'
     ) {
       return;
@@ -68,7 +61,7 @@ watch(
 
 onMounted(async () => {
   if (!schedulerStore.hasLoadedEmployees || schedulerStore.employees.length === 0) {
-    await prepareSchedulerEmployees({ force: true });
+    await prepareSchedulerEmployees();
   }
 });
 </script>
@@ -78,18 +71,11 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  gap: 12px;
 }
 
-.left-pane-search {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #fff;
-  padding: 8px 12px 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
+.left-pane-search,
 .left-pane-filters {
-  padding: 0 12px 12px;
+  flex-shrink: 0;
 }
 </style>

@@ -12,10 +12,18 @@
       </div>
 
       <div class="scheduler-surface">
-        <q-inner-loading :showing="isEmployeesLoading">
+        <q-inner-loading :showing="showInitialLoading">
           <q-spinner color="primary" size="40px" />
           <div class="scheduler-loading-label">{{ schedulerLoadingLabel }}</div>
         </q-inner-loading>
+
+        <div
+          v-if="isRefreshing"
+          class="scheduler-refresh-banner row items-center justify-center q-gutter-sm"
+        >
+          <q-spinner color="primary" size="18px" />
+          <span>{{ schedulerLoadingLabel }}</span>
+        </div>
 
         <SchedulerGrid
           class="scheduler-grid-host"
@@ -24,7 +32,7 @@
           :events="workEvents"
           :employees-by-id="employeesById"
           :view-by="viewBy"
-          :loading="isEmployeesLoading"
+          :loading="showInitialLoading"
           :loading-shifts="isLoadingCalendars"
           :loading-more="isLoadingMoreEmployees"
           :has-more="canLoadMoreEmployees"
@@ -67,7 +75,6 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { date, useQuasar } from 'quasar';
 import { storeToRefs } from 'pinia';
 import { useCalendarStore } from '@hr/stores/calendar-store';
-import { useAuthStore } from '@core/stores/auth';
 import { useDepartmentStore } from '@hr/stores/department-store';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
 import { useAttendanceStore } from '@payroll/stores/attendance-store';
@@ -99,7 +106,6 @@ import {
 const $q = useQuasar();
 const schedulerStore = useSchedulerStore();
 const calendarStore = useCalendarStore();
-const authStore = useAuthStore();
 const departmentStore = useDepartmentStore();
 const attendanceStore = useAttendanceStore();
 const {
@@ -125,17 +131,26 @@ const canLoadMoreEmployees = computed(
   () => schedulerStore.employeesMode === 'paginated' && employeesHasMore.value,
 );
 
-const roleLabel = computed(() => authStore.user?.role?.toLowerCase() ?? '');
+const canViewEmployees = computed(() => canManageSchedulerEmployees());
 
-const canViewEmployees = computed(() => canManageSchedulerEmployees(roleLabel.value));
+const isBootstrapping = ref(false);
 
 const isEmployeesLoading = computed(
   () =>
-    (canViewEmployees.value && !hasLoadedEmployees.value) ||
-    (isLoadingEmployees.value && schedulerStoreEmployees.value.length === 0),
+    isBootstrapping.value
+    || (canViewEmployees.value && !hasLoadedEmployees.value)
+    || (isLoadingEmployees.value && schedulerStoreEmployees.value.length === 0),
 );
 
-const schedulerLoadingLabel = computed(() => 'Loading employees…');
+const schedulerLoadingLabel = computed(() => {
+  if (isEmployeesLoading.value || (isLoadingEmployees.value && schedulerStoreEmployees.value.length === 0)) {
+    return 'Loading employees…';
+  }
+  if (isLoadingCalendars.value) {
+    return 'Loading schedule…';
+  }
+  return 'Loading…';
+});
 
 const selectedDate = ref(date.formatDate(Date.now(), 'YYYY-MM-DD'));
 const viewMode = ref<SchedulerViewMode>('week');
@@ -185,7 +200,7 @@ const typeLabels: Record<CalendarType, string> = {
   other: 'Other',
 };
 
-const isAdminUser = computed(() => canViewAllSchedulerEmployees(roleLabel.value));
+const isAdminUser = computed(() => canViewAllSchedulerEmployees());
 
 const generalGroupId = computed(
   () => calendarGroups.value.find((group) => group.key === 'general')?.id ?? null,
@@ -257,6 +272,17 @@ const gridRows = computed<SchedulerGridRow[]>(() => {
   return buildEmployeeGridRows(employees, sortBy.value);
 });
 
+const showInitialLoading = computed(
+  () => isEmployeesLoading.value || (isLoadingCalendars.value && gridRows.value.length === 0),
+);
+
+const isRefreshing = computed(
+  () =>
+    (isLoadingCalendars.value || (isLoadingEmployees.value && !isLoadingMoreEmployees.value))
+    && gridRows.value.length > 0
+    && !isLoadingMoreEmployees.value,
+);
+
 const gridEmptyMessage = computed(() => {
   if (isEmployeesLoading.value) {
     return '';
@@ -313,9 +339,22 @@ async function fetchShifts() {
     params.employeeId = currentEmployee.value.id;
   }
 
+  const timesheetEmployeeIds = schedulerEmployees.value.map((employee) => employee.id);
+  const timesheetPromise = timesheetEmployeeIds.length
+    ? attendanceStore.fetchTimesheets(
+        {
+          startDate: start,
+          endDate: end,
+          employeeIds: timesheetEmployeeIds,
+        },
+        1,
+        Math.min(Math.max(timesheetEmployeeIds.length * 14, 50), 500),
+      )
+    : Promise.resolve();
+
   await Promise.all([
     calendarStore.fetchCalendars(params),
-    attendanceStore.fetchTimesheets({ startDate: start, endDate: end }, 1, 2000),
+    timesheetPromise,
   ]);
 
   if (error.value) {
@@ -369,7 +408,19 @@ function clearCreateSelection() {
 }
 
 async function handleLoadMoreEmployees() {
-  await schedulerStore.loadMoreEmployees();
+  const { start, end } = getDateRangeForView(viewMode.value, selectedDate.value);
+  const newEmployees = await schedulerStore.loadMoreEmployees();
+  const employeeIds = newEmployees.map((employee) => employee.id);
+  if (!employeeIds.length) {
+    return;
+  }
+
+  await attendanceStore.fetchTimesheets(
+    { startDate: start, endDate: end, employeeIds },
+    1,
+    Math.min(employeeIds.length * 14, 500),
+    { append: true },
+  );
 }
 
 watch([selectedDate, viewMode, filterEmployeeId, filterDepartmentId], () => {
@@ -392,23 +443,28 @@ watch(
 );
 
 async function initializeSchedulerView() {
-  await Promise.all([
-    calendarStore.fetchCalendarGroups(),
-    departmentStore.fetchDepartments({ page: 1, perPage: 500 }),
-  ]);
+  isBootstrapping.value = true;
+  try {
+    const departmentPromise = departmentStore.departments.length
+      ? Promise.resolve()
+      : departmentStore.fetchDepartments({ page: 1, perPage: 500 });
+    const groupsPromise = calendarGroups.value.length
+      ? Promise.resolve()
+      : calendarStore.fetchCalendarGroups();
 
-  if (employeesError.value) {
-    $q.notify({ type: 'negative', message: employeesError.value });
+    await Promise.all([groupsPromise, departmentPromise, prepareSchedulerEmployees()]);
+
+    if (employeesError.value) {
+      $q.notify({ type: 'negative', message: employeesError.value });
+    }
+
+    await fetchShifts();
+  } finally {
+    isBootstrapping.value = false;
   }
-
-  await fetchShifts();
 }
 
 onMounted(async () => {
-  if (!hasLoadedEmployees.value || schedulerStoreEmployees.value.length === 0) {
-    await prepareSchedulerEmployees({ force: true });
-  }
-
   await initializeSchedulerView();
 });
 </script>
@@ -461,5 +517,21 @@ onMounted(async () => {
   font-size: 13px;
   color: #666;
   text-align: center;
+}
+
+.scheduler-refresh-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  color: #52606d;
+  font-size: 13px;
+  pointer-events: none;
 }
 </style>

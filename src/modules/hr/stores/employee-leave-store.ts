@@ -34,6 +34,8 @@ interface CreateEmployeeLeaveBody {
   totalDays?: number;
   notes?: string | null;
   multiplier?: number;
+  applyHoursBank?: boolean;
+  leaveHours?: number | null;
 }
 
 interface UpdateEmployeeLeaveBody {
@@ -396,6 +398,7 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
       notes?: string | null,
       multiplier?: number,
       attachments: File[] = [],
+      options?: { applyHoursBank?: boolean; leaveHours?: number | null },
     ): Promise<EmployeeLeave | null> {
       this.isLoading = true;
       this.error = null;
@@ -426,6 +429,12 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
         }
         if (multiplier !== undefined) {
           body.multiplier = multiplier;
+        }
+        if (options?.applyHoursBank) {
+          body.applyHoursBank = true;
+          if (options.leaveHours != null) {
+            body.leaveHours = options.leaveHours;
+          }
         }
 
         const hasAttachments = attachments.length > 0;

@@ -63,6 +63,48 @@
 
       <div class="col-12 col-xl-3">
         <div class="theme-panel q-pa-md rounded-borders">
+          <div class="section-label q-mb-xs">LOGO</div>
+          <div class="row items-center q-gutter-sm q-mb-sm">
+            <q-avatar size="64px" rounded class="bg-grey-3">
+              <q-img
+                v-if="currentLogoUrl && !removeLogo"
+                :src="currentLogoUrl"
+                fit="contain"
+              />
+              <q-icon v-else name="business" size="34px" color="grey-5" />
+            </q-avatar>
+            <q-btn
+              v-if="currentLogoUrl && !removeLogo"
+              flat
+              dense
+              no-caps
+              color="negative"
+              icon="delete"
+              label="Remove"
+              :disable="loading"
+              @click="removeCurrentLogo"
+            />
+          </div>
+          <q-file
+            v-model="logoFile"
+            label="Upload logo (optional)"
+            accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
+            max-file-size="5242880"
+            dense
+            filled
+            clearable
+            bottom-slots
+            :disable="loading"
+            hint="JPG, PNG, GIF, or WebP. Maximum 5 MB."
+            @update:model-value="handleLogoSelected"
+          >
+            <template #prepend>
+              <q-icon name="image" />
+            </template>
+          </q-file>
+
+          <q-separator class="q-my-md" />
+
           <div class="section-label q-mb-xs">THEME</div>
           <div class="text-caption text-grey-7 q-mb-sm">
             Applied to header, buttons, and accents.
@@ -144,14 +186,17 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'update', payload: Organization): void;
+  (e: 'update', payload: Organization, logoFile: File | null, removeLogo: boolean): void;
   (e: 'preview-theme', payload: { primaryColor?: string; secondaryColor?: string }): void;
 }>();
 
 const localityStore = useLocalityStore();
 const form = ref<Organization>({ ...props.org });
+const logoFile = ref<File | null>(null);
+const removeLogo = ref(false);
 
 const localityOptions = computed(() => localityStore.localities);
+const currentLogoUrl = computed(() => form.value.logoUrl || form.value.logoPath || null);
 
 const themePreview = computed(() =>
   resolveCompanyTheme(form.value.primaryColor, form.value.secondaryColor),
@@ -178,6 +223,8 @@ watch(
   () => props.org,
   (newOrg) => {
     form.value = { ...newOrg };
+    logoFile.value = null;
+    removeLogo.value = false;
   },
   { deep: true },
 );
@@ -211,7 +258,18 @@ onMounted(async () => {
 });
 
 const submitForm = () => {
-  emit('update', form.value);
+  emit('update', form.value, logoFile.value, removeLogo.value);
+};
+
+const handleLogoSelected = (file: File | null) => {
+  if (file) {
+    removeLogo.value = false;
+  }
+};
+
+const removeCurrentLogo = () => {
+  logoFile.value = null;
+  removeLogo.value = true;
 };
 </script>
 

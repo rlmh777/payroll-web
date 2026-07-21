@@ -32,7 +32,7 @@
         name="period"
         title="Pay period"
         icon="event"
-        :done="payrollStep === 'import' || payrollStep === 'review' || payrollStep === 'summary' || payrollStep === 'process'"
+        :done="payrollStep === 'import' || payrollStep === 'pools' || payrollStep === 'review' || payrollStep === 'summary' || payrollStep === 'process'"
       >
         <q-card flat bordered class="payroll-run-card">
           <q-card-section>
@@ -159,7 +159,7 @@
         name="review"
         title="Accountant review"
         icon="fact_check"
-        :done="payrollStep === 'import' || payrollStep === 'summary' || payrollStep === 'process'"
+        :done="payrollStep === 'import' || payrollStep === 'pools' || payrollStep === 'summary' || payrollStep === 'process'"
       >
         <div class="row items-center justify-between q-col-gutter-md q-mb-md">
           <div class="col-12 col-md">
@@ -268,7 +268,7 @@
         name="import"
         title="Allowances & deductions"
         icon="upload_file"
-        :done="payrollStep === 'summary' || payrollStep === 'process'"
+        :done="payrollStep === 'pools' || payrollStep === 'summary' || payrollStep === 'process'"
       >
         <q-card flat bordered class="payroll-run-card q-mb-md">
           <q-card-section>
@@ -454,15 +454,38 @@
                     unelevated
                     color="primary"
                     icon-right="arrow_forward"
-                    label="Continue to payroll summary"
+                    label="Continue to pool distribution"
                     :disable="!selectedPayPeriodId"
-                    @click="goToPayrollSummaryStep"
+                    @click="goToPoolsStep"
                   />
                 </div>
               </div>
             </div>
           </q-card-section>
         </q-card>
+      </q-step>
+
+      <q-step
+        name="pools"
+        title="Pool distribution"
+        icon="pie_chart"
+        :done="payrollStep === 'summary' || payrollStep === 'process'"
+      >
+        <PayrollPoolStep
+          :payroll-run-id="selectedPayrollRunId"
+          :disabled="selectedPeriodProcessed"
+        />
+        <div class="row q-gutter-sm justify-between q-mt-md">
+          <q-btn flat color="primary" icon="arrow_back" label="Back to import" @click="payrollStep = 'import'" />
+          <q-btn
+            unelevated
+            color="primary"
+            icon-right="arrow_forward"
+            label="Continue to payroll summary"
+            :disable="!selectedPayPeriodId"
+            @click="goToPayrollSummaryStep"
+          />
+        </div>
       </q-step>
 
       <q-step
@@ -483,8 +506,8 @@
               flat
               color="primary"
               icon="arrow_back"
-              label="Back to import"
-              @click="payrollStep = 'import'"
+              label="Back to pools"
+              @click="payrollStep = 'pools'"
             />
             <q-btn
               unelevated
@@ -864,6 +887,7 @@ import TimesheetApprovalDialog from '@payroll/components/attendance/TimesheetApp
 import SsBenefitDateField from '@payroll/components/employee/ss-benefit/SsBenefitDateField.vue';
 import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
 import PayPeriodGroupSelect from '@payroll/components/payroll/pay-period-groups/PayPeriodGroupSelect.vue';
+import PayrollPoolStep from '@payroll/components/payroll/PayrollPoolStep.vue';
 import type { TimesheetApprovalAction, TimesheetFilterForm } from '../components/attendance/types';
 import {
   useAttendanceStore,
@@ -905,7 +929,7 @@ const {
   error,
 } = storeToRefs(attendanceStore);
 
-const payrollStep = ref<'period' | 'import' | 'review' | 'summary' | 'process'>('period');
+const payrollStep = ref<'period' | 'import' | 'pools' | 'review' | 'summary' | 'process'>('period');
 const payslipSort = ref<PayslipSort>('last_name');
 const payslipSortOptions = [
   { label: 'Last name (A-Z)', value: 'last_name' },
@@ -1253,6 +1277,10 @@ async function savePayPeriod() {
 
 function goToImportStep() {
   payrollStep.value = 'import';
+}
+
+function goToPoolsStep() {
+  payrollStep.value = 'pools';
 }
 
 function goToPayrollSummaryStep() {

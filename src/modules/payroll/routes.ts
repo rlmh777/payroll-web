@@ -25,6 +25,11 @@ export const payrollRoutes: RouteRecordRaw[] = [
         component: () => import('@payroll/pages/AttendanceTimesheetPage.vue'),
       },
       {
+        path: '/payroll/allowances',
+        component: () => import('@payroll/pages/PayrollAllowancesPage.vue'),
+        props: { title: 'Payroll Allowances' },
+      },
+      {
         path: '/payroll/generate-payslip',
         component: () => import('@payroll/pages/GeneratePayslipPage.vue'),
       },
@@ -53,6 +58,12 @@ export const payrollRoutes: RouteRecordRaw[] = [
         props: { title: 'Payroll Earning Codes' },
       },
       { path: '/settings/general/payroll-earning-codes', redirect: '/settings/payroll-earning-codes' },
+      {
+        path: '/settings/pool-distribution-types',
+        component: () => import('@payroll/components/settings/pool-distribution/ManagePoolDistributionType.vue'),
+        props: { title: 'Pool Distribution' },
+      },
+      { path: '/settings/general/pool-distribution-types', redirect: '/settings/pool-distribution-types' },
       {
         path: '/settings/accounts',
         component: () => import('@payroll/components/settings/account/ManageAccounts.vue'),

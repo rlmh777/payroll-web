@@ -59,6 +59,9 @@
       :payrate-frequency-name="payrateFrequencyName"
       @saved="refresh"
     />
+
+    <ManageEmployeePoolPoints :employee-id="employeeId" />
+    <ManageEmployeeHoursBank :employee-id="employeeId" />
   </div>
 </template>
 
@@ -74,6 +77,8 @@ import { useEmployeeStore } from '@hr/stores/employee-store';
 import { usePayrateFrequencyStore } from 'src/stores/payrate-frequency-store';
 import AddEmployeeCompensation from './AddEmployeeCompensation.vue';
 import EditEmployeeCompensation from './EditEmployeeCompensation.vue';
+import ManageEmployeePoolPoints from './ManageEmployeePoolPoints.vue';
+import ManageEmployeeHoursBank from './ManageEmployeeHoursBank.vue';
 import {
   formatCompensationMethod,
   formatCompensationReason,

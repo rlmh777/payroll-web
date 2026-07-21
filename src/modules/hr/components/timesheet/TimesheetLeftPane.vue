@@ -10,8 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { useAuthStore } from '@core/stores/auth';
+import { ref, watch } from 'vue';
 import { useCalendarStore } from '@hr/stores/calendar-store';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
 import { useTimesheetStore } from '@hr/stores/timesheet-store';
@@ -19,12 +18,10 @@ import { canViewAllSchedulerEmployees } from '@hr/utils/scheduler-access';
 import SchedulerMiniSearch from '../settings/calendar/SchedulerMiniSearch.vue';
 import TimesheetFilterOptions from './TimesheetFilterOptions.vue';
 
-const authStore = useAuthStore();
 const calendarStore = useCalendarStore();
 const schedulerStore = useSchedulerStore();
 const timesheetStore = useTimesheetStore();
 
-const roleLabel = computed(() => authStore.user?.role?.toLowerCase() ?? '');
 const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null);
 
 watch(
@@ -36,7 +33,7 @@ watch(
   () => {
     void (async () => {
       if (
-        canViewAllSchedulerEmployees(roleLabel.value)
+        canViewAllSchedulerEmployees()
         && schedulerStore.employeesMode === 'paginated'
       ) {
         await schedulerStore.fetchEmployees(true);
@@ -60,11 +57,8 @@ watch(
 
     searchDebounce.value = setTimeout(() => {
       void (async () => {
-        if (canViewAllSchedulerEmployees(roleLabel.value)) {
-          await schedulerStore.reloadEmployeesForSearch(
-            calendarStore.currentEmployee,
-            roleLabel.value,
-          );
+        if (canViewAllSchedulerEmployees()) {
+          await schedulerStore.reloadEmployeesForSearch(calendarStore.currentEmployee);
         }
         await timesheetStore.fetchTimesheetRows(true);
       })();
@@ -78,18 +72,11 @@ watch(
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  gap: 12px;
 }
 
-.left-pane-search {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #fff;
-  padding: 8px 12px 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
+.left-pane-search,
 .left-pane-filters {
-  padding: 0 12px 12px;
+  flex-shrink: 0;
 }
 </style>

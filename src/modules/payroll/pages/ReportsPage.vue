@@ -33,6 +33,7 @@
         <SalaryReviewReport v-else-if="selectedReportId === 'salary-review'" />
         <PayrollSummaryByDepartmentReport v-else-if="selectedReportId === 'payroll-summary-by-department'" />
         <PayrollJournalDepartmentsReport v-else-if="selectedReportId === 'payroll-journal-departments'" />
+        <ScheduledVsWorkedHoursReport v-else-if="selectedReportId === 'scheduled-vs-worked-hours'" />
         <div v-else class="text-body1 text-grey-7">
           Select a report from the list.
         </div>
@@ -45,10 +46,16 @@
 import { ref } from 'vue';
 import JournalEntriesReport from '@payroll/components/reports/JournalEntriesReport.vue';
 import PayrollJournalDepartmentsReport from '@payroll/components/reports/PayrollJournalDepartmentsReport.vue';
+import ScheduledVsWorkedHoursReport from '@payroll/components/reports/ScheduledVsWorkedHoursReport.vue';
 import PayrollSummaryByDepartmentReport from '@payroll/components/reports/PayrollSummaryByDepartmentReport.vue';
 import SalaryReviewReport from '@payroll/components/reports/SalaryReviewReport.vue';
 
-type ReportId = 'journal-entries' | 'salary-review' | 'payroll-summary-by-department' | 'payroll-journal-departments';
+type ReportId =
+  | 'journal-entries'
+  | 'salary-review'
+  | 'payroll-summary-by-department'
+  | 'payroll-journal-departments'
+  | 'scheduled-vs-worked-hours';
 
 const selectedReportId = ref<ReportId>('journal-entries');
 
@@ -76,6 +83,12 @@ const reportOptions = [
     label: 'Payroll Journal Departments',
     caption: 'Department payroll journal by employee',
     icon: 'receipt_long',
+  },
+  {
+    id: 'scheduled-vs-worked-hours' as const,
+    label: 'Scheduled vs Worked Hours',
+    caption: 'Scheduled/worked, OT, tips, shares, specials',
+    icon: 'query_stats',
   },
 ];
 </script>

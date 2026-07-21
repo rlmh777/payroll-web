@@ -22,16 +22,8 @@ export function usePermissions() {
   const permissions = computed(() => authStore.user?.permissions ?? []);
   const roles = computed(() => resolveUserRoles(authStore.user));
 
-  function isSuperAdmin(): boolean {
-    return roles.value.includes('super-admin');
-  }
-
   function can(permission: string | null | undefined): boolean {
     if (!permission) {
-      return true;
-    }
-
-    if (isSuperAdmin()) {
       return true;
     }
 
@@ -39,26 +31,14 @@ export function usePermissions() {
   }
 
   function canAny(required: string[]): boolean {
-    if (isSuperAdmin()) {
-      return true;
-    }
-
     return required.some((permission) => permissions.value.includes(permission));
   }
 
   function canAll(required: string[]): boolean {
-    if (isSuperAdmin()) {
-      return true;
-    }
-
     return required.every((permission) => permissions.value.includes(permission));
   }
 
   function canAccessRoute(path: string, menuTree: MenuItem[] = []): boolean {
-    if (isSuperAdmin()) {
-      return true;
-    }
-
     if (menuTree.length > 0 && isPathAllowedByMenus(path, collectMenuRoutes(menuTree))) {
       return true;
     }
@@ -74,6 +54,5 @@ export function usePermissions() {
     canAny,
     canAll,
     canAccessRoute,
-    isSuperAdmin,
   };
 }

@@ -1,7 +1,7 @@
 <template>
   <div class="profile-header row items-center no-wrap" :class="{ 'profile-header--compact': compact }">
     <q-avatar :size="compact ? '52px' : '100px'" rounded class="bg-grey-3 q-mr-md">
-      <q-img v-if="org?.logoPath" :src="org.logoPath" />
+      <q-img v-if="org?.logoUrl || org?.logoPath" :src="org.logoUrl || org.logoPath || ''" fit="contain" />
       <q-icon v-else name="business" :size="compact ? '28px' : '50px'" color="grey-5" />
     </q-avatar>
 

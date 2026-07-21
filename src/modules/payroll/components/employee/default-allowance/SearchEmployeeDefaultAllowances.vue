@@ -24,14 +24,6 @@
         />
       </div>
       <div class="col-12 col-md-2">
-        <PayRateFrequencySelect
-          v-model="searchFilters.frequencyId"
-          label="Filter by Frequency"
-          clearable
-          @update:model-value="onSearch"
-        />
-      </div>
-      <div class="col-12 col-md-2">
         <AccountSelect
           v-model="searchFilters.accountId"
           label="Filter by Account"
@@ -70,7 +62,6 @@ import { computed, onMounted, ref } from 'vue';
 import { useEmployeeDefaultAllowanceStore } from '@/stores/employee-default-allowance-store';
 import { useEmployeeStore } from '@/stores/employee-store';
 import AllowanceSelect from '@payroll/components/shared/allowance/AllowanceSelect.vue';
-import PayRateFrequencySelect from '@hr/components/employee/common/PayRateFrequencySelect.vue';
 import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
 import AddEmployeeDefaultAllowance from './AddEmployeeDefaultAllowance.vue';
 
@@ -86,10 +77,9 @@ const searchFilters = computed({
 
 const hasActiveFilters = computed(() => {
   return !!(
-    searchFilters.value.search ||
-    searchFilters.value.allowanceId ||
-    searchFilters.value.frequencyId ||
-    searchFilters.value.accountId
+    searchFilters.value.search
+    || searchFilters.value.allowanceId
+    || searchFilters.value.accountId
   );
 });
 
@@ -101,20 +91,17 @@ const clearFilters = async () => {
   employeeDefaultAllowanceStore.searchFilters = {
     search: null,
     allowanceId: null,
-    frequencyId: null,
     accountId: null,
   };
   await onSearch();
 };
 
-const showAddDialog = ref<boolean>(false);
+const showAddDialog = ref(false);
 
 const onEmployeeDefaultAllowanceSaved = async () => {
-  // Refresh the list after a new default allowance is added
   await employeeDefaultAllowanceStore.fetchEmployeeDefaultAllowances();
 };
 
-// Fetch initial data on mount
 onMounted(async () => {
   if (employeeStore.allowances.length === 0) {
     await employeeStore.fetchAllowances();
@@ -122,12 +109,5 @@ onMounted(async () => {
   if (employeeStore.accounts.length === 0) {
     await employeeStore.fetchAccounts();
   }
-  if (employeeStore.payrateFrequencies.length === 0) {
-    await employeeStore.fetchPayrateFrequencies();
-  }
 });
 </script>
-
-<style scoped>
-</style>
-

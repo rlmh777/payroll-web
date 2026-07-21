@@ -9,7 +9,8 @@ export interface Organization {
   email: string;
   phoneNumber1: string;
   phoneNumber2?: string;
-  logoPath?: string;
+  logoPath?: string | null;
+  logoUrl?: string | null;
   street?: string;
   localityId?: string;
   socialSecurityNumber?: string;
@@ -103,30 +104,66 @@ export const useOrganizationStore = defineStore('organization', {
     /**
      * Updates an existing country record via API.
      */
-    async updateOrganization(id: number, payload: Partial<Organization>) {
+    async updateOrganization(
+      id: number,
+      payload: Partial<Organization>,
+      logoFile: File | null = null,
+      removeLogo = false,
+    ) {
       this.isLoading = true;
       this.error = null;
       try {
         const authStore = useAuthStore();
+        const editableFields = { ...payload };
+        delete editableFields.id;
+        delete editableFields.logoPath;
+        delete editableFields.logoUrl;
+
+        let method = 'PUT';
+        let body: BodyInit;
+        const headers: HeadersInit = {
+          Authorization: `Bearer ${authStore.token}`,
+        };
+
+        if (logoFile || removeLogo) {
+          const formData = new FormData();
+          Object.entries(editableFields).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              formData.append(key, String(value));
+            }
+          });
+          if (logoFile) {
+            formData.append('logo', logoFile);
+          }
+          if (removeLogo) {
+            formData.append('removeLogo', '1');
+          }
+          formData.append('_method', 'PUT');
+          method = 'POST';
+          body = formData;
+        } else {
+          headers['Content-Type'] = 'application/json';
+          body = JSON.stringify(editableFields);
+        }
 
         const response = await fetch(`${API_URL}/company/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authStore.token}`,
-          },
-          body: JSON.stringify(payload),
+          method,
+          headers,
+          body,
         });
 
         if (!response.ok) {
           const errorBody = await response.json().catch(() => ({}));
-          throw new Error(errorBody.message || 'Update failed.');
+          const validationError = errorBody.error && typeof errorBody.error === 'object'
+            ? Object.values(errorBody.error).flat()[0]
+            : null;
+          throw new Error(String(validationError || errorBody.message || 'Update failed.'));
         }
 
         // Refresh the list after successful update
         await this.fetchOrganizations();
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Error updating country';
+        this.error = error instanceof Error ? error.message : 'Error updating organization';
         throw error;
       } finally {
         this.isLoading = false;

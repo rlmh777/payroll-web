@@ -42,7 +42,24 @@
 
     <q-separator />
 
+    <div
+      v-if="group.rows.length === 0"
+      class="full-width row flex-center q-gutter-sm text-grey-7 q-py-md"
+    >
+      <q-icon name="event_busy" size="20px" />
+      <span>No timesheet records for this period.</span>
+      <q-btn
+        v-if="canCreateTimesheet"
+        flat
+        dense
+        color="primary"
+        label="Add record"
+        @click="showAddDialog = true"
+      />
+    </div>
+
     <q-table
+      v-else
       class="employee-group-table"
       :rows="group.rows"
       :columns="columns"

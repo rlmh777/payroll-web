@@ -10,10 +10,6 @@ import { useMenuStore } from '@core/stores/menus';
 import { isPathAllowedByMenus, collectMenuRoutes } from '@core/utils/menu-navigation';
 import { routeViewPermission } from '@core/utils/permissions';
 import routes from './routes';
-import {
-  prepareSchedulerEmployees,
-  resetSchedulerEmployeesIfLeaving,
-} from '@hr/utils/scheduler-bootstrap';
 
 /*
  * If not building with SSR mode, you can
@@ -42,24 +38,7 @@ export default route(function (/* { store } */) {
   const authStore = useAuthStore();
   const menuStore = useMenuStore();
 
-  function userRoles(): string[] {
-    const user = authStore.user;
-    if (!user) {
-      return [];
-    }
-
-    if (user.roles?.length) {
-      return user.roles;
-    }
-
-    return user.role ? [user.role] : [];
-  }
-
   function canAccessPath(path: string): boolean {
-    if (userRoles().includes('super-admin')) {
-      return true;
-    }
-
     if (menuStore.menuTree.length > 0) {
       const menuRoutes = collectMenuRoutes(menuStore.menuTree);
       if (isPathAllowedByMenus(path, menuRoutes)) {
@@ -83,10 +62,8 @@ export default route(function (/* { store } */) {
     void Router.push(target);
   });
 
-  Router.beforeEach(async (to, from) => {
+  Router.beforeEach(async (to) => {
     authStore.checkAuth();
-
-    resetSchedulerEmployeesIfLeaving(from.path, to.path);
 
     if (to.matched.some((record) => record.meta.requiresAuth)) {
       if (!authStore.isAuthenticated) {
@@ -118,12 +95,6 @@ export default route(function (/* { store } */) {
       if (isValid) {
         return { path: '/' };
       }
-    }
-
-    if (to.path.startsWith('/scheduler') || to.path.startsWith('/timesheet')) {
-      const enteringScheduler =
-        !from.path.startsWith('/scheduler') && !from.path.startsWith('/timesheet');
-      await prepareSchedulerEmployees({ force: enteringScheduler });
     }
   });
 

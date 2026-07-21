@@ -14,17 +14,18 @@
       </q-card-section>
 
       <q-card-section>
-        <LeaveFormFields
-          v-model="form"
-          :loading="employeeLeaveStore.isLoading"
-          :are-dates-valid="areDatesValid"
-          submit-label="Save"
-          @leave-type-change="onLeaveTypeChange"
-          @duration-change="onDurationChange"
-          @date-change="onDateChange"
-          @submit="onSubmit"
-          @cancel="onClose"
-        />
+    <LeaveFormFields
+      v-model="form"
+      :loading="employeeLeaveStore.isLoading"
+      :are-dates-valid="areDatesValid"
+      :accrued-hours="accruedHours"
+      submit-label="Save"
+      @leave-type-change="onLeaveTypeChange"
+      @duration-change="onDurationChange"
+      @date-change="onDateChange"
+      @submit="onSubmit"
+      @cancel="onClose"
+    />
       </q-card-section>
     </q-card>
   </q-dialog>
@@ -35,6 +36,7 @@
       :loading="employeeLeaveStore.isLoading"
       :disabled="Boolean(disabled)"
       :are-dates-valid="areDatesValid"
+      :accrued-hours="accruedHours"
       :submit-label="props.submitLabel ?? 'Assign leave'"
       :cancel-label="props.cancelLabel ?? 'Reset'"
       @leave-type-change="onLeaveTypeChange"
@@ -53,6 +55,7 @@ import { useEmployeeLeaveStore } from '@/stores/employee-leave-store';
 import { useEmployeeStore } from '@/stores/employee-store';
 import LeaveFormFields from './LeaveFormFields.vue';
 import { leavePayMultiplierFromType } from '@hr/utils/leave-pay-utils';
+import { useEmployeePoolStore } from '@payroll/stores/employee-pool-store';
 
 const $q = useQuasar();
 
@@ -77,6 +80,8 @@ const emit = defineEmits<{
 
 const employeeLeaveStore = useEmployeeLeaveStore();
 const employeeStore = useEmployeeStore();
+const poolStore = useEmployeePoolStore();
+const accruedHours = ref<number | null>(null);
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -94,6 +99,8 @@ type LeaveFormState = {
   notes: string;
   multiplier: number;
   attachments: File[];
+  applyHoursBank: boolean;
+  leaveHours: number | null;
 };
 
 function emptyForm(): LeaveFormState {
@@ -108,6 +115,8 @@ function emptyForm(): LeaveFormState {
     notes: '',
     multiplier: 1.0,
     attachments: [],
+    applyHoursBank: false,
+    leaveHours: null,
   };
 }
 
@@ -254,6 +263,10 @@ const onSubmit = async () => {
       form.value.notes || null,
       form.value.multiplier,
       form.value.attachments ?? [],
+      {
+        applyHoursBank: form.value.applyHoursBank,
+        leaveHours: form.value.leaveHours,
+      },
     );
 
     if (newEmployeeLeave) {
@@ -297,12 +310,33 @@ const onClose = () => {
   isOpen.value = false;
 };
 
+async function loadAccruedHours() {
+  const employeeId = employeeStore.selectedEmployee?.id;
+  if (!employeeId) {
+    accruedHours.value = null;
+    return;
+  }
+  try {
+    const summary = await poolStore.fetchHoursBank(employeeId);
+    accruedHours.value = Number(summary?.balanceHours ?? 0);
+  } catch {
+    accruedHours.value = null;
+  }
+}
+
 watch(isOpen, async (newValue) => {
   if (!props.embedded && newValue) {
     resetForm();
-    await employeeStore.fetchLeaveTypes();
+    await Promise.all([employeeStore.fetchLeaveTypes(), loadAccruedHours()]);
   }
 });
+
+watch(
+  () => employeeStore.selectedEmployee?.id,
+  () => {
+    void loadAccruedHours();
+  },
+);
 
 watch([() => form.value.fromTime, () => form.value.toTime], () => {
   if (form.value.duration === 'Custom') {
@@ -312,7 +346,7 @@ watch([() => form.value.fromTime, () => form.value.toTime], () => {
 
 onMounted(async () => {
   if (props.embedded) {
-    await employeeStore.fetchLeaveTypes();
+    await Promise.all([employeeStore.fetchLeaveTypes(), loadAccruedHours()]);
   }
 });
 </script>

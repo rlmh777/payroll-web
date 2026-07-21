@@ -7,16 +7,16 @@ export async function prepareSchedulerEmployees(options?: { force?: boolean }): 
   authStore.checkAuth();
   await authStore.ensureUser();
 
-  const role = authStore.user?.role;
-  if (!role) {
+  if (!authStore.user) {
     return;
   }
 
   const calendarStore = useCalendarStore();
   const schedulerStore = useSchedulerStore();
+  const userId = authStore.user?.id ? String(authStore.user.id) : null;
 
-  if (authStore.user?.id) {
-    await calendarStore.fetchEmployeeByUserId(String(authStore.user.id));
+  if (userId && (options?.force === true || !calendarStore.currentEmployee)) {
+    await calendarStore.fetchEmployeeByUserId(userId, { context: 'scheduler' });
   }
 
   if (options?.force === true) {
@@ -32,16 +32,5 @@ export async function prepareSchedulerEmployees(options?: { force?: boolean }): 
     return;
   }
 
-  await schedulerStore.ensureEmployeesLoaded(role, calendarStore.currentEmployee ?? null);
-}
-
-export function resetSchedulerEmployeesIfLeaving(fromPath: string, toPath: string): void {
-  const fromSchedulerContext =
-    fromPath.startsWith('/scheduler') || fromPath.startsWith('/timesheet');
-  const toSchedulerContext =
-    toPath.startsWith('/scheduler') || toPath.startsWith('/timesheet');
-
-  if (fromSchedulerContext && !toSchedulerContext) {
-    useSchedulerStore().resetEmployees();
-  }
+  await schedulerStore.ensureEmployeesLoaded(calendarStore.currentEmployee ?? null);
 }

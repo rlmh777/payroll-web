@@ -113,6 +113,7 @@ export const useSchedulerStore = defineStore('scheduler', {
         sort_by: this.sortBy,
         sort_direction: 'asc',
         page: String(pageToFetch),
+        context: 'scheduler',
       });
 
       const search = this.employeeSearch.trim();
@@ -209,14 +210,13 @@ export const useSchedulerStore = defineStore('scheduler', {
         }
 
         const search = this.employeeSearch.trim();
-        const queryParams = new URLSearchParams();
+        const queryParams = new URLSearchParams({ context: 'scheduler' });
         if (search) {
           queryParams.append('search', search);
         }
 
-        const query = queryParams.toString();
         const response = await fetch(
-          `${API_URL}/employees/${employeeId}/subordinates${query ? `?${query}` : ''}`,
+          `${API_URL}/employees/${employeeId}/subordinates?${queryParams}`,
           { headers },
         );
 
@@ -239,17 +239,12 @@ export const useSchedulerStore = defineStore('scheduler', {
       }
     },
 
-    async ensureEmployeesLoaded(roleLabel: string, currentEmployee: CalendarEmployee | null) {
-      const role = roleLabel.trim();
-      if (!role) {
-        return;
-      }
-
+    async ensureEmployeesLoaded(currentEmployee: CalendarEmployee | null) {
       if (ensureEmployeesPromise) {
         return ensureEmployeesPromise;
       }
 
-      ensureEmployeesPromise = this.resolveEmployees(role, currentEmployee)
+      ensureEmployeesPromise = this.resolveEmployees(currentEmployee)
         .then(() => {
           this.hasLoadedEmployees = true;
         })
@@ -260,17 +255,15 @@ export const useSchedulerStore = defineStore('scheduler', {
       return ensureEmployeesPromise;
     },
 
-    async resolveEmployees(role: string, currentEmployee: CalendarEmployee | null) {
-      const normalizedRole = role.toLowerCase();
-
-      if (canViewAllSchedulerEmployees(normalizedRole)) {
+    async resolveEmployees(currentEmployee: CalendarEmployee | null) {
+      if (canViewAllSchedulerEmployees()) {
         this.employeesMode = 'paginated';
         this.employeesPerPage = DEFAULT_EMPLOYEES_PER_PAGE;
         await this.fetchEmployees(true);
         return;
       }
 
-      if (isSchedulerSupervisor(normalizedRole)) {
+      if (isSchedulerSupervisor()) {
         if (currentEmployee?.id) {
           await this.fetchSubordinates(currentEmployee.id);
           return;
@@ -288,16 +281,8 @@ export const useSchedulerStore = defineStore('scheduler', {
       this.employeesTotal = this.employees.length;
     },
 
-    async reloadEmployeesForSearch(
-      currentEmployee: CalendarEmployee | null,
-      roleLabel: string,
-    ) {
-      const role = roleLabel.trim().toLowerCase();
-      if (!role) {
-        return;
-      }
-
-      if (canViewAllSchedulerEmployees(role)) {
+    async reloadEmployeesForSearch(currentEmployee: CalendarEmployee | null) {
+      if (canViewAllSchedulerEmployees()) {
         this.employeesMode = 'paginated';
         await this.fetchEmployees(true);
         return;
@@ -308,7 +293,7 @@ export const useSchedulerStore = defineStore('scheduler', {
         return;
       }
 
-      if (this.employeesMode === 'paginated' || isSchedulerSupervisor(role)) {
+      if (this.employeesMode === 'paginated' || isSchedulerSupervisor()) {
         this.employeesMode = 'paginated';
         await this.fetchEmployees(true);
       }

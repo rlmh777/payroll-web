@@ -351,13 +351,13 @@ export interface EmployeeDefaultAllowance {
   id: string;
   employeeId: string;
   allowanceId: string;
-  frequencyId: number;
   accountId: string;
   note: string;
+  quantity: number;
+  unitAmount: number;
   amount: number;
   employee?: Employee | null;
   allowance?: Allowance | null;
-  payrate_frequency?: PayrateFrequency | null;
   chart_of_account?: Account | null;
 }
 

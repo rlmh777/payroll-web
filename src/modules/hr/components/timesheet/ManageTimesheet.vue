@@ -16,11 +16,20 @@
         class="timesheet-surface"
         @scroll="onSurfaceScroll"
       >
-        <q-inner-loading :showing="isLoadingTimesheets && groupedTimesheets.length === 0">
+        <q-inner-loading :showing="showInitialLoading">
           <q-spinner color="primary" size="40px" />
+          <div class="timesheet-loading-label">{{ loadingLabel }}</div>
         </q-inner-loading>
 
-        <div v-if="!isLoadingTimesheets && groupedTimesheets.length === 0" class="empty-state">
+        <div
+          v-if="isRefreshing && groupedTimesheets.length > 0"
+          class="timesheet-refresh-banner row items-center justify-center q-gutter-sm"
+        >
+          <q-spinner color="primary" size="18px" />
+          <span>{{ loadingLabel }}</span>
+        </div>
+
+        <div v-if="!isSurfaceLoading && groupedTimesheets.length === 0" class="empty-state">
           <q-icon name="event_note" size="48px" color="grey-5" />
           <div class="text-subtitle1 q-mt-md">No timesheets found for this period</div>
           <div class="text-caption text-grey-7">Adjust the filters or date range to see employee hours.</div>
@@ -37,7 +46,7 @@
         </div>
 
         <div
-          v-else-if="!canLoadMoreEmployees && groupedTimesheets.length > 0"
+          v-else-if="!canLoadMoreEmployees && groupedTimesheets.length > 0 && !isSurfaceLoading"
           class="row justify-center q-my-md"
         >
           <div class="text-caption text-grey-6">All employees loaded</div>
@@ -48,12 +57,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { date } from 'quasar';
 import { storeToRefs } from 'pinia';
 import TimesheetTopbar from './TimesheetTopbar.vue';
 import TimesheetEmployeeGroup from './TimesheetEmployeeGroup.vue';
-import { useAuthStore } from '@core/stores/auth';
 import { useAttendanceStore } from '@payroll/stores/attendance-store';
 import { useAttendanceSettingStore } from 'src/stores/attendance-setting-store';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
@@ -66,20 +74,43 @@ const LOAD_MORE_OFFSET_PX = 240;
 
 const attendanceStore = useAttendanceStore();
 const attendanceSettingStore = useAttendanceSettingStore();
-const authStore = useAuthStore();
 const schedulerStore = useSchedulerStore();
 const timesheetStore = useTimesheetStore();
 
 const { isLoadingTimesheets } = storeToRefs(attendanceStore);
+const { isLoadingEmployees } = storeToRefs(schedulerStore);
 const { groupedTimesheets, employeesHasMore, isLoadingMoreEmployees } = storeToRefs(timesheetStore);
 
-const roleLabel = computed(() => authStore.user?.role?.toLowerCase() ?? '');
+const isBootstrapping = ref(false);
 const canLoadMoreEmployees = computed(
-  () => canViewAllSchedulerEmployees(roleLabel.value) && employeesHasMore.value,
+  () => canViewAllSchedulerEmployees() && employeesHasMore.value,
 );
-const isLoadingMore = computed(
-  () => isLoadingMoreEmployees.value || (isLoadingTimesheets.value && groupedTimesheets.value.length > 0),
+const isLoadingMore = computed(() => isLoadingMoreEmployees.value);
+
+const isSurfaceLoading = computed(
+  () =>
+    isBootstrapping.value
+    || (isLoadingEmployees.value && !isLoadingMoreEmployees.value)
+    || (isLoadingTimesheets.value && !isLoadingMoreEmployees.value),
 );
+
+const showInitialLoading = computed(
+  () => isSurfaceLoading.value && groupedTimesheets.value.length === 0,
+);
+
+const isRefreshing = computed(
+  () =>
+    isSurfaceLoading.value
+    && groupedTimesheets.value.length > 0
+    && !isLoadingMoreEmployees.value,
+);
+
+const loadingLabel = computed(() => {
+  if (isBootstrapping.value || (isLoadingEmployees.value && schedulerStore.employees.length === 0)) {
+    return 'Loading employees…';
+  }
+  return 'Loading timesheets…';
+});
 
 const anchorDate = ref(date.formatDate(new Date(), 'YYYY-MM-DD'));
 const timesheetSurfaceRef = ref<HTMLElement | null>(null);
@@ -92,10 +123,12 @@ function syncWeekRange() {
 }
 
 async function refreshTimesheets(reset = true) {
-  if (reset && canViewAllSchedulerEmployees(roleLabel.value)) {
-    if (!schedulerStore.hasLoadedEmployees || schedulerStore.employees.length === 0) {
-      await prepareSchedulerEmployees({ force: true });
-    }
+  if (
+    reset
+    && canViewAllSchedulerEmployees()
+    && schedulerStore.employees.length === 0
+  ) {
+    await prepareSchedulerEmployees();
   }
 
   await timesheetStore.fetchTimesheetRows(reset);
@@ -120,24 +153,12 @@ function goToday() {
 }
 
 async function handleLoadMoreEmployees() {
-  await timesheetStore.loadMoreTimesheetEmployees(roleLabel.value);
-}
-
-async function fillViewportIfNeeded() {
-  await nextTick();
-  const element = timesheetSurfaceRef.value;
-  if (!element || !canLoadMoreEmployees.value || isLoadingMore.value) {
-    return;
-  }
-
-  if (element.scrollHeight <= element.clientHeight + LOAD_MORE_OFFSET_PX) {
-    await handleLoadMoreEmployees();
-  }
+  await timesheetStore.loadMoreTimesheetEmployees();
 }
 
 function onSurfaceScroll() {
   const element = timesheetSurfaceRef.value;
-  if (!element || !canLoadMoreEmployees.value || isLoadingMore.value) {
+  if (!element || !canLoadMoreEmployees.value || isLoadingMore.value || isSurfaceLoading.value) {
     return;
   }
 
@@ -147,19 +168,18 @@ function onSurfaceScroll() {
   }
 }
 
-watch(
-  () => [groupedTimesheets.value.length, canLoadMoreEmployees.value, isLoadingMore.value] as const,
-  () => {
-    void fillViewportIfNeeded();
-  },
-);
-
 onMounted(async () => {
   syncWeekRange();
-  await attendanceSettingStore.fetchSettings();
-  await prepareSchedulerEmployees({ force: true });
-  await refreshTimesheets(true);
-  await fillViewportIfNeeded();
+  isBootstrapping.value = true;
+  try {
+    await Promise.all([
+      attendanceSettingStore.fetchSettings(),
+      prepareSchedulerEmployees(),
+    ]);
+    await refreshTimesheets(true);
+  } finally {
+    isBootstrapping.value = false;
+  }
 });
 </script>
 
@@ -189,6 +209,26 @@ onMounted(async () => {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+}
+
+.timesheet-loading-label {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #666;
+  text-align: center;
+}
+
+.timesheet-refresh-banner {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  color: #52606d;
+  font-size: 13px;
 }
 
 .empty-state {

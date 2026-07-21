@@ -133,16 +133,42 @@ export interface PayrollJournalDepartmentsReport {
   departments: PayrollJournalDepartmentsDepartment[];
 }
 
+export interface ScheduledVsWorkedHoursRow {
+  employeeId: string;
+  employeeCode: string | null;
+  employeeName: string;
+  scheduledHours: number;
+  scheduledAmount: number;
+  workedHours: number;
+  workedAmount: number;
+  overtimeHours: number;
+  overtimeAmount: number;
+  tips: number;
+  shares: number;
+  specialAssignments: number;
+}
+
+export interface ScheduledVsWorkedHoursReport {
+  payrollRunId: string;
+  payPeriodGroupName: string | null;
+  payPeriodStartDate: string;
+  payPeriodEndDate: string;
+  rows: ScheduledVsWorkedHoursRow[];
+  totals: Omit<ScheduledVsWorkedHoursRow, 'employeeId' | 'employeeCode' | 'employeeName'>;
+}
+
 export const useReportsStore = defineStore('reports', {
   state: () => ({
     journalEntryReport: null as JournalEntryReport | null,
     salaryReviewReport: null as SalaryReviewReport | null,
     payrollSummaryByDepartmentReport: null as PayrollSummaryByDepartmentReport | null,
     payrollJournalDepartmentsReport: null as PayrollJournalDepartmentsReport | null,
+    scheduledVsWorkedHoursReport: null as ScheduledVsWorkedHoursReport | null,
     isLoadingJournalEntries: false,
     isLoadingSalaryReview: false,
     isLoadingPayrollSummaryByDepartment: false,
     isLoadingPayrollJournalDepartments: false,
+    isLoadingScheduledVsWorkedHours: false,
     error: null as string | null,
   }),
 
@@ -297,6 +323,38 @@ export const useReportsStore = defineStore('reports', {
 
     clearPayrollJournalDepartmentsReport() {
       this.payrollJournalDepartmentsReport = null;
+      this.error = null;
+    },
+
+    async fetchScheduledVsWorkedHoursReport(payrollRunId: string): Promise<boolean> {
+      this.isLoadingScheduledVsWorkedHours = true;
+      this.error = null;
+
+      try {
+        const params = new URLSearchParams({ payroll_run_id: payrollRunId });
+        const response = await fetch(
+          `${API_URL}/reports/scheduled-vs-worked-hours?${params.toString()}`,
+          { headers: this.buildHeaders() },
+        );
+
+        const body = await response.json().catch(() => ({} as Record<string, unknown>));
+        if (!response.ok) {
+          throw new Error(this.parseError(body, 'Failed to load scheduled vs worked hours report.'));
+        }
+
+        this.scheduledVsWorkedHoursReport = body as ScheduledVsWorkedHoursReport;
+        return true;
+      } catch (error) {
+        this.scheduledVsWorkedHoursReport = null;
+        this.error = error instanceof Error ? error.message : 'Failed to load scheduled vs worked hours report.';
+        return false;
+      } finally {
+        this.isLoadingScheduledVsWorkedHours = false;
+      }
+    },
+
+    clearScheduledVsWorkedHoursReport() {
+      this.scheduledVsWorkedHoursReport = null;
       this.error = null;
     },
   },

@@ -79,6 +79,33 @@
       :disable="isDisabled"
     />
 
+    <q-banner v-if="accruedHours != null" rounded class="bg-blue-1 text-blue-10">
+      <template #avatar><q-icon name="schedule" /></template>
+      Accrued worked hours available: <strong>{{ accruedHours.toFixed(2) }}</strong>
+      <div class="text-caption q-mt-xs">
+        Surplus hours from prior weeks can offset this leave against the hours bank used for pool eligibility.
+      </div>
+    </q-banner>
+
+    <q-toggle
+      v-model="form.applyHoursBank"
+      label="Apply accrued worked hours to this leave"
+      :disable="isDisabled || (accruedHours != null && accruedHours <= 0)"
+    />
+
+    <q-input
+      v-if="form.applyHoursBank"
+      v-model.number="form.leaveHours"
+      type="number"
+      step="0.25"
+      min="0"
+      label="Leave hours to apply"
+      outlined
+      dense
+      :disable="isDisabled"
+      hint="Defaults from leave days × standard daily hours when left blank on save"
+    />
+
     <q-file
       v-model="form.attachments"
       label="Attachments"
@@ -134,6 +161,8 @@ export type LeaveFormModel = {
   notes: string;
   multiplier: number;
   attachments: File[];
+  applyHoursBank: boolean;
+  leaveHours: number | null;
 };
 
 const props = withDefaults(
@@ -143,6 +172,7 @@ const props = withDefaults(
     areDatesValid?: boolean;
     submitLabel?: string;
     cancelLabel?: string;
+    accruedHours?: number | null;
   }>(),
   {
     loading: false,
@@ -150,6 +180,7 @@ const props = withDefaults(
     areDatesValid: false,
     submitLabel: 'Save',
     cancelLabel: 'Cancel',
+    accruedHours: null,
   },
 );
 

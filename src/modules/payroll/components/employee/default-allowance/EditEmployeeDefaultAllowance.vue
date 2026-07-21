@@ -22,12 +22,6 @@
             :showEdit="true"
           />
 
-          <PayRateFrequencySelect
-            v-model="form.frequencyId"
-            :rules="[(val: number | null | undefined) => !!val || 'Frequency is required']"
-            :disable="employeeDefaultAllowanceStore.isLoading"
-          />
-
           <AccountSelect
             v-model="form.accountId"
             :rules="[(val: string | null | undefined) => !!val || 'Account is required']"
@@ -37,16 +31,34 @@
           />
 
           <q-input
-            v-model.number="form.amount"
-            label="Amount *"
+            v-model.number="form.quantity"
+            label="Quantity *"
+            type="number"
+            step="0.0001"
+            min="0.0001"
+            outlined
+            :rules="[(val) => (val !== null && val !== undefined && val > 0) || 'Quantity is required']"
+            :disable="employeeDefaultAllowanceStore.isLoading"
+          />
+
+          <q-input
+            v-model.number="form.unitAmount"
+            label="Unit amount *"
             type="number"
             step="0.01"
             min="0"
             outlined
-            :rules="[
-              val => val !== null && val !== undefined && val >= 0 || 'Amount is required',
-              val => val <= 999999999999.99 || 'Amount must be less than 1,000,000,000,000'
-            ]"
+            :rules="[(val) => (val !== null && val !== undefined && val >= 0) || 'Unit amount is required']"
+            :disable="employeeDefaultAllowanceStore.isLoading"
+          />
+
+          <q-input
+            :model-value="computedAmount"
+            label="Amount (total)"
+            type="number"
+            outlined
+            readonly
+            hint="Calculated as quantity × unit amount"
             :disable="employeeDefaultAllowanceStore.isLoading"
           />
 
@@ -88,7 +100,6 @@ import { useQuasar } from 'quasar';
 import { useEmployeeDefaultAllowanceStore } from '@/stores/employee-default-allowance-store';
 import { useEmployeeStore } from '@/stores/employee-store';
 import AllowanceSelect from '@payroll/components/shared/allowance/AllowanceSelect.vue';
-import PayRateFrequencySelect from '@hr/components/employee/common/PayRateFrequencySelect.vue';
 import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
 import type { EmployeeDefaultAllowance } from '@core/types/models';
 
@@ -106,7 +117,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  'updated': [employeeDefaultAllowanceId: string];
+  updated: [employeeDefaultAllowanceId: string];
 }>();
 
 const employeeDefaultAllowanceStore = useEmployeeDefaultAllowanceStore();
@@ -119,38 +130,53 @@ const isOpen = computed({
 
 const form = ref({
   allowanceId: null as string | null,
-  frequencyId: null as number | null,
   accountId: null as string | null,
-  amount: null as number | null,
+  quantity: 1 as number | null,
+  unitAmount: null as number | null,
   note: '',
 });
 
+const computedAmount = computed(() => {
+  const quantity = Number(form.value.quantity ?? 0);
+  const unitAmount = Number(form.value.unitAmount ?? 0);
+  return Math.round(quantity * unitAmount * 100) / 100;
+});
+
+const initialAllowanceId = ref<string | null>(null);
+
 const onSubmit = async () => {
-  if (!form.value.allowanceId || !form.value.frequencyId || !form.value.accountId || 
-      form.value.amount === null || form.value.amount === undefined || !form.value.note || 
-      !props.employeeDefaultAllowance) {
+  if (
+    !form.value.allowanceId
+    || !form.value.accountId
+    || form.value.quantity === null
+    || form.value.quantity === undefined
+    || form.value.unitAmount === null
+    || form.value.unitAmount === undefined
+    || !props.employeeDefaultAllowance
+  ) {
     return;
   }
 
   try {
-    const updatedEmployeeDefaultAllowance = await employeeDefaultAllowanceStore.updateEmployeeDefaultAllowance(
+    const updated = await employeeDefaultAllowanceStore.updateEmployeeDefaultAllowance(
       props.employeeDefaultAllowance.id,
-      undefined, // employeeId - not updating
-      form.value.allowanceId,
-      form.value.frequencyId,
-      form.value.accountId,
-      form.value.note,
-      form.value.amount
+      {
+        allowanceId: form.value.allowanceId,
+        accountId: form.value.accountId,
+        note: form.value.note,
+        quantity: form.value.quantity,
+        unitAmount: form.value.unitAmount,
+      },
     );
 
-    if (updatedEmployeeDefaultAllowance) {
+    if (updated) {
       $q.notify({
         color: 'positive',
         position: 'top',
         icon: 'check_circle',
         message: 'Employee default allowance updated successfully!',
       });
-      emit('updated', updatedEmployeeDefaultAllowance.id);
+      emit('updated', updated.id);
       onClose();
     } else if (employeeDefaultAllowanceStore.error) {
       $q.notify({
@@ -161,12 +187,11 @@ const onSubmit = async () => {
       });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to update employee default allowance';
     $q.notify({
       color: 'negative',
       position: 'top',
       icon: 'error',
-      message: errorMessage,
+      message: error instanceof Error ? error.message : 'Failed to update employee default allowance',
     });
   }
 };
@@ -175,46 +200,40 @@ const onClose = () => {
   isOpen.value = false;
 };
 
-// Track initial allowance ID to detect changes
-const initialAllowanceId = ref<string | null>(null);
-
-// Watch for allowance selection to auto-populate amount
 watch(() => form.value.allowanceId, (newAllowanceId) => {
-  if (newAllowanceId && employeeStore.allowances.length > 0) {
-    const selectedAllowance = employeeStore.allowances.find(a => a.id === newAllowanceId);
-    if (selectedAllowance && selectedAllowance.defaultAmount !== null && selectedAllowance.defaultAmount !== undefined) {
-      // Only auto-populate if the allowance has changed from the initial value
-      // This allows the user to change the allowance and get the new default amount
-      if (newAllowanceId !== initialAllowanceId.value) {
-        form.value.amount = selectedAllowance.defaultAmount;
-      }
-    }
+  if (!newAllowanceId || employeeStore.allowances.length === 0) {
+    return;
+  }
+  const selectedAllowance = employeeStore.allowances.find((a) => a.id === newAllowanceId);
+  if (
+    selectedAllowance?.defaultAmount != null
+    && newAllowanceId !== initialAllowanceId.value
+  ) {
+    form.value.unitAmount = selectedAllowance.defaultAmount;
   }
 });
 
-// Load employee default allowance data when dialog opens
 watch(isOpen, async (newValue) => {
-  if (newValue && props.employeeDefaultAllowance) {
-    // Populate form with existing data
-    form.value = {
-      allowanceId: props.employeeDefaultAllowance.allowanceId || null,
-      frequencyId: props.employeeDefaultAllowance.frequencyId || null,
-      accountId: props.employeeDefaultAllowance.accountId || null,
-      amount: props.employeeDefaultAllowance.amount !== null && props.employeeDefaultAllowance.amount !== undefined ? props.employeeDefaultAllowance.amount : null,
-      note: props.employeeDefaultAllowance.note || '',
-    };
-    // Store initial allowance ID to detect changes
-    initialAllowanceId.value = props.employeeDefaultAllowance.allowanceId || null;
-    // Fetch required data if not already loaded
-    if (employeeStore.allowances.length === 0) {
-      await employeeStore.fetchAllowances();
-    }
-    if (employeeStore.accounts.length === 0) {
-      await employeeStore.fetchAccounts();
-    }
-    if (employeeStore.payrateFrequencies.length === 0) {
-      await employeeStore.fetchPayrateFrequencies();
-    }
+  if (!newValue || !props.employeeDefaultAllowance) {
+    return;
+  }
+
+  form.value = {
+    allowanceId: props.employeeDefaultAllowance.allowanceId || null,
+    accountId: props.employeeDefaultAllowance.accountId || null,
+    quantity: props.employeeDefaultAllowance.quantity ?? 1,
+    unitAmount: props.employeeDefaultAllowance.unitAmount
+      ?? props.employeeDefaultAllowance.amount
+      ?? null,
+    note: props.employeeDefaultAllowance.note || '',
+  };
+  initialAllowanceId.value = props.employeeDefaultAllowance.allowanceId || null;
+
+  if (employeeStore.allowances.length === 0) {
+    await employeeStore.fetchAllowances();
+  }
+  if (employeeStore.accounts.length === 0) {
+    await employeeStore.fetchAccounts();
   }
 });
 </script>
@@ -232,4 +251,3 @@ watch(isOpen, async (newValue) => {
   overflow-y: auto;
 }
 </style>
-

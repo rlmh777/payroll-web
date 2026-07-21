@@ -402,7 +402,7 @@ export const useCalendarStore = defineStore('calendar', {
         this.error = error instanceof Error ? error.message : 'Error loading calendar groups';
       }
     },
-    async fetchEmployeeByUserId(userId: string) {
+    async fetchEmployeeByUserId(userId: string, options?: { context?: string }) {
       this.error = null;
 
       try {
@@ -414,7 +414,13 @@ export const useCalendarStore = defineStore('calendar', {
           headers['Authorization'] = `Bearer ${authStore.token}`;
         }
 
-        const response = await fetch(`${API_URL}/employees/by-user/${userId}`, { headers });
+        const query = options?.context
+          ? `?context=${encodeURIComponent(options.context)}`
+          : '';
+        const response = await fetch(
+          `${API_URL}/employees/by-user/${userId}${query}`,
+          { headers },
+        );
 
         if (response.status === 404) {
           this.currentEmployee = null;

@@ -18,19 +18,37 @@ interface ErrorWithData extends Error {
 interface CreateEmployeeDefaultAllowanceBody {
   employeeId: string;
   allowanceId: string;
-  frequencyId: number;
   accountId: string;
   note: string;
+  quantity: number;
+  unitAmount: number;
   amount: number;
 }
 
 interface UpdateEmployeeDefaultAllowanceBody {
   employeeId?: string;
   allowanceId?: string;
-  frequencyId?: number;
   accountId?: string;
   note?: string;
+  quantity?: number;
+  unitAmount?: number;
   amount?: number;
+}
+
+function extractErrorMessage(errorData: ApiErrorData, fallback: string): string {
+  let errorMessage = errorData.error || fallback;
+  if (errorData.errors) {
+    const errorKeys = Object.keys(errorData.errors);
+    if (errorKeys.length > 0 && errorKeys[0]) {
+      const firstError = errorData.errors[errorKeys[0]];
+      if (Array.isArray(firstError) && firstError[0]) {
+        errorMessage = firstError[0];
+      } else if (typeof firstError === 'string') {
+        errorMessage = firstError;
+      }
+    }
+  }
+  return errorMessage;
 }
 
 export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllowance', {
@@ -45,12 +63,9 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
     searchFilters: {
       search: null as string | null,
       allowanceId: null as string | null,
-      frequencyId: null as number | null,
       accountId: null as string | null,
     },
   }),
-
-  getters: {},
 
   actions: {
     async fetchEmployeeDefaultAllowances(page?: number, perPage?: number) {
@@ -64,26 +79,20 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
         const employeeStore = useEmployeeStore();
         const queryParams = new URLSearchParams();
 
-        // Add employee filter if selected
         if (employeeStore.selectedEmployee?.id) {
           queryParams.append('employee_id', employeeStore.selectedEmployee.id);
         }
 
-        // Add search filters
         if (this.searchFilters.search) {
           queryParams.append('search', this.searchFilters.search);
         }
         if (this.searchFilters.allowanceId) {
           queryParams.append('allowance_id', this.searchFilters.allowanceId);
         }
-        if (this.searchFilters.frequencyId) {
-          queryParams.append('frequency_id', String(this.searchFilters.frequencyId));
-        }
         if (this.searchFilters.accountId) {
           queryParams.append('account_id', this.searchFilters.accountId);
         }
 
-        // Add pagination parameters
         const currentPage = page ?? this.currentPage;
         const itemsPerPage = perPage ?? 10;
         queryParams.append('page', currentPage.toString());
@@ -107,20 +116,17 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
 
         const data = await response.json();
 
-        // Handle paginated response
         if (data.data && Array.isArray(data.data)) {
           this.employeeDefaultAllowances = data.data;
           this.currentPage = data.current_page || 1;
           this.lastPage = data.last_page || 1;
           this.total = data.total || 0;
         } else if (Array.isArray(data)) {
-          // Fallback for non-paginated response
           this.employeeDefaultAllowances = data;
         } else {
           this.employeeDefaultAllowances = [];
         }
       } catch (error) {
-        console.error('Error fetching employee default allowances:', error);
         this.error = error instanceof Error ? error.message : 'Error fetching employee default allowances';
       } finally {
         this.isLoadingEmployeeDefaultAllowances = false;
@@ -130,10 +136,10 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
     async createEmployeeDefaultAllowance(
       employeeId: string,
       allowanceId: string,
-      frequencyId: number,
       accountId: string,
       note: string,
-      amount: number
+      quantity: number,
+      unitAmount: number,
     ): Promise<EmployeeDefaultAllowance | null> {
       this.isLoading = true;
       this.error = null;
@@ -148,12 +154,14 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
           headers['Authorization'] = `Bearer ${authStore.token}`;
         }
 
+        const amount = Math.round(quantity * unitAmount * 100) / 100;
         const body: CreateEmployeeDefaultAllowanceBody = {
           employeeId,
           allowanceId,
-          frequencyId,
           accountId,
           note,
+          quantity,
+          unitAmount,
           amount,
         };
 
@@ -165,35 +173,18 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
 
         if (!response.ok) {
           const errorData: ApiErrorData = await response.json().catch(() => ({}));
-          // Extract error message from errors object if present
-          let errorMessage = errorData.error || `Failed to create employee default allowance: ${response.statusText}`;
-          if (errorData.errors) {
-            // Get first error message from errors object
-            const errorKeys = Object.keys(errorData.errors);
-            if (errorKeys.length > 0 && errorKeys[0]) {
-              const firstErrorKey = errorKeys[0];
-              const firstError = errorData.errors[firstErrorKey];
-              if (Array.isArray(firstError) && firstError[0]) {
-                errorMessage = firstError[0];
-              } else if (typeof firstError === 'string') {
-                errorMessage = firstError;
-              }
-            }
-          }
-          const error = new Error(errorMessage) as ErrorWithData;
+          const error = new Error(
+            extractErrorMessage(errorData, `Failed to create employee default allowance: ${response.statusText}`),
+          ) as ErrorWithData;
           error.errorData = errorData;
           throw error;
         }
 
         const result = await response.json();
         const newEmployeeDefaultAllowance = result.data || result;
-
-        // Add to employee default allowances list
         this.employeeDefaultAllowances = [...this.employeeDefaultAllowances, newEmployeeDefaultAllowance];
-
         return newEmployeeDefaultAllowance;
       } catch (error) {
-        console.error('Error creating employee default allowance:', error);
         this.error = error instanceof Error ? error.message : 'Error creating employee default allowance';
         return null;
       } finally {
@@ -203,12 +194,7 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
 
     async updateEmployeeDefaultAllowance(
       id: string,
-      employeeId?: string,
-      allowanceId?: string,
-      frequencyId?: number,
-      accountId?: string,
-      note?: string,
-      amount?: number
+      payload: UpdateEmployeeDefaultAllowanceBody,
     ): Promise<EmployeeDefaultAllowance | null> {
       this.isLoading = true;
       this.error = null;
@@ -223,25 +209,9 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
           headers['Authorization'] = `Bearer ${authStore.token}`;
         }
 
-        const body: UpdateEmployeeDefaultAllowanceBody = {};
-
-        if (employeeId !== undefined) {
-          body.employeeId = employeeId;
-        }
-        if (allowanceId !== undefined) {
-          body.allowanceId = allowanceId;
-        }
-        if (frequencyId !== undefined) {
-          body.frequencyId = frequencyId;
-        }
-        if (accountId !== undefined) {
-          body.accountId = accountId;
-        }
-        if (note !== undefined) {
-          body.note = note;
-        }
-        if (amount !== undefined) {
-          body.amount = amount;
+        const body = { ...payload };
+        if (body.quantity != null && body.unitAmount != null) {
+          body.amount = Math.round(body.quantity * body.unitAmount * 100) / 100;
         }
 
         const response = await fetch(`${API_URL}/employee-default-allowances/${id}`, {
@@ -252,30 +222,15 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
 
         if (!response.ok) {
           const errorData: ApiErrorData = await response.json().catch(() => ({}));
-          // Extract error message from errors object if present
-          let errorMessage = errorData.error || `Failed to update employee default allowance: ${response.statusText}`;
-          if (errorData.errors) {
-            // Get first error message from errors object
-            const errorKeys = Object.keys(errorData.errors);
-            if (errorKeys.length > 0 && errorKeys[0]) {
-              const firstErrorKey = errorKeys[0];
-              const firstError = errorData.errors[firstErrorKey];
-              if (Array.isArray(firstError) && firstError[0]) {
-                errorMessage = firstError[0];
-              } else if (typeof firstError === 'string') {
-                errorMessage = firstError;
-              }
-            }
-          }
-          const error = new Error(errorMessage) as ErrorWithData;
+          const error = new Error(
+            extractErrorMessage(errorData, `Failed to update employee default allowance: ${response.statusText}`),
+          ) as ErrorWithData;
           error.errorData = errorData;
           throw error;
         }
 
         const result = await response.json();
         const updatedEmployeeDefaultAllowance = result.data || result;
-
-        // Update in employee default allowances list
         const index = this.employeeDefaultAllowances.findIndex((eda) => eda.id === id);
         if (index !== -1) {
           this.employeeDefaultAllowances[index] = updatedEmployeeDefaultAllowance;
@@ -283,7 +238,6 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
 
         return updatedEmployeeDefaultAllowance;
       } catch (error) {
-        console.error('Error updating employee default allowance:', error);
         this.error = error instanceof Error ? error.message : 'Error updating employee default allowance';
         return null;
       } finally {
@@ -315,12 +269,9 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
           throw new Error(errorData.error || `Failed to delete employee default allowance: ${response.statusText}`);
         }
 
-        // Remove from employee default allowances list
         this.employeeDefaultAllowances = this.employeeDefaultAllowances.filter((eda) => eda.id !== id);
-
         return true;
       } catch (error) {
-        console.error('Error deleting employee default allowance:', error);
         this.error = error instanceof Error ? error.message : 'Error deleting employee default allowance';
         return false;
       } finally {
@@ -333,4 +284,3 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
 if (import.meta.hot) {
   import.meta.hot.accept(acceptHMRUpdate(useEmployeeDefaultAllowanceStore, import.meta.hot));
 }
-

@@ -280,7 +280,7 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
           employeeIds,
         },
         1,
-        500,
+        300,
         { append: false },
       );
 
@@ -288,11 +288,11 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
       this.employeesHasMore = schedulerStore.employeesHasMore;
     },
 
-    async loadMoreTimesheetEmployees(roleLabel: string) {
+    async loadMoreTimesheetEmployees() {
       if (
         this.isLoadingMoreEmployees ||
         !this.employeesHasMore ||
-        !canViewAllSchedulerEmployees(roleLabel)
+        !canViewAllSchedulerEmployees()
       ) {
         return;
       }
@@ -317,7 +317,7 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
               employeeIds,
             },
             1,
-            500,
+            300,
             { append: true },
           );
           this.employeePage += 1;

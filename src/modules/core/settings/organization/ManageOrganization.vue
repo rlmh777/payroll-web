@@ -57,9 +57,13 @@ const handlePreviewTheme = (payload: { primaryColor?: string; secondaryColor?: s
   applyCompanyTheme(payload.primaryColor, payload.secondaryColor);
 };
 
-const handleUpdate = async (payload: Organization) => {
+const handleUpdate = async (
+  payload: Organization,
+  logoFile: File | null,
+  removeLogo: boolean,
+) => {
   try {
-    await store.updateOrganization(payload.id, payload);
+    await store.updateOrganization(payload.id, payload, logoFile, removeLogo);
     store.applyOrganizationTheme();
     savedTheme.primaryColor = store.organizationToEdit?.primaryColor;
     savedTheme.secondaryColor = store.organizationToEdit?.secondaryColor;

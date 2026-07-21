@@ -21,14 +21,19 @@
           {{ props.value?.name || '-' }}
         </q-td>
       </template>
-      <template v-slot:body-cell-payrateFrequency="props">
+      <template v-slot:body-cell-chartOfAccount="props">
         <q-td :props="props">
           {{ props.value?.name || '-' }}
         </q-td>
       </template>
-      <template v-slot:body-cell-chartOfAccount="props">
+      <template v-slot:body-cell-quantity="props">
         <q-td :props="props">
-          {{ props.value?.name || '-' }}
+          {{ props.value ?? '-' }}
+        </q-td>
+      </template>
+      <template v-slot:body-cell-unitAmount="props">
+        <q-td :props="props">
+          {{ formatCurrency(props.value) }}
         </q-td>
       </template>
       <template v-slot:body-cell-amount="props">
@@ -140,17 +145,24 @@ const columns = [
     sortable: true,
   },
   {
-    name: 'payrateFrequency',
-    label: 'Frequency',
-    field: (row: EmployeeDefaultAllowance) => row.payrate_frequency,
-    align: 'left' as const,
-    sortable: true,
-  },
-  {
     name: 'chartOfAccount',
     label: 'Account',
     field: (row: EmployeeDefaultAllowance) => row.chart_of_account,
     align: 'left' as const,
+    sortable: true,
+  },
+  {
+    name: 'quantity',
+    label: 'Qty',
+    field: 'quantity',
+    align: 'right' as const,
+    sortable: true,
+  },
+  {
+    name: 'unitAmount',
+    label: 'Unit amount',
+    field: 'unitAmount',
+    align: 'right' as const,
     sortable: true,
   },
   {
