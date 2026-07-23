@@ -1,6 +1,19 @@
 <template>
   <q-page class="dashboard-page q-pa-md">
-    <div class="dashboard-grid">
+    <div v-if="store.isLoading" class="row justify-center q-pa-xl">
+      <q-spinner color="primary" size="40px" />
+    </div>
+
+    <div v-else-if="store.error" class="q-pa-md">
+      <q-banner class="bg-negative text-white" rounded>
+        {{ store.error }}
+        <template #action>
+          <q-btn flat label="Retry" @click="reload" />
+        </template>
+      </q-banner>
+    </div>
+
+    <div v-else class="dashboard-grid">
       <q-card v-for="kpi in kpis" :key="kpi.label" flat bordered class="kpi-card">
         <q-card-section class="q-pa-sm">
           <div class="text-caption text-grey-7">{{ kpi.label }}</div>
@@ -9,7 +22,10 @@
       </q-card>
 
       <q-card flat bordered class="panel panel--wide">
-        <q-card-section class="panel__header">Payroll Trend</q-card-section>
+        <q-card-section class="panel__header">
+          Payroll Trend
+          <span v-if="periodLabel" class="text-caption text-grey-7 q-ml-sm">{{ periodLabel }}</span>
+        </q-card-section>
         <q-card-section class="panel__body">
           <VChart class="chart" :option="payrollTrendOption" autoresize />
         </q-card-section>
@@ -54,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, provide } from 'vue';
+import { computed, onMounted, provide } from 'vue';
 import VChart, { THEME_KEY } from 'vue-echarts';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -67,6 +83,7 @@ import {
   DatasetComponent,
   VisualMapComponent,
 } from 'echarts/components';
+import { useDashboardStore } from 'src/stores/dashboard-store';
 
 use([
   CanvasRenderer,
@@ -84,120 +101,187 @@ use([
 
 provide(THEME_KEY, 'light');
 
-const kpis = [
-  { label: 'Current Payroll', value: '$412,300' },
-  { label: 'YTD Payroll', value: '$3,982,450' },
-  { label: 'Net Pay', value: '$327,990' },
-  { label: 'Employer Cost', value: '$455,220' },
-  { label: 'Headcount Paid', value: '143' },
-  { label: 'Overtime Cost', value: '$29,180' },
-];
+const store = useDashboardStore();
 
-const payrollTrendOption = computed(() => ({
-  tooltip: { trigger: 'axis' },
-  legend: { top: 0 },
-  grid: { left: 36, right: 16, top: 28, bottom: 24 },
-  xAxis: { type: 'category', data: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'] },
-  yAxis: { type: 'value' },
-  series: [
-    { name: 'Gross', type: 'line', smooth: true, data: [360, 372, 389, 401, 395, 412] },
-    { name: 'Net', type: 'line', smooth: true, data: [288, 296, 309, 319, 313, 328] },
-    { name: 'Employer Cost', type: 'line', smooth: true, data: [395, 408, 423, 438, 441, 455] },
-  ],
-}));
+const currency = new Intl.NumberFormat(undefined, {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
 
-const departmentShareOption = computed(() => ({
-  tooltip: { trigger: 'item' },
-  legend: { orient: 'vertical', right: 0, top: 'middle', textStyle: { fontSize: 10 } },
-  series: [
-    {
-      type: 'pie',
-      radius: ['42%', '68%'],
-      center: ['35%', '52%'],
-      label: { show: false },
-      data: [
-        { value: 26, name: 'Operations' },
-        { value: 21, name: 'Sales' },
-        { value: 18, name: 'Support' },
-        { value: 15, name: 'Finance' },
-        { value: 20, name: 'Other' },
-      ],
-    },
-  ],
-}));
+const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
-const departmentStackOption = computed(() => ({
-  tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-  legend: { top: 0, textStyle: { fontSize: 10 } },
-  grid: { left: 38, right: 8, top: 30, bottom: 28 },
-  xAxis: { type: 'category', data: ['Ops', 'Sales', 'Support', 'Finance', 'IT'] },
-  yAxis: { type: 'value' },
-  series: [
-    { name: 'Regular', type: 'bar', stack: 'total', data: [120, 96, 88, 66, 52] },
-    { name: 'Overtime', type: 'bar', stack: 'total', data: [20, 14, 16, 8, 9] },
-    { name: 'Holiday', type: 'bar', stack: 'total', data: [6, 4, 5, 2, 3] },
-    { name: 'Allowances', type: 'bar', stack: 'total', data: [9, 10, 8, 6, 4] },
-  ],
-}));
+function money(value: number | null | undefined): string {
+  return currency.format(Number(value || 0));
+}
 
-const deductionsOption = computed(() => ({
-  tooltip: { trigger: 'item' },
-  series: [
-    {
-      type: 'pie',
-      radius: ['45%', '72%'],
-      label: { formatter: '{b}\n{d}%' },
-      data: [
-        { value: 49, name: 'Tax' },
-        { value: 33, name: 'Social' },
-        { value: 18, name: 'Other' },
-      ],
-    },
-  ],
-}));
+const periodLabel = computed(() => {
+  const period = store.data?.meta?.currentPeriod;
+  if (!period?.startDate || !period?.endDate) return '';
+  const label = period.label ? `${period.label} · ` : '';
+  return `${label}${period.startDate} → ${period.endDate}`;
+});
 
-const ytdVsCurrentOption = computed(() => ({
-  tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-  legend: { top: 0, textStyle: { fontSize: 10 } },
-  grid: { left: 40, right: 10, top: 30, bottom: 24 },
-  xAxis: { type: 'category', data: ['Ops', 'Sales', 'Support', 'Finance', 'IT'] },
-  yAxis: { type: 'value' },
-  series: [
-    { name: 'Current', type: 'bar', data: [155, 124, 117, 82, 68] },
-    { name: 'YTD', type: 'bar', data: [1320, 1110, 1030, 760, 640] },
-  ],
-}));
+const kpis = computed(() => {
+  const data = store.data?.kpis;
+  return [
+    { label: 'Current Payroll', value: money(data?.currentPayroll) },
+    { label: 'YTD Payroll', value: money(data?.ytdPayroll) },
+    { label: 'Net Pay', value: money(data?.netPay) },
+    { label: 'Employer Cost', value: money(data?.employerCost) },
+    { label: 'Headcount Paid', value: numberFormat.format(data?.headcountPaid || 0) },
+    { label: 'Overtime Cost', value: money(data?.overtimeCost) },
+  ];
+});
 
-const overtimeHeatmapOption = computed(() => ({
-  tooltip: { position: 'top' },
-  grid: { left: 52, right: 10, top: 10, bottom: 24 },
-  xAxis: { type: 'category', data: ['W1', 'W2', 'W3', 'W4'] },
-  yAxis: { type: 'category', data: ['Ops', 'Sales', 'Support', 'Finance', 'IT'] },
-  visualMap: {
-    min: 0,
-    max: 24,
-    orient: 'horizontal',
+const emptyMessage = {
+  title: {
+    text: 'No posted payroll data',
     left: 'center',
-    bottom: 0,
-    itemWidth: 90,
-    itemHeight: 8,
-    textStyle: { fontSize: 10 },
+    top: 'middle',
+    textStyle: { fontSize: 12, color: '#9e9e9e', fontWeight: 400 },
   },
-  series: [
-    {
-      type: 'heatmap',
-      data: [
-        [0, 0, 20], [1, 0, 18], [2, 0, 22], [3, 0, 24],
-        [0, 1, 10], [1, 1, 12], [2, 1, 14], [3, 1, 11],
-        [0, 2, 13], [1, 2, 11], [2, 2, 15], [3, 2, 14],
-        [0, 3, 6], [1, 3, 7], [2, 3, 8], [3, 3, 9],
-        [0, 4, 9], [1, 4, 10], [2, 4, 12], [3, 4, 11],
-      ],
-      label: { show: false },
-      emphasis: { itemStyle: { shadowBlur: 6 } },
+};
+
+const payrollTrendOption = computed(() => {
+  const trend = store.data?.payrollTrend;
+  if (!trend?.labels?.length) return emptyMessage;
+  return {
+    tooltip: {
+      trigger: 'axis',
+      valueFormatter: (value: number) => money(value),
     },
-  ],
-}));
+    legend: { top: 0 },
+    grid: { left: 48, right: 16, top: 28, bottom: 24 },
+    xAxis: { type: 'category', data: trend.labels },
+    yAxis: { type: 'value' },
+    series: [
+      { name: 'Gross', type: 'line', smooth: true, data: trend.gross },
+      { name: 'Net', type: 'line', smooth: true, data: trend.net },
+      { name: 'Employer Cost', type: 'line', smooth: true, data: trend.employerCost },
+    ],
+  };
+});
+
+const departmentShareOption = computed(() => {
+  const share = store.data?.departmentShare ?? [];
+  if (!share.length) return emptyMessage;
+  return {
+    tooltip: {
+      trigger: 'item',
+      valueFormatter: (value: number) => money(value),
+    },
+    legend: { orient: 'vertical', right: 0, top: 'middle', textStyle: { fontSize: 10 } },
+    series: [
+      {
+        type: 'pie',
+        radius: ['42%', '68%'],
+        center: ['35%', '52%'],
+        label: { show: false },
+        data: share.map((item) => ({ value: item.value, name: item.name })),
+      },
+    ],
+  };
+});
+
+const departmentStackOption = computed(() => {
+  const cost = store.data?.costByDepartment;
+  if (!cost?.departments?.length) return emptyMessage;
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (value: number) => money(value),
+    },
+    legend: { top: 0, textStyle: { fontSize: 10 } },
+    grid: { left: 48, right: 8, top: 30, bottom: 28 },
+    xAxis: { type: 'category', data: cost.departments },
+    yAxis: { type: 'value' },
+    series: [
+      { name: 'Regular', type: 'bar', stack: 'total', data: cost.regular },
+      { name: 'Overtime', type: 'bar', stack: 'total', data: cost.overtime },
+      { name: 'Holiday', type: 'bar', stack: 'total', data: cost.holiday },
+      { name: 'Allowances', type: 'bar', stack: 'total', data: cost.allowances },
+    ],
+  };
+});
+
+const deductionsOption = computed(() => {
+  const mix = store.data?.deductionsMix ?? [];
+  if (!mix.length) return emptyMessage;
+  return {
+    tooltip: {
+      trigger: 'item',
+      valueFormatter: (value: number) => money(value),
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['45%', '72%'],
+        label: { formatter: '{b}\n{d}%' },
+        data: mix.map((item) => ({ value: item.value, name: item.name })),
+      },
+    ],
+  };
+});
+
+const ytdVsCurrentOption = computed(() => {
+  const compare = store.data?.ytdVsCurrentByDepartment;
+  if (!compare?.departments?.length) return emptyMessage;
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (value: number) => money(value),
+    },
+    legend: { top: 0, textStyle: { fontSize: 10 } },
+    grid: { left: 48, right: 10, top: 30, bottom: 24 },
+    xAxis: { type: 'category', data: compare.departments },
+    yAxis: { type: 'value' },
+    series: [
+      { name: 'Current', type: 'bar', data: compare.current },
+      { name: 'YTD', type: 'bar', data: compare.ytd },
+    ],
+  };
+});
+
+const overtimeHeatmapOption = computed(() => {
+  const heatmap = store.data?.overtimeHeatmap;
+  if (!heatmap?.weeks?.length || !heatmap.departments?.length) return emptyMessage;
+  const max = Math.max(1, ...heatmap.cells.map((cell) => Number(cell[2] || 0)));
+  return {
+    tooltip: { position: 'top' },
+    grid: { left: 72, right: 10, top: 10, bottom: 24 },
+    xAxis: { type: 'category', data: heatmap.weeks },
+    yAxis: { type: 'category', data: heatmap.departments },
+    visualMap: {
+      min: 0,
+      max,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 0,
+      itemWidth: 90,
+      itemHeight: 8,
+      textStyle: { fontSize: 10 },
+    },
+    series: [
+      {
+        type: 'heatmap',
+        data: heatmap.cells,
+        label: { show: false },
+        emphasis: { itemStyle: { shadowBlur: 6 } },
+      },
+    ],
+  };
+});
+
+async function reload() {
+  await store.fetchDashboard(6);
+}
+
+onMounted(() => {
+  void reload();
+});
 </script>
 
 <style scoped>

@@ -15,6 +15,7 @@ export interface EmployeeCompensation {
   requiresClocking: boolean;
   hourlyRate: string | number;
   yearlyRate: string | number;
+  dailyRate?: string | number | null;
   standardWeeklyHours?: string | number | null;
   payscale?: string | null;
   payscalePoint?: string | null;
@@ -35,6 +36,7 @@ export interface EmployeeCompensationPayload {
   requiresClocking: boolean;
   hourlyRate: number;
   yearlyRate: number;
+  dailyRate?: number | null;
   standardWeeklyHours?: number | null;
   payscale?: string | null;
   payscalePoint?: string | null;

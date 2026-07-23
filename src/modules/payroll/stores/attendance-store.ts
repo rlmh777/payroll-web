@@ -282,6 +282,8 @@ export interface PayrollRun {
   id: string;
   payPeriodScheduleId: string;
   status: string;
+  payrollNumber: number | null;
+  payrollNumberFormatted: string | null;
   payPeriodSchedule: PayPeriodSchedule | null;
 }
 
@@ -289,6 +291,10 @@ type PayrollRunApiRow = {
   id?: string | null;
   pay_period_schedule_id?: string | null;
   status?: string | null;
+  payroll_number?: number | null;
+  payrollNumber?: number | null;
+  payrollNumberFormatted?: string | null;
+  payroll_number_formatted?: string | null;
   pay_period_schedule?: PayPeriodApiRow | null;
   payPeriodSchedule?: PayPeriodApiRow | null;
 };
@@ -688,6 +694,13 @@ export const useAttendanceStore = defineStore('attendance', {
         id: row.id,
         payPeriodScheduleId,
         status: row.status ?? 'draft',
+        payrollNumber: row.payroll_number ?? row.payrollNumber ?? null,
+        payrollNumberFormatted:
+          row.payrollNumberFormatted
+          ?? row.payroll_number_formatted
+          ?? (row.payroll_number != null || row.payrollNumber != null
+            ? String(row.payroll_number ?? row.payrollNumber).padStart(9, '0')
+            : null),
         payPeriodSchedule: payPeriod,
       };
     },

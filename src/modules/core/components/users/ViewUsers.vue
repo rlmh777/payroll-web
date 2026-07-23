@@ -105,11 +105,14 @@ const emit = defineEmits<{
 
 <style scoped>
 .view-users-container {
-  max-width: 200px;
+  width: min(320px, 38vw);
+  min-width: 260px;
+  max-width: 360px;
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .users-list {

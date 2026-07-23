@@ -35,6 +35,21 @@
           </div>
 
           <div class="col-12 col-sm-6 col-lg-4">
+            <div class="section-label">SS ELECTRONIC EMPLOYER NUMBER</div>
+            <q-input
+              v-model="form.socialSecurityElectronicEmployerNumber"
+              dense
+              filled
+              hide-bottom-space
+            />
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg-4">
+            <div class="section-label">BANK BRANCH NUMBER</div>
+            <q-input v-model="form.bankBranchNumber" dense filled hide-bottom-space />
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg-4">
             <div class="section-label">TAX ID</div>
             <q-input v-model="form.taxIdentificationNumber" type="text" dense filled hide-bottom-space />
           </div>

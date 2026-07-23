@@ -29,6 +29,12 @@ const onUserSelected = async (user: User) => {
   display: flex;
   height: 100%;
   gap: 16px;
+  min-height: 0;
+}
+
+.manage-users-container > :last-child {
+  flex: 1;
+  min-width: 0;
 }
 </style>
 

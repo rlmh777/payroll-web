@@ -34,6 +34,9 @@
         <PayrollSummaryByDepartmentReport v-else-if="selectedReportId === 'payroll-summary-by-department'" />
         <PayrollJournalDepartmentsReport v-else-if="selectedReportId === 'payroll-journal-departments'" />
         <ScheduledVsWorkedHoursReport v-else-if="selectedReportId === 'scheduled-vs-worked-hours'" />
+        <PayeEmploymentDetailsReport v-else-if="selectedReportId === 'paye-employment-details'" />
+        <SocialSecurityPaymentsByMonthReport v-else-if="selectedReportId === 'social-security-payments-by-month'" />
+        <BankUploadReport v-else-if="selectedReportId === 'bank-upload'" />
         <div v-else class="text-body1 text-grey-7">
           Select a report from the list.
         </div>
@@ -49,13 +52,19 @@ import PayrollJournalDepartmentsReport from '@payroll/components/reports/Payroll
 import ScheduledVsWorkedHoursReport from '@payroll/components/reports/ScheduledVsWorkedHoursReport.vue';
 import PayrollSummaryByDepartmentReport from '@payroll/components/reports/PayrollSummaryByDepartmentReport.vue';
 import SalaryReviewReport from '@payroll/components/reports/SalaryReviewReport.vue';
+import PayeEmploymentDetailsReport from '@payroll/components/reports/PayeEmploymentDetailsReport.vue';
+import SocialSecurityPaymentsByMonthReport from '@payroll/components/reports/SocialSecurityPaymentsByMonthReport.vue';
+import BankUploadReport from '@payroll/components/reports/BankUploadReport.vue';
 
 type ReportId =
   | 'journal-entries'
   | 'salary-review'
   | 'payroll-summary-by-department'
   | 'payroll-journal-departments'
-  | 'scheduled-vs-worked-hours';
+  | 'scheduled-vs-worked-hours'
+  | 'paye-employment-details'
+  | 'social-security-payments-by-month'
+  | 'bank-upload';
 
 const selectedReportId = ref<ReportId>('journal-entries');
 
@@ -89,6 +98,24 @@ const reportOptions = [
     label: 'Scheduled vs Worked Hours',
     caption: 'Scheduled/worked, OT, tips, shares, specials',
     icon: 'query_stats',
+  },
+  {
+    id: 'paye-employment-details' as const,
+    label: 'PAYE Employment Details',
+    caption: 'Belize Tax Services PAYE upload workbook',
+    icon: 'account_balance',
+  },
+  {
+    id: 'social-security-payments-by-month' as const,
+    label: 'Social Security Payments by Month',
+    caption: 'Weekly SS filing rows by Monday',
+    icon: 'health_and_safety',
+  },
+  {
+    id: 'bank-upload' as const,
+    label: 'Generate Bank Upload',
+    caption: 'Salary deposit CSV for posted payroll',
+    icon: 'account_balance_wallet',
   },
 ];
 </script>

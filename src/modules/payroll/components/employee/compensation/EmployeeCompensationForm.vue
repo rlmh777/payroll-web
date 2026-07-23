@@ -115,6 +115,19 @@
         @update:model-value="syncDerivedRates"
       />
       <q-input
+        v-if="isDailyRateMethod(model.compensationMethod)"
+        v-model.number="model.dailyRate"
+        type="number"
+        step="0.01"
+        min="0"
+        label="Daily rate *"
+        dense
+        outlined
+        hint="Paid as units × daily rate for each day / trip entry"
+        :disable="props.disable"
+      />
+      <q-input
+        v-if="!isDailyRateMethod(model.compensationMethod)"
         v-model.number="model.standardWeeklyHours"
         type="number"
         step="0.5"
@@ -223,6 +236,7 @@ import {
   effectiveYearlyRateFromForm,
   isBaseMethod,
   isBiweeklyPayFrequency,
+  isDailyRateMethod,
   isHourlyMethod,
   isMonthlyPayFrequency,
   type CompensationMethod,
@@ -250,11 +264,17 @@ const employmentDetailOptions = computed(() => props.employmentDetails.map((deta
   value: detail.id,
 })));
 
-const clockingLocked = computed(() => isHourlyMethod(model.value.compensationMethod));
+const clockingLocked = computed(() => (
+  isHourlyMethod(model.value.compensationMethod) || isDailyRateMethod(model.value.compensationMethod)
+));
 
 const clockingHint = computed(() => {
-  if (clockingLocked.value) {
+  if (isHourlyMethod(model.value.compensationMethod)) {
     return 'Hourly payment methods always require clocking.';
+  }
+
+  if (isDailyRateMethod(model.value.compensationMethod)) {
+    return 'Day / trip workers do not clock in. Pay comes from day work entries.';
   }
 
   return 'Track attendance even when pay is not tied to punches.';
@@ -312,12 +332,14 @@ const derivedAnnualDisplay = computed(() => (
 const effectiveAnnualRate = computed(() => effectiveYearlyRateFromForm(model.value));
 
 const showBiweeklyPeriodBasePay = computed(() => (
-  !compensationAllowsOvertime(model.value.compensationMethod)
+  !isDailyRateMethod(model.value.compensationMethod)
+  && !compensationAllowsOvertime(model.value.compensationMethod)
   && isBiweeklyPayFrequency(props.payrateFrequencyName)
 ));
 
 const showMonthlyPeriodBasePay = computed(() => (
-  !compensationAllowsOvertime(model.value.compensationMethod)
+  !isDailyRateMethod(model.value.compensationMethod)
+  && !compensationAllowsOvertime(model.value.compensationMethod)
   && isMonthlyPayFrequency(props.payrateFrequencyName)
 ));
 
@@ -350,6 +372,12 @@ const derivedPeriodDisplay = computed(() => (
 ));
 
 function syncDerivedRates() {
+  if (isDailyRateMethod(model.value.compensationMethod)) {
+    model.value.hourlyRate = 0;
+    model.value.yearlyRate = 0;
+    return;
+  }
+
   if (Number(model.value.standardWeeklyHours) <= 0) {
     model.value.standardWeeklyHours = DEFAULT_STANDARD_WEEKLY_HOURS;
   }
@@ -373,7 +401,11 @@ function syncDerivedRates() {
 function onCompensationMethodChange(value: CompensationMethod) {
   model.value.requiresClocking = defaultRequiresClocking(value);
 
-  if (Number(model.value.standardWeeklyHours) <= 0) {
+  if (isDailyRateMethod(value)) {
+    model.value.hourlyRate = 0;
+    model.value.yearlyRate = 0;
+    model.value.requiresClocking = false;
+  } else if (Number(model.value.standardWeeklyHours) <= 0) {
     model.value.standardWeeklyHours = DEFAULT_STANDARD_WEEKLY_HOURS;
   }
 

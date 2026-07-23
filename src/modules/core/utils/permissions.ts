@@ -1,5 +1,7 @@
 export const CRUD_PERMISSIONS = {
   account: 'view-accounts',
+  accountMapping: 'account-mapping-crud',
+  databaseBackup: 'database-backup-crud',
   allowance: 'view-pay-items',
   bank: 'bank-account-type-crud',
   bankAccountType: 'bank-account-type-crud',
@@ -39,6 +41,8 @@ export const ROUTE_VIEW_PERMISSIONS: Array<{ prefix: string; permission: string 
   { prefix: '/settings/roles', permission: 'view-roles' },
   { prefix: '/settings/menu', permission: 'view-menu' },
   { prefix: '/settings/users', permission: 'manager-users' },
+  { prefix: '/settings/account-mapping', permission: 'view-account-mappings' },
+  { prefix: '/settings/database-backup', permission: 'view-database-backup' },
   { prefix: '/employees', permission: 'view-employees' },
   { prefix: '/payroll/allowances', permission: 'view-payroll-allowances' },
   { prefix: '/payroll', permission: 'view-payroll' },

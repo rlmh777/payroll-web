@@ -1,8 +1,8 @@
 <template>
   <q-dialog v-model="isOpen" position="right" @hide="onClose">
-    <q-card class="payroll-allowance-dialog">
+    <q-card class="day-work-dialog">
       <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">{{ isEdit ? 'Edit allowance' : 'Add allowance' }}</div>
+        <div class="text-h6">{{ isEdit ? 'Edit day / trip work' : 'Record day / trip work' }}</div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup :disable="saving" />
       </q-card-section>
@@ -26,64 +26,40 @@
             :disable="saving || isEdit"
             :rules="[(val) => !!val || 'Employee is required']"
             @filter="filterEmployees"
+            @update:model-value="onEmployeeChanged"
           />
 
-          <q-select
-            v-model="form.allowanceId"
-            :options="allowanceOptions"
-            option-value="id"
-            option-label="name"
-            emit-value
-            map-options
-            outlined
-            dense
-            label="Allowance *"
-            :disable="saving"
-            :rules="[(val) => !!val || 'Allowance is required']"
-            @update:model-value="onAllowanceChanged"
-          />
-
-          <q-select
-            v-model="form.accountId"
-            :options="accountOptions"
-            option-value="id"
-            option-label="name"
-            emit-value
-            map-options
-            use-input
-            fill-input
-            hide-selected
-            input-debounce="0"
-            outlined
-            dense
-            label="Account *"
-            :disable="saving"
-            :rules="[(val) => !!val || 'Account is required']"
-            @filter="filterAccounts"
+          <SsBenefitDateField
+            v-model="form.date"
+            label="Work date *"
+            required
+            :disable="saving === true"
           />
 
           <q-input
-            v-model.number="form.quantity"
+            v-model.number="form.units"
             type="number"
-            step="0.0001"
-            min="0.0001"
+            step="0.01"
+            min="0.01"
             outlined
             dense
-            label="Quantity *"
+            label="Units / trips *"
+            hint="Example: 1 day, 2 trips, or 2.5 at supervisor discretion"
             :disable="saving"
-            :rules="[(val) => (val !== null && val !== undefined && Number(val) > 0) || 'Quantity is required']"
+            :rules="[(val) => (val !== null && val !== undefined && Number(val) > 0) || 'Units are required']"
           />
 
           <q-input
-            v-model.number="form.unitAmount"
+            v-model.number="form.dailyRate"
             type="number"
             step="0.01"
             min="0"
             outlined
             dense
-            label="Unit amount *"
+            label="Daily rate *"
+            hint="Defaults from employee compensation; admin/accountant can override"
             :disable="saving"
-            :rules="[(val) => (val !== null && val !== undefined && Number(val) >= 0) || 'Unit amount is required']"
+            :rules="[(val) => (val !== null && val !== undefined && Number(val) >= 0) || 'Daily rate is required']"
           />
 
           <q-input
@@ -93,7 +69,7 @@
             dense
             readonly
             label="Amount (total)"
-            hint="Calculated as quantity × unit amount"
+            hint="Calculated as units × daily rate"
           />
 
           <q-input
@@ -125,18 +101,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type {
-  HistoricalEmployeeAllowance,
-  PayrollAllowanceEmployeeOption,
-} from '@payroll/stores/payroll-allowance-store';
-import type { Allowance, Account } from '@core/types/models';
+  DayWorkEmployeeOption,
+  EmployeeDayWork,
+} from '@payroll/stores/employee-day-work-store';
+import SsBenefitDateField from '@payroll/components/employee/ss-benefit/SsBenefitDateField.vue';
 
 const props = defineProps<{
   modelValue: boolean;
-  record?: HistoricalEmployeeAllowance | null;
-  payrollRunId: string | null;
-  employees: PayrollAllowanceEmployeeOption[];
-  allowances: Allowance[];
-  accounts: Account[];
+  record?: EmployeeDayWork | null;
+  employees: DayWorkEmployeeOption[];
   saving?: boolean;
 }>();
 
@@ -144,11 +117,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   save: [payload: {
     employeeId: string;
-    allowanceId: string;
-    accountId: string;
-    payrollRunId: string;
-    quantity: number;
-    unitAmount: number;
+    date: string;
+    units: number;
+    dailyRate: number;
     note?: string;
   }];
 }>();
@@ -162,25 +133,21 @@ const isEdit = computed(() => !!props.record?.id);
 
 const form = ref({
   employeeId: null as string | null,
-  allowanceId: null as string | null,
-  accountId: null as string | null,
-  quantity: 1 as number | null,
-  unitAmount: null as number | null,
+  date: new Date().toISOString().slice(0, 10),
+  units: 1 as number | null,
+  dailyRate: null as number | null,
   note: '',
 });
 
-/** Quasar @filter requires options to be assigned inside update() via a ref. */
-const employeeOptions = ref<PayrollAllowanceEmployeeOption[]>([]);
-const accountOptions = ref<Account[]>([]);
-const allowanceOptions = computed(() => props.allowances);
+const employeeOptions = ref<DayWorkEmployeeOption[]>([]);
 
 const computedAmount = computed(() => {
-  const quantity = Number(form.value.quantity ?? 0);
-  const unitAmount = Number(form.value.unitAmount ?? 0);
-  return Math.round(quantity * unitAmount * 100) / 100;
+  const units = Number(form.value.units ?? 0);
+  const dailyRate = Number(form.value.dailyRate ?? 0);
+  return Math.round(units * dailyRate * 100) / 100;
 });
 
-const matchEmployees = (val: string): PayrollAllowanceEmployeeOption[] => {
+const matchEmployees = (val: string): DayWorkEmployeeOption[] => {
   const needle = val.trim().toLowerCase();
   if (!needle) return [...props.employees];
 
@@ -203,46 +170,30 @@ const matchEmployees = (val: string): PayrollAllowanceEmployeeOption[] => {
   });
 };
 
-const matchAccounts = (val: string): Account[] => {
-  const needle = val.trim().toLowerCase();
-  if (!needle) return [...props.accounts];
-  return props.accounts.filter((account) => {
-    return `${account.name} ${account.code1 ?? ''}`.toLowerCase().includes(needle);
-  });
-};
-
 const filterEmployees = (val: string, update: (fn: () => void) => void) => {
   update(() => {
     employeeOptions.value = matchEmployees(val);
   });
 };
 
-const filterAccounts = (val: string, update: (fn: () => void) => void) => {
-  update(() => {
-    accountOptions.value = matchAccounts(val);
-  });
-};
-
 const syncSelectOptions = () => {
   employeeOptions.value = [...props.employees];
-  accountOptions.value = [...props.accounts];
 };
 
-const onAllowanceChanged = (allowanceId: string | null) => {
-  if (!allowanceId) return;
-  const allowance = props.allowances.find((item) => item.id === allowanceId);
-  if (allowance?.defaultAmount != null) {
-    form.value.unitAmount = Number(allowance.defaultAmount);
+const onEmployeeChanged = (employeeId: string | null) => {
+  if (!employeeId) return;
+  const employee = props.employees.find((item) => item.id === employeeId);
+  if (employee && (form.value.dailyRate == null || form.value.dailyRate === 0)) {
+    form.value.dailyRate = Number(employee.dailyRate ?? 0);
   }
 };
 
 const resetForm = () => {
   form.value = {
     employeeId: null,
-    allowanceId: null,
-    accountId: null,
-    quantity: 1,
-    unitAmount: null,
+    date: new Date().toISOString().slice(0, 10),
+    units: 1,
+    dailyRate: null,
     note: '',
   };
   syncSelectOptions();
@@ -254,31 +205,25 @@ const onClose = () => {
 
 const onSubmit = () => {
   if (
-    !props.payrollRunId
-    || !form.value.employeeId
-    || !form.value.allowanceId
-    || !form.value.accountId
-    || form.value.quantity == null
-    || form.value.unitAmount == null
+    !form.value.employeeId
+    || !form.value.date
+    || form.value.units == null
+    || form.value.dailyRate == null
   ) {
     return;
   }
 
   const payload: {
     employeeId: string;
-    allowanceId: string;
-    accountId: string;
-    payrollRunId: string;
-    quantity: number;
-    unitAmount: number;
+    date: string;
+    units: number;
+    dailyRate: number;
     note?: string;
   } = {
     employeeId: form.value.employeeId,
-    allowanceId: form.value.allowanceId,
-    accountId: form.value.accountId,
-    payrollRunId: props.payrollRunId,
-    quantity: Number(form.value.quantity),
-    unitAmount: Number(form.value.unitAmount),
+    date: form.value.date,
+    units: Number(form.value.units),
+    dailyRate: Number(form.value.dailyRate),
   };
 
   const note = form.value.note.trim();
@@ -301,11 +246,10 @@ watch(
 
     if (record) {
       form.value = {
-        employeeId: record.employeeId || record.employee_id || null,
-        allowanceId: record.allowanceId || record.allowance_id || null,
-        accountId: record.accountId || record.account_id || null,
-        quantity: Number(record.quantity ?? 1),
-        unitAmount: Number(record.unitAmount ?? record.amount ?? 0),
+        employeeId: record.employeeId || null,
+        date: String(record.date).slice(0, 10),
+        units: Number(record.units ?? 1),
+        dailyRate: Number(record.dailyRate ?? 0),
         note: record.note ?? '',
       };
       return;
@@ -316,7 +260,7 @@ watch(
 );
 
 watch(
-  () => [props.employees, props.accounts] as const,
+  () => props.employees,
   () => {
     if (props.modelValue) {
       syncSelectOptions();
@@ -326,7 +270,7 @@ watch(
 </script>
 
 <style scoped>
-.payroll-allowance-dialog {
+.day-work-dialog {
   width: min(420px, 100vw);
   max-height: 100vh;
 }

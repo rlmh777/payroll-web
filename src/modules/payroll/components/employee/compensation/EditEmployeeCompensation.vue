@@ -97,6 +97,7 @@ async function save() {
       requiresClocking: form.requiresClocking,
       hourlyRate: Number(form.hourlyRate),
       yearlyRate: Number(form.yearlyRate),
+      dailyRate: Number(form.dailyRate),
       standardWeeklyHours: Number(form.standardWeeklyHours),
       payscale: form.payscale.trim() || null,
       payscalePoint: form.payscalePoint.trim() || null,

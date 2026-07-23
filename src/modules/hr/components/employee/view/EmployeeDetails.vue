@@ -10,6 +10,7 @@
       <q-tab name="compensation" icon="payments" label="Compensation" />
       <q-tab name="documents" icon="description" label="Documents" />
       <q-tab name="incidents" icon="report_problem" label="Incidents" />
+      <q-tab name="time-travel" icon="history" label="Time Travel" />
     </q-tabs>
 
     <q-separator class="q-my-sm" />
@@ -61,6 +62,13 @@
           :employee-id="employeeStore.selectedEmployee.id"
         />
       </q-tab-panel>
+
+      <q-tab-panel name="time-travel">
+        <employee-time-travel
+          v-if="employeeStore.selectedEmployee?.id"
+          :employee-id="employeeStore.selectedEmployee.id"
+        />
+      </q-tab-panel>
     </q-tab-panels>
   </q-card>
 </template>
@@ -77,6 +85,7 @@ import ManageEmploymentDetails from '../employment-detail/ManageEmploymentDetail
 import ManageEmployeeCompensation from '@payroll/components/employee/compensation/ManageEmployeeCompensation.vue';
 import ManageEmployeeDocuments from '../document/ManageEmployeeDocuments.vue';
 import ManageEmployeeIncidents from '../incident/ManageEmployeeIncidents.vue';
+import EmployeeTimeTravel from '../time-travel/EmployeeTimeTravel.vue';
 
 const employeeStore = useEmployeeStore();
 const { activeDetailsTab } = storeToRefs(employeeStore);
@@ -90,6 +99,7 @@ const validTabs = new Set<EmployeeDetailsTab>([
   'compensation',
   'documents',
   'incidents',
+  'time-travel',
 ]);
 
 const tab = computed({

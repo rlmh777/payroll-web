@@ -116,7 +116,7 @@ const columns: QTableProps['columns'] = [
   { name: 'payscale', label: 'Payscale', field: (r) => r.payscale ?? '—', align: 'left' },
   { name: 'payscalePoint', label: 'Point', field: (r) => r.payscalePoint ?? '—', align: 'left' },
   { name: 'reasonType', label: 'Reason', field: (r) => formatCompensationReason(r.reasonType), align: 'left' },
-  { name: 'hourlyRate', label: 'Hourly rate', field: (r) => formatHourlyRate(r), align: 'right' },
+  { name: 'hourlyRate', label: 'Rate', field: (r) => formatHourlyRate(r), align: 'right' },
   { name: 'yearlyRate', label: 'Annual base', field: (r) => Number(r.yearlyRate) > 0 ? formatYearlyRate(r.yearlyRate) : '—', align: 'right' },
   { name: 'standardWeeklyHours', label: 'Std weekly hrs', field: (r) => Number(r.standardWeeklyHours ?? 0) > 0 ? Number(r.standardWeeklyHours ?? 40).toFixed(1) : '—', align: 'right' },
   { name: 'actions', label: '', field: 'actions', align: 'right' },

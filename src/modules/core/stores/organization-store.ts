@@ -14,6 +14,8 @@ export interface Organization {
   street?: string;
   localityId?: string;
   socialSecurityNumber?: string;
+  socialSecurityElectronicEmployerNumber?: string;
+  bankBranchNumber?: string;
   taxIdentificationNumber?: string;
   primaryColor?: string;
   secondaryColor?: string;

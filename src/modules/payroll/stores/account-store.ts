@@ -1,6 +1,7 @@
 import { defineStore, acceptHMRUpdate } from 'pinia';
 import { useAuthStore } from '@core/stores/auth';
 import type { Account } from '@core/types/models';
+import { flattenAccountsHierarchically } from '@payroll/utils/account-hierarchy';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 
@@ -87,6 +88,7 @@ export const useAccountStore = defineStore('account', {
         const itemsPerPage = perPage ?? 10;
         queryParams.append('page', currentPage.toString());
         queryParams.append('per_page', itemsPerPage.toString());
+        queryParams.append('with_relations', '1');
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
@@ -106,15 +108,14 @@ export const useAccountStore = defineStore('account', {
 
         const data = await response.json();
 
-        // Handle paginated response
+        // Handle paginated response — keep parents above their children within the page
         if (data.data && Array.isArray(data.data)) {
-          this.accounts = data.data;
+          this.accounts = flattenAccountsHierarchically(data.data);
           this.currentPage = data.current_page || 1;
           this.lastPage = data.last_page || 1;
           this.total = data.total || 0;
         } else if (Array.isArray(data)) {
-          // Fallback for non-paginated response
-          this.accounts = data;
+          this.accounts = flattenAccountsHierarchically(data);
         } else {
           this.accounts = [];
         }

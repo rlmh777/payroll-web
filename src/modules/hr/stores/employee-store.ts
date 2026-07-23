@@ -14,7 +14,8 @@ export type EmployeeDetailsTab =
   | 'contracts'
   | 'compensation'
   | 'documents'
-  | 'incidents';
+  | 'incidents'
+  | 'time-travel';
 
 export const useEmployeeStore = defineStore('employee', {
   state: () => ({

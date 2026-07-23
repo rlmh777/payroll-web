@@ -2,40 +2,38 @@
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
       <div>
-        <div class="text-h6">Payroll allowances</div>
+        <div class="text-h6">Day / trip work</div>
         <div class="text-caption text-grey-7">
-          Add or update employee allowances for the upcoming draft payroll run.
+          Record units worked for daily-rate employees who do not clock in. Pay = units × daily rate.
         </div>
       </div>
       <q-btn
         color="primary"
         icon="add"
-        label="Add allowance"
+        label="Record work"
         unelevated
         no-caps
-        :disable="!store.selectedPayrollRunId || store.draftRuns.length === 0"
+        :disable="store.employees.length === 0"
         @click="openCreate"
       />
     </div>
 
     <div class="row q-col-gutter-md q-mb-md items-end">
-      <div class="col-12 col-md-4">
-        <q-select
-          v-model="store.selectedPayrollRunId"
-          :options="payrollRunOptions"
-          option-value="value"
-          option-label="label"
-          emit-value
-          map-options
-          outlined
-          dense
-          label="Upcoming payroll run"
-          :loading="store.isBootstrapping"
-          :disable="store.isBootstrapping"
-          @update:model-value="onPayrollRunChanged"
+      <div class="col-12 col-md-3">
+        <SsBenefitDateField
+          :model-value="store.startDate"
+          label="From"
+          @update:model-value="onStartDateChanged"
         />
       </div>
       <div class="col-12 col-md-3">
+        <SsBenefitDateField
+          :model-value="store.endDate"
+          label="To"
+          @update:model-value="onEndDateChanged"
+        />
+      </div>
+      <div class="col-12 col-md-4">
         <q-select
           v-model="store.selectedEmployeeId"
           :options="employeeFilterOptions"
@@ -49,24 +47,10 @@
           outlined
           dense
           label="Employee"
+          :loading="store.isBootstrapping"
           @filter="filterEmployees"
           @update:model-value="refreshList"
         />
-      </div>
-      <div class="col-12 col-md-3">
-        <q-input
-          v-model="store.search"
-          outlined
-          dense
-          clearable
-          label="Search note / allowance"
-          @keyup.enter="refreshList"
-          @clear="refreshList"
-        >
-          <template #append>
-            <q-icon name="search" class="cursor-pointer" @click="refreshList" />
-          </template>
-        </q-input>
       </div>
     </div>
 
@@ -75,11 +59,12 @@
     </q-banner>
 
     <q-banner
-      v-else-if="!store.isBootstrapping && store.draftRuns.length === 0"
+      v-else-if="!store.isBootstrapping && store.employees.length === 0"
       class="bg-grey-2 text-grey-8 q-mb-md"
       rounded
     >
-      No draft payroll run is available. Create a payroll run first, then return here to enter allowances.
+      No daily-rate employees are in your scope. Set an employee’s compensation method to
+      <strong>Daily / trip rate</strong> first.
     </q-banner>
 
     <q-table
@@ -87,7 +72,7 @@
       bordered
       dense
       row-key="id"
-      :rows="store.allowances"
+      :rows="store.entries"
       :columns="columns"
       :loading="store.isLoading || store.isBootstrapping"
       v-model:pagination="pagination"
@@ -99,24 +84,14 @@
           {{ employeeLabel(props.row) }}
         </q-td>
       </template>
-      <template #body-cell-allowance="props">
+      <template #body-cell-units="props">
         <q-td :props="props">
-          {{ props.row.allowance?.name || '—' }}
+          {{ props.row.units ?? '—' }}
         </q-td>
       </template>
-      <template #body-cell-account="props">
+      <template #body-cell-dailyRate="props">
         <q-td :props="props">
-          {{ props.row.chart_of_account?.name || '—' }}
-        </q-td>
-      </template>
-      <template #body-cell-quantity="props">
-        <q-td :props="props">
-          {{ props.row.quantity ?? '—' }}
-        </q-td>
-      </template>
-      <template #body-cell-unitAmount="props">
-        <q-td :props="props">
-          {{ formatCurrency(props.row.unitAmount) }}
+          {{ formatCurrency(props.row.dailyRate) }}
         </q-td>
       </template>
       <template #body-cell-amount="props">
@@ -136,13 +111,10 @@
       </template>
     </q-table>
 
-    <PayrollAllowanceFormDialog
+    <EmployeeDayWorkFormDialog
       v-model="showForm"
       :record="editingRecord"
-      :payroll-run-id="store.selectedPayrollRunId"
       :employees="store.employees"
-      :allowances="store.allowanceOptions"
-      :accounts="store.accountOptions"
       :saving="store.isSaving"
       @save="handleSave"
     />
@@ -150,21 +122,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useQuasar, type QTableProps } from 'quasar';
 import {
-  usePayrollAllowanceStore,
-  type HistoricalEmployeeAllowance,
-  type PayrollAllowanceEmployeeOption,
-} from '@payroll/stores/payroll-allowance-store';
-import PayrollAllowanceFormDialog from '@payroll/components/payroll/PayrollAllowanceFormDialog.vue';
+  useEmployeeDayWorkStore,
+  type DayWorkEmployeeOption,
+  type EmployeeDayWork,
+} from '@payroll/stores/employee-day-work-store';
+import EmployeeDayWorkFormDialog from '@payroll/components/payroll/EmployeeDayWorkFormDialog.vue';
+import SsBenefitDateField from '@payroll/components/employee/ss-benefit/SsBenefitDateField.vue';
 
 const $q = useQuasar();
-const store = usePayrollAllowanceStore();
+const store = useEmployeeDayWorkStore();
 
 const showForm = ref(false);
-const editingRecord = ref<HistoricalEmployeeAllowance | null>(null);
-const employeeFilterOptions = ref<PayrollAllowanceEmployeeOption[]>([]);
+const editingRecord = ref<EmployeeDayWork | null>(null);
+const employeeFilterOptions = ref<DayWorkEmployeeOption[]>([]);
 
 const pagination = ref({
   page: 1,
@@ -173,32 +146,19 @@ const pagination = ref({
 });
 
 const columns = [
+  { name: 'date', label: 'Date', field: 'date', align: 'left' as const },
   { name: 'employee', label: 'Employee', field: 'employee', align: 'left' as const },
-  { name: 'allowance', label: 'Allowance', field: 'allowance', align: 'left' as const },
-  { name: 'account', label: 'Account', field: 'account', align: 'left' as const },
-  { name: 'quantity', label: 'Qty', field: 'quantity', align: 'right' as const },
-  { name: 'unitAmount', label: 'Unit amount', field: 'unitAmount', align: 'right' as const },
+  { name: 'units', label: 'Units', field: 'units', align: 'right' as const },
+  { name: 'dailyRate', label: 'Daily rate', field: 'dailyRate', align: 'right' as const },
   { name: 'amount', label: 'Amount', field: 'amount', align: 'right' as const },
   { name: 'note', label: 'Note', field: 'note', align: 'left' as const },
   { name: 'actions', label: '', field: 'actions', align: 'right' as const },
 ];
 
-const payrollRunOptions = computed(() =>
-  store.draftRuns.map((run) => {
-    const schedule = run.payPeriodSchedule;
-    const groupName = schedule?.payPeriodGroup?.name ?? 'Payroll';
-    const range = [schedule?.startDate, schedule?.endDate].filter(Boolean).join(' → ');
-    return {
-      value: run.id,
-      label: range ? `${groupName}: ${range}` : `${groupName} (${run.id.slice(0, 8)})`,
-    };
-  }),
-);
-
 const matchEmployeesByName = (
-  employees: PayrollAllowanceEmployeeOption[],
+  employees: DayWorkEmployeeOption[],
   val: string,
-): PayrollAllowanceEmployeeOption[] => {
+): DayWorkEmployeeOption[] => {
   const needle = val.trim().toLowerCase();
   if (!needle) return [...employees];
 
@@ -251,27 +211,36 @@ const formatCurrency = (value: number | string | null | undefined) => {
   }).format(amount);
 };
 
-const employeeLabel = (row: HistoricalEmployeeAllowance) => {
+const employeeLabel = (row: EmployeeDayWork) => {
   const employee = row.employee;
-  if (!employee) return '—';
+  if (!employee) {
+    const option = store.employees.find((item) => item.id === row.employeeId);
+    return option?.displayName || '—';
+  }
   const name = `${employee.lastName ?? ''}, ${employee.firstName ?? ''}`.replace(/^,\s*|,\s*$/g, '').trim();
   return name || employee.code || 'Employee';
 };
 
 const refreshList = async () => {
   pagination.value.page = 1;
-  await store.fetchAllowances(1, pagination.value.rowsPerPage);
+  await store.fetchEntries(1, pagination.value.rowsPerPage);
 };
 
-const onPayrollRunChanged = async () => {
-  await refreshList();
+const onStartDateChanged = (value: string | null) => {
+  store.startDate = value ?? '';
+  void refreshList();
+};
+
+const onEndDateChanged = (value: string | null) => {
+  store.endDate = value ?? '';
+  void refreshList();
 };
 
 const onRequest: NonNullable<QTableProps['onRequest']> = (requestProps) => {
   const { page, rowsPerPage } = requestProps.pagination;
   pagination.value.page = page;
   pagination.value.rowsPerPage = rowsPerPage;
-  void store.fetchAllowances(page, rowsPerPage);
+  void store.fetchEntries(page, rowsPerPage);
 };
 
 const openCreate = () => {
@@ -279,27 +248,25 @@ const openCreate = () => {
   showForm.value = true;
 };
 
-const openEdit = (row: HistoricalEmployeeAllowance) => {
+const openEdit = (row: EmployeeDayWork) => {
   editingRecord.value = row;
   showForm.value = true;
 };
 
 const handleSave = async (payload: {
   employeeId: string;
-  allowanceId: string;
-  accountId: string;
-  payrollRunId: string;
-  quantity: number;
-  unitAmount: number;
+  date: string;
+  units: number;
+  dailyRate: number;
   note?: string;
 }) => {
   try {
     if (editingRecord.value?.id) {
-      await store.updateAllowance(editingRecord.value.id, payload);
-      $q.notify({ type: 'positive', message: 'Allowance updated' });
+      await store.updateEntry(editingRecord.value.id, payload);
+      $q.notify({ type: 'positive', message: 'Day / trip work updated' });
     } else {
-      await store.createAllowance(payload);
-      $q.notify({ type: 'positive', message: 'Allowance added' });
+      await store.createEntry(payload);
+      $q.notify({ type: 'positive', message: 'Day / trip work recorded' });
     }
     showForm.value = false;
     editingRecord.value = null;
@@ -308,17 +275,17 @@ const handleSave = async (payload: {
   }
 };
 
-const confirmDelete = (row: HistoricalEmployeeAllowance) => {
+const confirmDelete = (row: EmployeeDayWork) => {
   $q.dialog({
-    title: 'Delete allowance',
-    message: 'Remove this allowance from the upcoming payroll run?',
+    title: 'Delete day / trip work',
+    message: 'Remove this work entry? It will no longer be included in payroll.',
     cancel: true,
     persistent: true,
   }).onOk(() => {
     void (async () => {
       try {
-        await store.deleteAllowance(row.id);
-        $q.notify({ type: 'positive', message: 'Allowance deleted' });
+        await store.deleteEntry(row.id);
+        $q.notify({ type: 'positive', message: 'Entry deleted' });
       } catch {
         $q.notify({ type: 'negative', message: store.error || 'Delete failed' });
       }
@@ -328,8 +295,6 @@ const confirmDelete = (row: HistoricalEmployeeAllowance) => {
 
 onMounted(async () => {
   await store.bootstrap();
-  if (store.selectedPayrollRunId) {
-    await store.fetchAllowances(1, pagination.value.rowsPerPage);
-  }
+  await store.fetchEntries(1, pagination.value.rowsPerPage);
 });
 </script>

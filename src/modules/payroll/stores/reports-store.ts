@@ -157,6 +157,111 @@ export interface ScheduledVsWorkedHoursReport {
   totals: Omit<ScheduledVsWorkedHoursRow, 'employeeId' | 'employeeCode' | 'employeeName'>;
 }
 
+export interface PayeEmploymentDetailsRow {
+  employeeId: string;
+  tin: string;
+  taxpayerName: string;
+  socialSecurityNumber: string;
+  passport: string | null;
+  numberOfWeeksEmployed: number;
+  totalEmoluments: number;
+  taxableBenefits: number;
+  commissions: number;
+  taxWithheld: number;
+}
+
+export interface PayeEmploymentDetailsReport {
+  year: number;
+  month: number | null;
+  period: string;
+  startDate: string;
+  endDate: string;
+  submitter: {
+    tin: string;
+    name: string;
+    address: string;
+  };
+  rows: PayeEmploymentDetailsRow[];
+  totals: {
+    totalEmoluments: number;
+    taxableBenefits: number;
+    commissions: number;
+    taxWithheld: number;
+  };
+}
+
+export interface SocialSecurityPaymentsByMonthRow {
+  id: string;
+  employeeId: string | null;
+  employeeSocialSecurityNumber: string | null;
+  companySocialSecurityNumber: string | null;
+  year: number;
+  monthName: string;
+  calendarWeek: number;
+  weekMondayDate: string | null;
+  weeklyGrossPay: number;
+  socialSecurityAmount: number;
+  electronicEmployerNumber: string | null;
+  dateHired: string | null;
+  blank: string;
+  firstName: string | null;
+  lastName: string | null;
+  recordCode: string;
+}
+
+export interface SocialSecurityPaymentsByMonthReport {
+  id: string | null;
+  year: number;
+  month: number;
+  monthName: string;
+  calculatedAt: string | null;
+  rows: SocialSecurityPaymentsByMonthRow[];
+  totals: {
+    weeklyGrossPay: number;
+    socialSecurityAmount: number;
+    rowCount: number;
+  };
+}
+
+export interface SocialSecurityPaymentsByMonthPeriods {
+  years: number[];
+  monthsByYear: Record<string, Array<{ value: number; label: string }>>;
+}
+
+export interface BankUploadReportRow {
+  transactionType: string;
+  paymentType: string;
+  branchNumber: string;
+  default1: number;
+  default2: number;
+  default3: number;
+  accountNumber: string;
+  employeeName: string;
+  netPay: number;
+  payrollNumberLabel: string;
+  csvLine: string;
+}
+
+export interface BankUploadReport {
+  payrollRunId: string;
+  payrollNumber: number;
+  payrollNumberFormatted: string;
+  payrollNumberLabel: string;
+  payPeriodGroupId: string | null;
+  payPeriodGroupName: string | null;
+  payPeriodStartDate: string | null;
+  payPeriodEndDate: string | null;
+  companyName?: string | null;
+  generatedOn?: string | null;
+  branchNumber: string;
+  rows: BankUploadReportRow[];
+  totals: {
+    rowCount: number;
+    netPay: number;
+  };
+  csv: string;
+}
+
 export const useReportsStore = defineStore('reports', {
   state: () => ({
     journalEntryReport: null as JournalEntryReport | null,
@@ -164,11 +269,20 @@ export const useReportsStore = defineStore('reports', {
     payrollSummaryByDepartmentReport: null as PayrollSummaryByDepartmentReport | null,
     payrollJournalDepartmentsReport: null as PayrollJournalDepartmentsReport | null,
     scheduledVsWorkedHoursReport: null as ScheduledVsWorkedHoursReport | null,
+    payeEmploymentDetailsReport: null as PayeEmploymentDetailsReport | null,
+    socialSecurityPaymentsByMonthReport: null as SocialSecurityPaymentsByMonthReport | null,
+    socialSecurityPaymentsByMonthPeriods: null as SocialSecurityPaymentsByMonthPeriods | null,
+    bankUploadReport: null as BankUploadReport | null,
     isLoadingJournalEntries: false,
     isLoadingSalaryReview: false,
     isLoadingPayrollSummaryByDepartment: false,
     isLoadingPayrollJournalDepartments: false,
     isLoadingScheduledVsWorkedHours: false,
+    isLoadingPayeEmploymentDetails: false,
+    isLoadingSocialSecurityPaymentsByMonth: false,
+    isLoadingSocialSecurityPaymentsByMonthPeriods: false,
+    isRecalculatingSocialSecurityPaymentsByMonth: false,
+    isLoadingBankUpload: false,
     error: null as string | null,
   }),
 
@@ -355,6 +469,175 @@ export const useReportsStore = defineStore('reports', {
 
     clearScheduledVsWorkedHoursReport() {
       this.scheduledVsWorkedHoursReport = null;
+      this.error = null;
+    },
+
+    async fetchPayeEmploymentDetailsReport(params: {
+      year: number;
+      month?: number | null;
+      scope?: 'yearly' | 'monthly';
+    }): Promise<boolean> {
+      this.isLoadingPayeEmploymentDetails = true;
+      this.error = null;
+
+      try {
+        const query = new URLSearchParams({
+          year: String(params.year),
+          scope: params.scope ?? (params.month ? 'monthly' : 'yearly'),
+        });
+        if (params.month) {
+          query.append('month', String(params.month));
+        }
+
+        const response = await fetch(
+          `${API_URL}/reports/paye-employment-details?${query.toString()}`,
+          { headers: this.buildHeaders() },
+        );
+
+        const body = await response.json().catch(() => ({} as Record<string, unknown>));
+        if (!response.ok) {
+          throw new Error(this.parseError(body, 'Failed to load PAYE Employment Details report.'));
+        }
+
+        this.payeEmploymentDetailsReport = body as PayeEmploymentDetailsReport;
+        return true;
+      } catch (error) {
+        this.payeEmploymentDetailsReport = null;
+        this.error = error instanceof Error
+          ? error.message
+          : 'Failed to load PAYE Employment Details report.';
+        return false;
+      } finally {
+        this.isLoadingPayeEmploymentDetails = false;
+      }
+    },
+
+    clearPayeEmploymentDetailsReport() {
+      this.payeEmploymentDetailsReport = null;
+      this.error = null;
+    },
+
+    async fetchSocialSecurityPaymentsByMonthPeriods(): Promise<boolean> {
+      this.isLoadingSocialSecurityPaymentsByMonthPeriods = true;
+      this.error = null;
+
+      try {
+        const response = await fetch(
+          `${API_URL}/reports/social-security-payments-by-month/periods`,
+          { headers: this.buildHeaders() },
+        );
+        const body = await response.json().catch(() => ({} as Record<string, unknown>));
+        if (!response.ok) {
+          throw new Error(this.parseError(body, 'Failed to load available payroll periods.'));
+        }
+
+        this.socialSecurityPaymentsByMonthPeriods = body as SocialSecurityPaymentsByMonthPeriods;
+        return true;
+      } catch (error) {
+        this.socialSecurityPaymentsByMonthPeriods = null;
+        this.error = error instanceof Error
+          ? error.message
+          : 'Failed to load available payroll periods.';
+        return false;
+      } finally {
+        this.isLoadingSocialSecurityPaymentsByMonthPeriods = false;
+      }
+    },
+
+    async fetchSocialSecurityPaymentsByMonthReport(year: number, month: number): Promise<boolean> {
+      this.isLoadingSocialSecurityPaymentsByMonth = true;
+      this.error = null;
+
+      try {
+        const query = new URLSearchParams({
+          year: String(year),
+          month: String(month),
+        });
+        const response = await fetch(
+          `${API_URL}/reports/social-security-payments-by-month?${query.toString()}`,
+          { headers: this.buildHeaders() },
+        );
+        const body = await response.json().catch(() => ({} as Record<string, unknown>));
+        if (!response.ok) {
+          throw new Error(this.parseError(body, 'Failed to load social security payments report.'));
+        }
+
+        this.socialSecurityPaymentsByMonthReport = body as SocialSecurityPaymentsByMonthReport;
+        return true;
+      } catch (error) {
+        this.socialSecurityPaymentsByMonthReport = null;
+        this.error = error instanceof Error
+          ? error.message
+          : 'Failed to load social security payments report.';
+        return false;
+      } finally {
+        this.isLoadingSocialSecurityPaymentsByMonth = false;
+      }
+    },
+
+    async recalculateSocialSecurityPaymentsByMonthReport(year: number, month: number): Promise<boolean> {
+      this.isRecalculatingSocialSecurityPaymentsByMonth = true;
+      this.error = null;
+
+      try {
+        const response = await fetch(
+          `${API_URL}/reports/social-security-payments-by-month/recalculate`,
+          {
+            method: 'POST',
+            headers: this.buildHeaders(),
+            body: JSON.stringify({ year, month }),
+          },
+        );
+        const body = await response.json().catch(() => ({} as Record<string, unknown>));
+        if (!response.ok) {
+          throw new Error(this.parseError(body, 'Failed to recalculate social security payments report.'));
+        }
+
+        this.socialSecurityPaymentsByMonthReport = body as SocialSecurityPaymentsByMonthReport;
+        return true;
+      } catch (error) {
+        this.error = error instanceof Error
+          ? error.message
+          : 'Failed to recalculate social security payments report.';
+        return false;
+      } finally {
+        this.isRecalculatingSocialSecurityPaymentsByMonth = false;
+      }
+    },
+
+    clearSocialSecurityPaymentsByMonthReport() {
+      this.socialSecurityPaymentsByMonthReport = null;
+      this.error = null;
+    },
+
+    async fetchBankUploadReport(payrollRunId: string): Promise<boolean> {
+      this.isLoadingBankUpload = true;
+      this.error = null;
+
+      try {
+        const params = new URLSearchParams({ payroll_run_id: payrollRunId });
+        const response = await fetch(
+          `${API_URL}/reports/bank-upload?${params.toString()}`,
+          { headers: this.buildHeaders() },
+        );
+        const body = await response.json().catch(() => ({} as Record<string, unknown>));
+        if (!response.ok) {
+          throw new Error(this.parseError(body, 'Failed to generate bank upload report.'));
+        }
+
+        this.bankUploadReport = body as BankUploadReport;
+        return true;
+      } catch (error) {
+        this.bankUploadReport = null;
+        this.error = error instanceof Error ? error.message : 'Failed to generate bank upload report.';
+        return false;
+      } finally {
+        this.isLoadingBankUpload = false;
+      }
+    },
+
+    clearBankUploadReport() {
+      this.bankUploadReport = null;
       this.error = null;
     },
   },

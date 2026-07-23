@@ -73,6 +73,8 @@ watch(
   flex-direction: column;
   min-height: 100%;
   gap: 12px;
+  padding: 12px 16px 16px;
+  box-sizing: border-box;
 }
 
 .left-pane-search,

@@ -30,6 +30,11 @@ export const payrollRoutes: RouteRecordRaw[] = [
         props: { title: 'Payroll Allowances' },
       },
       {
+        path: '/payroll/day-work',
+        component: () => import('@payroll/pages/EmployeeDayWorkPage.vue'),
+        props: { title: 'Day / trip work' },
+      },
+      {
         path: '/payroll/generate-payslip',
         component: () => import('@payroll/pages/GeneratePayslipPage.vue'),
       },
@@ -69,6 +74,12 @@ export const payrollRoutes: RouteRecordRaw[] = [
         component: () => import('@payroll/components/settings/account/ManageAccounts.vue'),
         props: { title: 'Accounts' },
       },
+      {
+        path: '/settings/account-mapping',
+        component: () => import('@payroll/components/settings/account-mapping/ManagePayrollAccountMapping.vue'),
+        props: { title: 'Account Mapping' },
+      },
+      { path: '/settings/accounts/mapping', redirect: '/settings/account-mapping' },
       {
         path: '/settings/social-security',
         component: () => import('@payroll/components/settings/social-security/ManageSocialSecurity.vue'),

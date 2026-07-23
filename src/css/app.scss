@@ -92,3 +92,14 @@ body.platform-android:not(.native-mobile) .q-dialog__inner--minimized.q-dialog__
 body.platform-android:not(.native-mobile) .q-dialog__inner--minimized.q-dialog__inner--left > div {
   max-height: 100vh !important;
 }
+
+/* Keep toasts below the top menu/header */
+.q-notifications__list--top,
+.q-notifications__list--top-left,
+.q-notifications__list--top-right {
+  top: 56px;
+}
+
+.q-notification.app-toast {
+  margin-top: 0;
+}

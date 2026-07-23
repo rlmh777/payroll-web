@@ -104,6 +104,11 @@ export const coreRoutes: RouteRecordRaw[] = [
         path: '/settings/users',
         component: () => import('@core/components/users/ManageUsers.vue'),
       },
+      {
+        path: '/settings/database-backup',
+        component: () => import('@core/settings/database-backup/ManageDatabaseBackup.vue'),
+        props: { title: 'Database Backup' },
+      },
       { path: '/settings/pay-period', redirect: '/payroll/pay-period' },
     ],
   },

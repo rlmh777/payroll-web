@@ -2,7 +2,8 @@ export type CompensationMethod =
   | 'HOURLY_NO_OT'
   | 'HOURLY_OT'
   | 'BASE_NO_OT'
-  | 'BASE_OT';
+  | 'BASE_OT'
+  | 'DAILY_RATE';
 
 export type CompensationReasonType =
   | 'INITIAL'
@@ -42,6 +43,11 @@ export const COMPENSATION_METHOD_OPTIONS: Array<{
     value: 'BASE_OT',
     description: 'Annual base for scheduled hours, plus overtime for extra clocked time beyond the schedule.',
   },
+  {
+    label: 'Daily / trip rate',
+    value: 'DAILY_RATE',
+    description: 'Fixed daily rate paid only for days/trips entered by a supervisor. No clock-in. Units (e.g. 1, 2, 2.5 trips) × daily rate = pay.',
+  },
 ];
 
 export const COMPENSATION_REASON_OPTIONS: Array<{ label: string; value: CompensationReasonType }> = [
@@ -64,6 +70,7 @@ export interface EmployeeCompensationFormModel {
   requiresClocking: boolean;
   hourlyRate: number;
   yearlyRate: number;
+  dailyRate: number;
   standardWeeklyHours: number;
   reasonType: CompensationReasonType;
   reasonNote: string;
@@ -81,6 +88,7 @@ export function createDefaultEmployeeCompensationForm(): EmployeeCompensationFor
     requiresClocking: true,
     hourlyRate: 0,
     yearlyRate: 0,
+    dailyRate: 0,
     standardWeeklyHours: DEFAULT_STANDARD_WEEKLY_HOURS,
     reasonType: 'INCREMENT',
     reasonNote: '',
@@ -96,6 +104,9 @@ export function normalizeCompensationMethod(value?: string | null): Compensation
     return 'BASE_NO_OT';
   }
   if (normalized === 'BASE_OT' || normalized === 'WEEKLY_SALARY_OT') return 'BASE_OT';
+  if (normalized === 'DAILY_RATE' || normalized === 'DAY_RATE' || normalized === 'TRIP_RATE' || normalized === 'UNIT_RATE') {
+    return 'DAILY_RATE';
+  }
 
   return 'HOURLY_OT';
 }
@@ -106,6 +117,10 @@ export function isHourlyMethod(method: CompensationMethod): boolean {
 
 export function isBaseMethod(method: CompensationMethod): boolean {
   return method === 'BASE_NO_OT' || method === 'BASE_OT';
+}
+
+export function isDailyRateMethod(method: CompensationMethod): boolean {
+  return method === 'DAILY_RATE';
 }
 
 export function compensationAllowsOvertime(method: CompensationMethod): boolean {
@@ -200,6 +215,10 @@ export function effectiveYearlyRateFromForm(form: Pick<
   EmployeeCompensationFormModel,
   'compensationMethod' | 'hourlyRate' | 'yearlyRate' | 'standardWeeklyHours'
 >): number {
+  if (isDailyRateMethod(form.compensationMethod)) {
+    return 0;
+  }
+
   if (isBaseMethod(form.compensationMethod)) {
     return Number(form.yearlyRate) || 0;
   }
@@ -216,6 +235,10 @@ export function effectiveHourlyRateFromRecord(record: {
   yearlyRate?: string | number | null;
   standardWeeklyHours?: string | number | null;
 }): number | null {
+  if (isDailyRateMethod(normalizeCompensationMethod(record.compensationMethod))) {
+    return null;
+  }
+
   const hourlyRate = Number(record.hourlyRate ?? 0);
   if (hourlyRate > 0) return hourlyRate;
 
@@ -231,7 +254,19 @@ export function formatHourlyRate(record: {
   compensationMethod?: string | null;
   hourlyRate?: string | number | null;
   yearlyRate?: string | number | null;
+  dailyRate?: string | number | null;
 }): string {
+  if (isDailyRateMethod(normalizeCompensationMethod(record.compensationMethod))) {
+    const dailyRate = Number(record.dailyRate ?? 0);
+    if (dailyRate <= 0) return '—';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(dailyRate);
+  }
+
   const rate = effectiveHourlyRateFromRecord(record);
   if (rate == null) return '—';
 
@@ -266,7 +301,11 @@ export function validateCompensationFields(form: EmployeeCompensationFormModel):
     return 'Annual base rate is required for base-rate payment methods.';
   }
 
-  if (Number(form.standardWeeklyHours) <= 0) {
+  if (isDailyRateMethod(form.compensationMethod) && Number(form.dailyRate) <= 0) {
+    return 'Daily rate is required for day / trip payment methods.';
+  }
+
+  if (!isDailyRateMethod(form.compensationMethod) && Number(form.standardWeeklyHours) <= 0) {
     return 'Standard weekly hours must be greater than zero.';
   }
 
@@ -294,6 +333,7 @@ interface EmployeeCompensationRecordSource {
   requiresClocking?: boolean | null;
   hourlyRate?: string | number | null;
   yearlyRate?: string | number | null;
+  dailyRate?: string | number | null;
   standardWeeklyHours?: string | number | null;
   reasonType?: string | null;
   reasonNote?: string | null;
@@ -305,6 +345,7 @@ export function mapEmployeeCompensationRecordToForm(
   const compensationMethod = normalizeCompensationMethod(record.compensationMethod);
   const storedHourlyRate = Number(record.hourlyRate ?? 0);
   let yearlyRate = Number(record.yearlyRate ?? 0);
+  const dailyRate = Number(record.dailyRate ?? 0);
   const standardWeeklyHours = Number(record.standardWeeklyHours ?? DEFAULT_STANDARD_WEEKLY_HOURS);
   let hourlyRate = storedHourlyRate;
 
@@ -327,6 +368,7 @@ export function mapEmployeeCompensationRecordToForm(
     requiresClocking: record.requiresClocking ?? defaultRequiresClocking(compensationMethod),
     hourlyRate,
     yearlyRate,
+    dailyRate,
     standardWeeklyHours: standardWeeklyHours > 0 ? standardWeeklyHours : DEFAULT_STANDARD_WEEKLY_HOURS,
     reasonType: (record.reasonType?.toUpperCase() as CompensationReasonType) ?? 'OTHER',
     reasonNote: record.reasonNote ?? '',

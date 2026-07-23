@@ -6,13 +6,13 @@
         
         <div class="row items-center q-mb-md">
           <q-avatar
-            :style="{ backgroundColor: getAvatarColor(user.name) }"
+            :style="{ backgroundColor: getUserAvatarColor(user.name || user.email) }"
             text-color="white"
             size="64px"
             class="q-mr-md"
             font-size="24px"
           >
-            {{ getInitial(user.name) }}
+            {{ getUserInitials(user.name) }}
           </q-avatar>
           <div>
             <div class="text-h6">{{ user.name }}</div>
@@ -158,6 +158,7 @@ import { ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useUserStore, type User } from '../../stores/user-store';
 import EmployeeSelect from '@hr/components/shared/EmployeeSelect.vue';
+import { getUserAvatarColor, getUserInitials } from './user-avatar';
 
 const props = defineProps<{
   user: User | null;
@@ -187,36 +188,6 @@ watch(() => props.user, (newUser) => {
     confirmPassword: '',
   };
 });
-
-const getInitial = (name: string | undefined | null): string => {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    const first = parts[0];
-    const last = parts[parts.length - 1];
-    if (first && last && first[0] && last[0]) {
-      return (first[0] + last[0]).toUpperCase();
-    }
-  }
-  return name.charAt(0).toUpperCase();
-};
-
-const getAvatarColor = (name: string | undefined | null): string => {
-  const colors: string[] = [
-    '#1976d2', '#388e3c', '#f57c00', '#7b1fa2', '#c2185b',
-    '#0097a7', '#5d4037', '#455a64', '#d32f2f', '#0288d1',
-    '#00796b', '#8e24aa', '#e64a19', '#303f9f', '#c62828',
-    '#558b2f', '#ef6c00', '#6a1b9a', '#00838f', '#ad1457',
-    '#1565c0', '#2e7d32', '#e65100', '#4a148c', '#b71c1c',
-  ];
-
-  if (!name) return colors[0]!;
-
-  const initial = name.charAt(0).toUpperCase();
-  const charCode = initial.charCodeAt(0);
-  const colorIndex = charCode % colors.length;
-  return colors[colorIndex]!;
-};
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
