@@ -3,8 +3,13 @@
     <q-card-section class="employee-group-header row items-center justify-between q-col-gutter-md">
       <div class="col-12 col-md">
         <div class="row items-center q-gutter-md">
-          <q-avatar color="blue-1" text-color="primary" size="40px">
-            {{ employeeInitials(group.employeeName) }}
+          <q-avatar
+            :style="{ backgroundColor: getUserAvatarColor(group.employeeName) }"
+            text-color="white"
+            size="40px"
+            font-size="16px"
+          >
+            {{ getUserInitials(group.employeeName) }}
           </q-avatar>
           <div>
             <div class="text-subtitle1 text-weight-bold">{{ group.employeeName || 'Unknown employee' }}</div>
@@ -400,7 +405,15 @@ import type { TimesheetEmployeeGroup } from '@hr/stores/timesheet-store';
 import AddTimesheetDialog from './AddTimesheetDialog.vue';
 import EditTimesheetDialog from './EditTimesheetDialog.vue';
 import { TIMESHEET_TABLE_COLUMNS } from '@hr/utils/timesheet-table-columns';
-import { formatDate, formatDateTime, formatOvertimeForPayType, formatPayType, humanizeStatus, workingStatusColor } from '@payroll/components/attendance/utils';
+import {
+  formatDate,
+  formatDateTime,
+  formatOvertimeForPayType,
+  formatPayType,
+  humanizeStatus,
+  workingStatusColor,
+} from '@payroll/components/attendance/utils';
+import { getUserAvatarColor, getUserInitials } from '@core/components/users/user-avatar';
 import {
   buildRoundOffDateTimes,
   formatTimesheetClockTime,
@@ -506,17 +519,6 @@ async function saveComment(row: TimesheetRow) {
 
   commentDrafts[row.id] = updated.comment || '';
   Object.assign(row, updated);
-}
-
-function employeeInitials(name?: string | null) {
-  if (!name) return '?';
-
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
 }
 
 function approvalColor(value?: string | null) {
