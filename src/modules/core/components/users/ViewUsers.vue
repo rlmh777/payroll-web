@@ -69,7 +69,7 @@ const isInfiniteScrollDisabled = computed(
 );
 
 watch(
-  () => [userStore.searchName, userStore.sortBy, userStore.sortDirection],
+  () => [userStore.searchName, userStore.roleId, userStore.sortBy, userStore.sortDirection],
   async () => {
     if (!isInitialLoad.value) {
       await userStore.fetchUsers(true);
@@ -105,14 +105,13 @@ const emit = defineEmits<{
 
 <style scoped>
 .view-users-container {
-  width: min(320px, 38vw);
-  min-width: 260px;
-  max-width: 360px;
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .users-list {

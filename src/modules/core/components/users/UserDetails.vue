@@ -22,6 +22,55 @@
 
         <q-separator class="q-my-md" />
 
+        <!-- Roles Section -->
+        <div class="q-mb-md">
+          <div class="text-subtitle1 q-mb-sm">Roles</div>
+          <div class="row q-gutter-sm q-mb-sm items-center">
+            <q-chip
+              v-for="role in userRoles"
+              :key="role.id"
+              color="primary"
+              text-color="white"
+              removable
+              :disable="isUpdatingRoles"
+              @remove="onRemoveRole(role.id)"
+            >
+              {{ role.name }}
+            </q-chip>
+            <div v-if="userRoles.length === 0" class="text-body2 text-grey-6">
+              No roles assigned
+            </div>
+          </div>
+          <div class="row q-gutter-sm items-end">
+            <div class="col">
+              <q-select
+                v-model="roleToAdd"
+                :options="availableRoleOptions"
+                label="Add role"
+                outlined
+                dense
+                emit-value
+                map-options
+                options-dense
+                clearable
+                :disable="isUpdatingRoles || availableRoleOptions.length === 0"
+                :loading="roleStore.isLoadingRoles"
+              />
+            </div>
+            <div class="col-auto">
+              <q-btn
+                label="Add"
+                color="primary"
+                :disable="!roleToAdd"
+                :loading="isUpdatingRoles"
+                @click="onAddRole"
+              />
+            </div>
+          </div>
+        </div>
+
+        <q-separator class="q-my-md" />
+
         <!-- Send Password Reset Email Section -->
         <div class="q-mb-md">
           <div class="text-subtitle1 q-mb-sm">Password Reset Email</div>
@@ -154,9 +203,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useUserStore, type User } from '../../stores/user-store';
+import { useRoleStore } from '../../stores/role-store';
 import EmployeeSelect from '@hr/components/shared/EmployeeSelect.vue';
 import { getUserAvatarColor, getUserInitials } from './user-avatar';
 
@@ -164,7 +214,12 @@ const props = defineProps<{
   user: User | null;
 }>();
 
+const emit = defineEmits<{
+  updated: [user: User];
+}>();
+
 const userStore = useUserStore();
+const roleStore = useRoleStore();
 const $q = useQuasar();
 
 const passwordForm = ref({
@@ -173,9 +228,29 @@ const passwordForm = ref({
 });
 
 const selectedEmployeeId = ref<string | null>(null);
+const roleToAdd = ref<string | null>(null);
 const isChangingPassword = ref(false);
 const isLinkingEmployee = ref(false);
 const isSendingResetEmail = ref(false);
+const isUpdatingRoles = ref(false);
+
+const userRoles = computed(() => props.user?.rolesManyToMany || []);
+
+const availableRoleOptions = computed(() => {
+  const assignedIds = new Set(userRoles.value.map((role) => role.id));
+  return roleStore.roles
+    .filter((role) => !assignedIds.has(role.id))
+    .map((role) => ({
+      label: role.name,
+      value: role.id,
+    }));
+});
+
+onMounted(async () => {
+  if (roleStore.roles.length === 0) {
+    await roleStore.fetchRoles(1, 100);
+  }
+});
 
 watch(() => props.user, (newUser) => {
   if (newUser) {
@@ -183,6 +258,7 @@ watch(() => props.user, (newUser) => {
   } else {
     selectedEmployeeId.value = null;
   }
+  roleToAdd.value = null;
   passwordForm.value = {
     newPassword: '',
     confirmPassword: '',
@@ -192,6 +268,90 @@ watch(() => props.user, (newUser) => {
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+};
+
+const refreshUser = async (userId: string) => {
+  const fullUser = await userStore.fetchUserById(userId);
+  if (fullUser) {
+    emit('updated', fullUser);
+  }
+  return fullUser;
+};
+
+const onAddRole = async () => {
+  if (!props.user || !roleToAdd.value) return;
+
+  isUpdatingRoles.value = true;
+  try {
+    const updated = await userStore.assignRoles(props.user.id, [roleToAdd.value]);
+    if (updated) {
+      $q.notify({
+        type: 'positive',
+        message: 'Role added successfully',
+        position: 'top',
+      });
+      roleToAdd.value = null;
+      emit('updated', updated);
+      await refreshUser(props.user.id);
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: userStore.error || 'Failed to add role',
+        position: 'top',
+      });
+    }
+  } catch (error) {
+    console.error('Error adding role:', error);
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to add role',
+      position: 'top',
+    });
+  } finally {
+    isUpdatingRoles.value = false;
+  }
+};
+
+const onRemoveRole = (roleId: string) => {
+  if (!props.user) return;
+
+  $q.dialog({
+    title: 'Remove Role',
+    message: 'Remove this role from the user?',
+    cancel: true,
+  }).onOk(() => {
+    void (async () => {
+      if (!props.user) return;
+      isUpdatingRoles.value = true;
+      try {
+        const updated = await userStore.removeRoles(props.user.id, [roleId]);
+        if (updated) {
+          $q.notify({
+            type: 'positive',
+            message: 'Role removed successfully',
+            position: 'top',
+          });
+          emit('updated', updated);
+          await refreshUser(props.user.id);
+        } else {
+          $q.notify({
+            type: 'negative',
+            message: userStore.error || 'Failed to remove role',
+            position: 'top',
+          });
+        }
+      } catch (error) {
+        console.error('Error removing role:', error);
+        $q.notify({
+          type: 'negative',
+          message: 'Failed to remove role',
+          position: 'top',
+        });
+      } finally {
+        isUpdatingRoles.value = false;
+      }
+    })();
+  });
 };
 
 const onSendPasswordResetEmail = () => {
@@ -290,8 +450,7 @@ const onLinkEmployee = async () => {
         message: 'Employee linked successfully',
         position: 'top',
       });
-      // Refresh user data
-      await userStore.fetchUserById(props.user.id);
+      await refreshUser(props.user.id);
     } else {
       $q.notify({
         type: 'negative',
@@ -320,35 +479,35 @@ const onUnlinkEmployee = () => {
     cancel: true,
   }).onOk(() => {
     void (async () => {
-    isLinkingEmployee.value = true;
-    try {
-      // Unlink by setting employee_id to null
-      const success = await userStore.linkUserToEmployee(props?.user?.id || '', null);
-      
-      if (success) {
-        $q.notify({
-          type: 'positive',
-          message: 'Employee unlinked successfully',
-          position: 'top',
-        });
-        await userStore.fetchUserById(props?.user?.id || '');
-      } else {
+      if (!props.user) return;
+      isLinkingEmployee.value = true;
+      try {
+        const success = await userStore.linkUserToEmployee(props.user.id, null);
+
+        if (success) {
+          $q.notify({
+            type: 'positive',
+            message: 'Employee unlinked successfully',
+            position: 'top',
+          });
+          await refreshUser(props.user.id);
+        } else {
+          $q.notify({
+            type: 'negative',
+            message: userStore.error || 'Failed to unlink employee',
+            position: 'top',
+          });
+        }
+      } catch (error) {
+        console.error('Error unlinking employee:', error);
         $q.notify({
           type: 'negative',
-          message: userStore.error || 'Failed to unlink employee',
+          message: 'Failed to unlink employee',
           position: 'top',
         });
+      } finally {
+        isLinkingEmployee.value = false;
       }
-    } catch (error) {
-      console.error('Error unlinking employee:', error);
-      $q.notify({
-        type: 'negative',
-        message: 'Failed to unlink employee',
-        position: 'top',
-      });
-    } finally {
-      isLinkingEmployee.value = false;
-    }
     })();
   });
 };

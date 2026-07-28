@@ -22,6 +22,47 @@ export interface User {
   }>;
 }
 
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+  roles?: string[];
+}
+
+const authHeaders = (): HeadersInit => {
+  const authStore = useAuthStore();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (authStore.token) {
+    headers['Authorization'] = `Bearer ${authStore.token}`;
+  }
+
+  return headers;
+};
+
+const parseApiError = async (response: Response, fallback: string): Promise<string> => {
+  try {
+    const data = await response.json();
+    if (data?.message && typeof data.message === 'string') {
+      return data.message;
+    }
+    if (data?.errors && typeof data.errors === 'object') {
+      const first = Object.values(data.errors as Record<string, string[] | string>)[0];
+      if (Array.isArray(first) && first[0]) return first[0];
+      if (typeof first === 'string') return first;
+    }
+    if (data?.error && typeof data.error === 'string') {
+      return data.error;
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return fallback;
+};
+
 export const useUserStore = defineStore('user', {
   state: () => ({
     users: [] as User[],
@@ -33,6 +74,7 @@ export const useUserStore = defineStore('user', {
     total: 0,
     hasMore: true,
     searchName: null as string | null,
+    roleId: null as string | null,
     sortBy: 'name' as string,
     sortDirection: 'asc' as 'asc' | 'desc',
     perPage: 15,
@@ -41,6 +83,20 @@ export const useUserStore = defineStore('user', {
   getters: {},
 
   actions: {
+    upsertUser(user: User) {
+      const index = this.users.findIndex((item) => item.id === user.id);
+      if (index >= 0) {
+        this.users[index] = { ...this.users[index], ...user };
+      } else {
+        this.users = [user, ...this.users];
+        this.total += 1;
+      }
+
+      if (this.selectedUser?.id === user.id) {
+        this.selectedUser = { ...this.selectedUser, ...user };
+      }
+    },
+
     async fetchUsers(reset: boolean = true) {
       if (this.isLoading) return;
 
@@ -53,26 +109,18 @@ export const useUserStore = defineStore('user', {
         this.hasMore = true;
       }
 
-      const authStore = useAuthStore();
       const queryParams = new URLSearchParams();
-      
+
       if (this.searchName) queryParams.append('search', this.searchName);
+      if (this.roleId) queryParams.append('role_id', this.roleId);
       if (this.sortBy) queryParams.append('sortBy', this.sortBy);
       if (this.sortDirection) queryParams.append('sortDirection', this.sortDirection);
       if (this.perPage) queryParams.append('per_page', this.perPage.toString());
       queryParams.append('page', this.currentPage.toString());
 
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (authStore.token) {
-        headers['Authorization'] = `Bearer ${authStore.token}`;
-      }
-
       try {
         const response = await fetch(`${API_URL}/users?${queryParams.toString()}`, {
-          headers,
+          headers: authHeaders(),
         });
 
         if (!response.ok) {
@@ -109,18 +157,9 @@ export const useUserStore = defineStore('user', {
     },
 
     async fetchUserById(userId: string): Promise<User | null> {
-      const authStore = useAuthStore();
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (authStore.token) {
-        headers['Authorization'] = `Bearer ${authStore.token}`;
-      }
-
       try {
         const response = await fetch(`${API_URL}/users/${userId}`, {
-          headers,
+          headers: authHeaders(),
         });
 
         if (!response.ok) {
@@ -128,7 +167,9 @@ export const useUserStore = defineStore('user', {
         }
 
         const data = await response.json();
-        return data.data || data;
+        const user = (data.data || data) as User;
+        this.upsertUser(user);
+        return user;
       } catch (error) {
         console.error('Error fetching user:', error);
         this.error = error instanceof Error ? error.message : 'Error fetching user';
@@ -136,20 +177,90 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    async updateUserPassword(userId: string, password: string): Promise<boolean> {
-      const authStore = useAuthStore();
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
+    async createUser(payload: CreateUserPayload): Promise<User | null> {
+      this.error = null;
 
-      if (authStore.token) {
-        headers['Authorization'] = `Bearer ${authStore.token}`;
+      try {
+        const response = await fetch(`${API_URL}/users`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          this.error = await parseApiError(response, `Failed to create user: ${response.statusText}`);
+          return null;
+        }
+
+        const data = await response.json();
+        const user = (data.data || data) as User;
+        this.upsertUser(user);
+        this.setSelectedUser(user);
+        return user;
+      } catch (error) {
+        console.error('Error creating user:', error);
+        this.error = error instanceof Error ? error.message : 'Error creating user';
+        return null;
       }
+    },
 
+    async assignRoles(userId: string, roleIds: string[]): Promise<User | null> {
+      this.error = null;
+
+      try {
+        const response = await fetch(`${API_URL}/users/${userId}/roles`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ roles: roleIds }),
+        });
+
+        if (!response.ok) {
+          this.error = await parseApiError(response, `Failed to assign roles: ${response.statusText}`);
+          return null;
+        }
+
+        const data = await response.json();
+        const user = (data.data || data) as User;
+        this.upsertUser(user);
+        return user;
+      } catch (error) {
+        console.error('Error assigning roles:', error);
+        this.error = error instanceof Error ? error.message : 'Error assigning roles';
+        return null;
+      }
+    },
+
+    async removeRoles(userId: string, roleIds: string[]): Promise<User | null> {
+      this.error = null;
+
+      try {
+        const response = await fetch(`${API_URL}/users/${userId}/roles`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+          body: JSON.stringify({ roles: roleIds }),
+        });
+
+        if (!response.ok) {
+          this.error = await parseApiError(response, `Failed to remove roles: ${response.statusText}`);
+          return null;
+        }
+
+        const data = await response.json();
+        const user = (data.user || data.data || data) as User;
+        this.upsertUser(user);
+        return user;
+      } catch (error) {
+        console.error('Error removing roles:', error);
+        this.error = error instanceof Error ? error.message : 'Error removing roles';
+        return null;
+      }
+    },
+
+    async updateUserPassword(userId: string, password: string): Promise<boolean> {
       try {
         const response = await fetch(`${API_URL}/users/${userId}/password`, {
           method: 'PUT',
-          headers,
+          headers: authHeaders(),
           body: JSON.stringify({ password }),
         });
 
@@ -166,19 +277,10 @@ export const useUserStore = defineStore('user', {
     },
 
     async sendPasswordResetEmail(userId: string): Promise<boolean> {
-      const authStore = useAuthStore();
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (authStore.token) {
-        headers['Authorization'] = `Bearer ${authStore.token}`;
-      }
-
       try {
         const response = await fetch(`${API_URL}/users/${userId}/send-password-reset`, {
           method: 'POST',
-          headers,
+          headers: authHeaders(),
         });
 
         if (!response.ok) {
@@ -224,19 +326,10 @@ export const useUserStore = defineStore('user', {
     },
 
     async linkUserToEmployee(userId: string, employeeId: string | null): Promise<boolean> {
-      const authStore = useAuthStore();
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (authStore.token) {
-        headers['Authorization'] = `Bearer ${authStore.token}`;
-      }
-
       try {
         const response = await fetch(`${API_URL}/users/${userId}/employee`, {
           method: 'PUT',
-          headers,
+          headers: authHeaders(),
           body: JSON.stringify({ employee_id: employeeId || null }),
         });
 
@@ -244,7 +337,6 @@ export const useUserStore = defineStore('user', {
           throw new Error(`Failed to link user to employee: ${response.statusText}`);
         }
 
-        // Refresh the user data
         await this.fetchUserById(userId);
         return true;
       } catch (error) {
@@ -256,6 +348,14 @@ export const useUserStore = defineStore('user', {
 
     setSelectedUser(user: User | null) {
       this.selectedUser = user;
+    },
+
+    setSearchName(value: string | null) {
+      this.searchName = value?.trim() ? value.trim() : null;
+    },
+
+    setRoleId(value: string | null) {
+      this.roleId = value || null;
     },
   },
 });

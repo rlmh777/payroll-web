@@ -34,6 +34,11 @@
           </q-icon>
         </div>
 
+        <div v-if="roleNames" class="user-card__roles" :title="roleNames">
+          <q-icon name="shield" size="12px" />
+          <span>{{ roleNames }}</span>
+        </div>
+
         <div v-if="employeeLabel" class="user-card__employee" :title="employeeLabel">
           <q-icon name="badge" size="12px" />
           <span>{{ employeeLabel }}</span>
@@ -73,6 +78,10 @@ const employeeLabel = computed(() => {
   const code = props.user.employee.code ? ` · ${props.user.employee.code}` : '';
   return `${name}${code}`.trim();
 });
+
+const roleNames = computed(() =>
+  (props.user.rolesManyToMany || []).map((role) => role.name).join(', '),
+);
 
 const copyToClipboard = async (text: string, label: string) => {
   try {
@@ -188,7 +197,19 @@ const copyToClipboard = async (text: string, label: string) => {
   line-height: 1.25;
 }
 
-.user-card__employee span {
+.user-card__roles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.user-card__employee span,
+.user-card__roles span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
