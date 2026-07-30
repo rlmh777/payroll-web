@@ -13,6 +13,7 @@
           dense
           :loading="store.isLoading"
           no-data-label="No account mappings"
+          :pagination="{ rowsPerPage: 20 }"
         >
           <template #body-cell-account="props">
             <q-td :props="props">

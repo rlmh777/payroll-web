@@ -158,7 +158,7 @@ export const useEmploymentDetailStore = defineStore('employmentDetail', {
       id: string,
       payload: Partial<EmploymentDetailPayload>,
       contractAgreementFile?: File | null,
-    ): Promise<{ revised: boolean; data?: EmploymentDetail }> {
+    ): Promise<{ data?: EmploymentDetail }> {
       const { body, headers } = this.buildRequestBody(payload, contractAgreementFile);
 
       if (contractAgreementFile && body instanceof FormData) {
@@ -179,9 +179,7 @@ export const useEmploymentDetailStore = defineStore('employmentDetail', {
       const result = await response.json();
       const data = result.data as EmploymentDetail | undefined;
 
-      return data
-        ? { revised: Boolean(result.revised), data }
-        : { revised: Boolean(result.revised) };
+      return data ? { data } : {};
     },
 
     async deleteRecord(id: string) {

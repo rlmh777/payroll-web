@@ -263,7 +263,7 @@ const canAccess = computed(() => Boolean(store.teamAccess?.canAccess));
 
 const pagination = ref({
   page: 1,
-  rowsPerPage: 15,
+  rowsPerPage: 20,
   rowsNumber: 0,
 });
 

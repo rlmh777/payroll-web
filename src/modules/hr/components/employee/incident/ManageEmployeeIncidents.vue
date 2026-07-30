@@ -19,6 +19,7 @@
       dense
       :loading="store.isLoading"
       no-data-label="No incidents recorded"
+      :pagination="{ rowsPerPage: 20 }"
     >
       <template #body-cell-severity="props">
         <q-td :props="props">

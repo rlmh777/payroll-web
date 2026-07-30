@@ -19,6 +19,7 @@
       dense
       :loading="store.isLoadingPoints"
       no-data-label="No pool points recorded"
+      :pagination="{ rowsPerPage: 20 }"
     >
       <template #body-cell-actions="props">
         <q-td :props="props" class="text-right">

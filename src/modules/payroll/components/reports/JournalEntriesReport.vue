@@ -108,6 +108,7 @@
           dense
           :loading="reportsStore.isLoadingJournalEntries"
           no-data-label="No journal entry lines found for this payroll run."
+          :pagination="{ rowsPerPage: 20 }"
         >
           <template #body-cell-debit="props">
             <q-td :props="props" class="text-right">

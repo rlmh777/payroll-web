@@ -68,6 +68,7 @@
           dense
           :loading="reportsStore.isLoadingScheduledVsWorkedHours"
           no-data-label="No employees found for this payroll run."
+          :pagination="{ rowsPerPage: 20 }"
         >
           <template #body-cell-employeeName="props">
             <q-td :props="props">

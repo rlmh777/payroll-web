@@ -13,6 +13,7 @@
       dense
       :loading="store.isLoading"
       no-data-label="No skills"
+      :pagination="{ rowsPerPage: 20 }"
     >
       <template #body-cell-actions="props">
         <q-td :props="props" class="text-right">

@@ -13,6 +13,7 @@
       dense
       :loading="store.isLoading"
       no-data-label="No employment contracts"
+      :pagination="{ rowsPerPage: 20 }"
     >
       <template #body-cell-isActive="props">
         <q-td :props="props">

@@ -12,7 +12,7 @@
           bordered
           dense
           :loading="store.isLoadingInstitutions"
-          :v-model:pagination="pagination"
+          v-model:pagination="pagination"
           :rows-per-page-options="[10, 15, 20]"
           server-side
           @request="onRequest"
@@ -68,7 +68,7 @@ const $q = useQuasar();
 
 const pagination = ref({
   page: 1,
-  rowsPerPage: store.total,
+  rowsPerPage: 20,
   rowsNumber: store.total,
   sortBy: 'name',
   descending: false,

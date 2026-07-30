@@ -20,6 +20,7 @@
       dense
       :loading="store.isLoadingHoursBank"
       no-data-label="No hours bank ledger entries"
+      :pagination="{ rowsPerPage: 20 }"
     />
 
     <q-dialog v-model="adjustOpen">

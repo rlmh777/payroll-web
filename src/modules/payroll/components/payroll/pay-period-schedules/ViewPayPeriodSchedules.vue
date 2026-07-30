@@ -133,7 +133,7 @@ const showDeleteDialog = ref(false);
 const recordToDelete = ref<PayPeriodSchedule | null>(null);
 
 const pagination = ref({
-  rowsPerPage: 10,
+  rowsPerPage: 20,
   page: 1,
   rowsNumber: 0,
 });

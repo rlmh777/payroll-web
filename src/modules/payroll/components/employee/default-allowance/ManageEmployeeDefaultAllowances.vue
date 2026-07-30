@@ -196,7 +196,7 @@ const selectedEmployeeDefaultAllowance = ref<EmployeeDefaultAllowance | null>(nu
 const employeeDefaultAllowanceToDelete = ref<EmployeeDefaultAllowance | null>(null);
 
 const pagination = ref({
-  rowsPerPage: 10,
+  rowsPerPage: 20,
   page: 1,
   rowsNumber: 0,
 });

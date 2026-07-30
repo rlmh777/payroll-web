@@ -13,6 +13,7 @@
       dense
       :loading="store.isLoading"
       no-data-label="No bank accounts on file"
+      :pagination="{ rowsPerPage: 20 }"
     >
       <template #body-cell-bank="props">
         <q-td :props="props">

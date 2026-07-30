@@ -144,7 +144,7 @@ const selectedRecord = ref<PersonalRelief | null>(null);
 const recordToDelete = ref<PersonalRelief | null>(null);
 
 const pagination = ref({
-  rowsPerPage: 10,
+  rowsPerPage: 20,
   page: 1,
   rowsNumber: 0,
 });

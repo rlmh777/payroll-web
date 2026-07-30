@@ -65,7 +65,7 @@ export const useDepartmentHeadStore = defineStore('departmentHead', {
 
       try {
         const currentPage = page ?? this.currentPage;
-        const itemsPerPage = perPage ?? 10;
+        const itemsPerPage = perPage ?? 20;
         const params = new URLSearchParams({
           page: String(currentPage),
           per_page: String(itemsPerPage),

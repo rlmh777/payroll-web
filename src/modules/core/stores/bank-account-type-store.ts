@@ -46,7 +46,7 @@ export const useBankAccountTypeStore = defineStore('bankAccountType', {
 
       try {
         const currentPage = page ?? this.currentPage;
-        const itemsPerPage = perPage ?? 10;
+        const itemsPerPage = perPage ?? 20;
 
         const queryParams = new URLSearchParams({
           page: String(currentPage),

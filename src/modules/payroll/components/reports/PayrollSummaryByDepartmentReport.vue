@@ -115,6 +115,7 @@
               dense
               :loading="reportsStore.isLoadingPayrollSummaryByDepartment"
               no-data-label="No employees found for this department."
+              :pagination="{ rowsPerPage: 20 }"
             >
               <template #body-cell-regularAmount="props">
                 <q-td :props="props" class="text-right">{{ formatPayrollSummaryCurrency(props.row.regularAmount) }}</q-td>

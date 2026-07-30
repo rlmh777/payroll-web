@@ -101,7 +101,7 @@ const showDeleteDialog = ref(false);
 const selected = ref<HistoricalEmployeeDeduction | null>(null);
 const toDelete = ref<HistoricalEmployeeDeduction | null>(null);
 
-const pagination = ref({ rowsPerPage: 10, page: 1, rowsNumber: 0 });
+const pagination = ref({ rowsPerPage: 20, page: 1, rowsNumber: 0 });
 
 watch(
   () => [store.currentPage, store.total],

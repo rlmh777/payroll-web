@@ -90,7 +90,7 @@
                 :columns="previewColumns"
                 row-key="__rowIndex"
                 :rows-per-page-options="[10, 25]"
-                :pagination="{ rowsPerPage: 10 }"
+                :pagination="{ rowsPerPage: 20 }"
               />
             </template>
           </div>

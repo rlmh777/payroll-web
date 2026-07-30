@@ -142,7 +142,7 @@ const selectedAccountType = ref<AccountType | null>(null);
 const accountTypeToDelete = ref<AccountType | null>(null);
 
 const pagination = ref({
-  rowsPerPage: 10,
+  rowsPerPage: 20,
   page: 1,
   rowsNumber: 0,
 });

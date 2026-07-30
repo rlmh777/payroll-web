@@ -8,7 +8,7 @@
       </div>
     </div>
 
-    <q-table :rows="rows" :columns="columns" row-key="id" flat bordered>
+    <q-table :rows="rows" :columns="columns" row-key="id" flat bordered :pagination="{ rowsPerPage: 20 }">
       <template #body-cell-status="props">
         <q-td :props="props">
           <q-badge

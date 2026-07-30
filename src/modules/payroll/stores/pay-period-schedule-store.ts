@@ -65,7 +65,7 @@ export const usePayPeriodScheduleStore = defineStore('payPeriodSchedule', {
         }
 
         const currentPage = page ?? this.currentPage;
-        const itemsPerPage = perPage ?? 10;
+        const itemsPerPage = perPage ?? 20;
         queryParams.append('page', currentPage.toString());
         queryParams.append('per_page', itemsPerPage.toString());
 

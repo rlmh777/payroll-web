@@ -220,7 +220,7 @@ const menuToDelete = ref<Menu | null>(null);
 
 const pagination = ref({
   page: 1,
-  rowsPerPage: 15,
+  rowsPerPage: 20,
   rowsNumber: 0,
   sortBy: 'order',
   descending: false,

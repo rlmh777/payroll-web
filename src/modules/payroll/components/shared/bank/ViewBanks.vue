@@ -132,7 +132,7 @@ const selectedBank = ref<Bank | null>(null);
 const bankToDelete = ref<Bank | null>(null);
 
 const pagination = ref({
-  rowsPerPage: 10,
+  rowsPerPage: 20,
   page: 1,
   rowsNumber: 0,
 });

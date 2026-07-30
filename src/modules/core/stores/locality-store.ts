@@ -43,7 +43,7 @@ export const useLocalityStore = defineStore('locality', {
         // 1. Determine Pagination Parameters
         const currentPage = page ?? this.currentPage;
         // Default page size (e.g., 10) if not provided and state is missing
-        const itemsPerPage = perPage ?? 10;
+        const itemsPerPage = perPage ?? 20;
         const queryParams = new URLSearchParams({
           page: String(currentPage),
           per_page: String(itemsPerPage),

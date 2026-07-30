@@ -74,6 +74,7 @@
           dense
           :loading="store.isLoading || store.isRestoring"
           no-data-label="No backups yet"
+          :pagination="{ rowsPerPage: 20 }"
         >
           <template #body-cell-type="props">
             <q-td :props="props">

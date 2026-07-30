@@ -8,6 +8,7 @@
       bordered
       :loading="loading"
       no-data-label="No timesheet templates defined."
+      :pagination="{ rowsPerPage: 20 }"
     >
       <template #body-cell-schedule="props">
         <q-td :props="props">

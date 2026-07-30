@@ -7,14 +7,6 @@
         <q-btn icon="close" flat round dense :disable="saving" @click="closeDialog" />
       </q-card-section>
       <q-card-section class="employment-contract-drawer__body q-pa-none">
-        <q-banner
-          v-if="store.recordToEdit?.isActive"
-          dense
-          rounded
-          class="bg-blue-1 text-primary q-mb-md"
-        >
-          Changing department, work site, or pay period group creates a new contract version and closes the current one.
-        </q-banner>
         <q-form @submit.prevent="save">
           <EmploymentDetailForm v-model="form" :disable="saving" />
           <EmploymentLeaveEntitlements
@@ -89,7 +81,7 @@ async function save() {
 
   saving.value = true;
   try {
-    const result = await store.updateRecord(store.recordToEdit.id, {
+    await store.updateRecord(store.recordToEdit.id, {
       startDate: form.startDate,
       endDate: form.endDate || null,
       isActive: form.isActive,
@@ -104,20 +96,14 @@ async function save() {
       defaultPayPeriodGroupId: form.defaultPayPeriodGroupId as string,
     }, form.contractAgreementFile);
 
-    const contractId = result.revised && result.data?.id
-      ? result.data.id
-      : store.recordToEdit.id;
-
-    if (entitlementsRef.value && contractId) {
-      await entitlementsRef.value.saveEntitlements(contractId);
+    if (entitlementsRef.value) {
+      await entitlementsRef.value.saveEntitlements(store.recordToEdit.id);
     }
 
     $q.notify({
       color: 'positive',
       position: 'top',
-      message: result.revised
-        ? 'A new employment contract version was created for the department change.'
-        : 'Employment contract updated.',
+      message: 'Employment contract updated.',
     });
     emit('saved');
     closeDialog();

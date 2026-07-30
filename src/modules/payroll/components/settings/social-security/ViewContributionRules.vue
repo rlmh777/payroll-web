@@ -17,6 +17,7 @@
       dense
       :loading="store.isLoading"
       no-data-label="No contribution rules"
+      :pagination="{ rowsPerPage: 20 }"
     >
       <template #body-cell-methods="props">
         <q-td :props="props">

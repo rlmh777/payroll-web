@@ -66,7 +66,7 @@ const $q = useQuasar();
 
 const pagination = ref({
   page: 1,
-  rowsPerPage: 10,
+  rowsPerPage: 20,
   rowsNumber: 0,
   sortBy: 'name',
   descending: false,

@@ -84,7 +84,7 @@ export const useDepartmentStore = defineStore('department', {
       try {
         const queryParams = new URLSearchParams({
           page: String(params.page ?? this.currentPage),
-          per_page: String(params.perPage ?? 10),
+          per_page: String(params.perPage ?? 20),
         });
         const search = params.search ?? this.search;
 

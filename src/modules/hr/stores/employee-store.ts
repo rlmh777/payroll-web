@@ -35,7 +35,7 @@ export const useEmployeeStore = defineStore('employee', {
     filterDepartmentId: null as number | null,
     sortBy: 'lastName',
     sortDirection: 'asc',
-    perPage: 10,
+    perPage: 20,
     currentPage: 1,
     lastPage: 1,
     total: 0,

@@ -108,6 +108,7 @@
               dense
               :loading="reportsStore.isLoadingSalaryReview"
               no-data-label="No employees found for this department."
+              :pagination="{ rowsPerPage: 20 }"
             >
               <template #body-cell="props">
                 <q-td

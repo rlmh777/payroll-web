@@ -13,6 +13,7 @@
       dense
       :loading="store.isLoading"
       no-data-label="No SS benefit status records"
+      :pagination="{ rowsPerPage: 20 }"
     >
       <template #body-cell-is_receiving_benefit="props">
         <q-td :props="props">

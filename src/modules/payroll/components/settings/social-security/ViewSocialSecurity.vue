@@ -246,7 +246,7 @@ const selectedRecord = ref<SocialSecurity | null>(null);
 const recordToDelete = ref<SocialSecurity | null>(null);
 
 const pagination = ref({
-  rowsPerPage: 10,
+  rowsPerPage: 20,
   page: 1,
   rowsNumber: 0,
 });

@@ -151,7 +151,7 @@ const selectedVendor = ref<Vendor | null>(null);
 const vendorToDelete = ref<Vendor | null>(null);
 
 const pagination = ref({
-  rowsPerPage: 10,
+  rowsPerPage: 20,
   page: 1,
   rowsNumber: 0,
 });
