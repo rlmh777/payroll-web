@@ -17,6 +17,7 @@ export * from './pool-distribution-type-store';
 export * from './employee-pool-store';
 export * from './payroll-allowance-store';
 export * from './employee-day-work-store';
+export * from './tax-calculator-store';
 export * from './payroll-setting-store';
 export * from './personal-relief-store';
 export * from './reports-store';

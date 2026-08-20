@@ -49,8 +49,15 @@ export const payrollRoutes: RouteRecordRaw[] = [
   {
     path: '/reports',
     component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true },
-    children: [{ path: '', component: () => import('@payroll/pages/ReportsPage.vue') }],
+    meta: { requiresAuth: true, fullHeight: true },
+    children: [
+      { path: '', redirect: '/reports/journal-entries' },
+      {
+        path: ':reportId',
+        component: () => import('@payroll/pages/ReportsPage.vue'),
+        props: true,
+      },
+    ],
   },
   {
     path: '/settings',
@@ -92,6 +99,12 @@ export const payrollRoutes: RouteRecordRaw[] = [
         path: '/settings/payroll-settings',
         component: () => import('@payroll/components/settings/payroll-settings/ManagePayrollSettings.vue'),
       },
+      {
+        path: '/settings/tax-calculator-accounts',
+        component: () => import('@payroll/components/settings/tax-calculator/ManageTaxCalculatorAccounts.vue'),
+        props: { title: 'GST Calculator' },
+      },
+      { path: '/settings/tax-calculator-rates', redirect: '/settings/tax-calculator-accounts' },
     ],
   },
 ];

@@ -16,6 +16,7 @@ import { computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useMenuStore, type MenuItem } from 'src/stores/menus';
 import { useEmployeeStore } from '@hr/stores/employee-store';
+import { reportLabel } from '@payroll/config/report-routes';
 import type { Employee } from '@core/types/models';
 
 const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -91,6 +92,9 @@ const breadcrumbs = computed(() => {
     const menuMatch = menuItems.find((item) => item.route === currentPath);
 
     let label = menuMatch?.title ?? formatSegmentLabel(segment);
+    if (parentPath === '/reports') {
+      label = reportLabel(segment) ?? label;
+    }
     if (isEmployeeRouteSegment(parentPath, segment)) {
       label = resolveEmployeeLabel(segment) ?? label;
     }

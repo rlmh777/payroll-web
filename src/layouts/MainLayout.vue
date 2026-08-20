@@ -6,7 +6,7 @@
       class="main-page-container"
       :class="{ 'main-page-container--full-height': isFullHeightPage }"
     >
-      <AppBreadcrumbs v-if="!isFullHeightPage" />
+      <AppBreadcrumbs v-if="showBreadcrumbs" />
       <router-view />
     </q-page-container>
   </q-layout>
@@ -38,4 +38,12 @@ const shouldHideDrawer = computed(() => {
 });
 
 const isFullHeightPage = computed(() => route.meta.fullHeight === true);
+
+const showBreadcrumbs = computed(() => {
+  if (!isFullHeightPage.value) {
+    return true;
+  }
+
+  return route.path.startsWith('/reports');
+});
 </script>
