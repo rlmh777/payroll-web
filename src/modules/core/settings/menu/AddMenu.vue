@@ -36,6 +36,8 @@
             hint="Leave empty for root menu"
           />
 
+          <ModuleSelect v-model="form.module_code" :disable="menuStore.isLoading" />
+
           <q-input
             v-model="form.route"
             label="Route"
@@ -112,9 +114,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { useMenuStore } from '../../stores/menu-store';
+import { useMenuStore, DEFAULT_MENU_MODULE } from '../../stores/menu-store';
 import type { Menu } from '../../stores/menu-store';
 import PermissionSelect from './PermissionSelect.vue';
+import ModuleSelect from './ModuleSelect.vue';
 
 const $q = useQuasar();
 
@@ -155,6 +158,7 @@ const form = ref({
   order: 0,
   type: 'menu' as string,
   is_active: true,
+  module_code: DEFAULT_MENU_MODULE,
 });
 
 const onSubmit = async () => {
@@ -171,7 +175,8 @@ const onSubmit = async () => {
       form.value.permission || null,
       form.value.order,
       form.value.is_active,
-      form.value.type
+      form.value.type,
+      form.value.module_code,
     );
 
     if (newMenu) {
@@ -212,9 +217,24 @@ const onClose = () => {
     order: 0,
     type: 'menu',
     is_active: true,
+    module_code: DEFAULT_MENU_MODULE,
   };
   isOpen.value = false;
 };
+
+watch(
+  () => form.value.parent_id,
+  (parentId) => {
+    if (!parentId) {
+      return;
+    }
+
+    const parent = menuStore.menus.find((menu) => menu.id === parentId);
+    if (parent?.module_code) {
+      form.value.module_code = parent.module_code;
+    }
+  },
+);
 
 // Reset form when dialog opens
 watch(isOpen, async (newValue) => {
@@ -228,6 +248,7 @@ watch(isOpen, async (newValue) => {
       order: 0,
       type: 'menu',
       is_active: true,
+      module_code: DEFAULT_MENU_MODULE,
     };
     // Fetch menus to populate parent options
     await menuStore.fetchMenus();

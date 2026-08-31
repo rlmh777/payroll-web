@@ -24,6 +24,11 @@
           <span v-else class="text-grey">-</span>
         </q-td>
       </template>
+      <template v-slot:body-cell-module_code="props">
+        <q-td :props="props">
+          {{ getModuleTitle(props.row.module_code) }}
+        </q-td>
+      </template>
       <template v-slot:body-cell-is_active="props">
         <q-td :props="props">
           <q-icon
@@ -97,12 +102,14 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useMenuStore } from '../../stores/menu-store';
 import { useMenuStore as useNavigationMenuStore } from '../../stores/menus';
+import { useModuleStore } from '../../stores/module-store';
 import EditMenu from './EditMenu.vue';
 import type { Menu } from '../../stores/menu-store';
 
 const $q = useQuasar();
 const menuStore = useMenuStore();
 const navigationMenuStore = useNavigationMenuStore();
+const moduleStore = useModuleStore();
 
 const columns = [
   {
@@ -144,6 +151,13 @@ const columns = [
     name: 'permission',
     label: 'Permission',
     field: 'permission',
+    align: 'left' as const,
+    sortable: true,
+  },
+  {
+    name: 'module_code',
+    label: 'Module',
+    field: 'module_code',
     align: 'left' as const,
     sortable: true,
   },
@@ -198,7 +212,8 @@ const allMenus = computed(() => {
     return result.filter(menu => 
       menu.title.toLowerCase().includes(lowerSearch) ||
       (menu.route && menu.route.toLowerCase().includes(lowerSearch)) ||
-      (menu.permission && menu.permission.toLowerCase().includes(lowerSearch))
+      (menu.permission && menu.permission.toLowerCase().includes(lowerSearch)) ||
+      (menu.module_code && menu.module_code.toLowerCase().includes(lowerSearch))
     );
   }
   
@@ -238,6 +253,15 @@ const onRequest = (props: {
   pagination.value.page = page;
   pagination.value.rowsPerPage = rowsPerPage;
   pagination.value.rowsNumber = allMenus.value.length;
+};
+
+const getModuleTitle = (moduleCode?: string | null): string => {
+  if (!moduleCode) {
+    return '—';
+  }
+
+  const module = moduleStore.modules.find((item) => item.code === moduleCode);
+  return module?.title ?? moduleCode;
 };
 
 const getParentTitle = (menu: Menu): string => {
@@ -306,9 +330,8 @@ const handleDelete = async () => {
 };
 
 onMounted(async () => {
-  // Fetch menus on mount
+  await moduleStore.fetchModules();
   await menuStore.fetchMenus();
-  // Set initial pagination rowsNumber
   pagination.value.rowsNumber = allMenus.value.length;
 });
 </script>

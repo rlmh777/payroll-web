@@ -96,6 +96,7 @@
 import { computed, ref } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
+import { employeePath } from '@core/config/module-routes';
 import type { Employee } from '@core/types/models';
 import { useEmployeeStore } from '@hr/stores/employee-store';
 import PersonalInfo from '../common/PersonalInfo.vue';
@@ -121,7 +122,7 @@ const isSaving = ref(false);
 const isCreating = computed(() => !employeeStore.selectedEmployee?.id);
 
 function cancelCreate() {
-  void router.push('/employees');
+  void router.push(employeePath());
 }
 
 function requiredCreateFields(employee: Employee): string | null {
@@ -210,7 +211,7 @@ async function saveEmployee() {
     if (isCreating.value) {
       const created = await employeeStore.createEmployee(buildCreatePayload(employee));
       $q.notify({ color: 'positive', position: 'top', message: 'Employee created successfully.' });
-      await router.replace(`/employees/${created.id}`);
+      await router.replace(employeePath(created.id));
       return;
     }
 

@@ -134,6 +134,7 @@ import { useEmployeeStore } from '@/stores/employee-store';
 import { computed, watch, ref } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRouter, useRoute } from 'vue-router';
+import { employeePath } from '@core/config/module-routes';
 import GenderIcon from './GenderIcon.vue';
 
 const employeeStore = useEmployeeStore();
@@ -274,7 +275,7 @@ const isEmployeeSelected = (employeeId: string): boolean => {
 };
 
 const navigateToEmployee = (employeeId: string) => {
-  router.push(`/employees/${employeeId}`).catch((err) => {
+  router.push(employeePath(employeeId)).catch((err) => {
     console.error('Navigation error:', err);
   });
 };

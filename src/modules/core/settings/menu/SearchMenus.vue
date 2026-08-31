@@ -46,6 +46,22 @@
         />
       </div>
       <div class="col-12 col-md-2">
+        <q-select
+          v-model="searchFilters.module_code"
+          :options="moduleOptions"
+          option-value="code"
+          option-label="title"
+          emit-value
+          map-options
+          outlined
+          dense
+          label="Module"
+          clearable
+          :loading="moduleStore.loading"
+          @update:model-value="onSearch"
+        />
+      </div>
+      <div class="col-12 col-md-2">
         <q-btn
           flat
           label="Clear Filters"
@@ -72,13 +88,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useMenuStore } from '../../stores/menu-store';
 import { useMenuStore as useNavigationMenuStore } from '../../stores/menus';
+import { useModuleStore } from '../../stores/module-store';
 import AddMenu from './AddMenu.vue';
 
 const menuStore = useMenuStore();
 const navigationMenuStore = useNavigationMenuStore();
+const moduleStore = useModuleStore();
+
+const moduleOptions = computed(() => moduleStore.modules);
 
 const typeOptions = [
   { value: 'menu', label: 'Menu' },
@@ -101,7 +121,8 @@ const hasActiveFilters = computed(() => {
   return !!(
     searchFilters.value.search ||
     searchFilters.value.type !== null ||
-    searchFilters.value.is_active !== null
+    searchFilters.value.is_active !== null ||
+    searchFilters.value.module_code
   );
 });
 
@@ -115,11 +136,16 @@ const clearFilters = async () => {
     type: null,
     parent_id: null,
     is_active: null,
+    module_code: null,
   };
   await onSearch();
 };
 
 const showAddDialog = ref<boolean>(false);
+
+onMounted(async () => {
+  await moduleStore.fetchModules();
+});
 
 const onMenuSaved = async () => {
   // Refresh the list after a new menu is added

@@ -13,9 +13,14 @@ export interface Menu {
   order?: number;
   is_active?: boolean;
   type?: string;
+  module_code?: string | null;
+  source?: string | null;
+  system_key?: string | null;
   parent?: Menu | null;
   children?: Menu[];
 }
+
+export const DEFAULT_MENU_MODULE = 'payroll';
 
 interface ApiErrorData {
   error?: string;
@@ -32,6 +37,7 @@ interface CreateMenuBody {
   order?: number;
   is_active?: boolean;
   type?: string;
+  module_code?: string | null;
 }
 
 interface UpdateMenuBody {
@@ -43,6 +49,7 @@ interface UpdateMenuBody {
   order?: number;
   is_active?: boolean;
   type?: string;
+  module_code?: string | null;
 }
 
 export const useMenuStore = defineStore('menu', {
@@ -56,6 +63,7 @@ export const useMenuStore = defineStore('menu', {
       type: null as string | null,
       parent_id: null as string | null,
       is_active: null as boolean | null,
+      module_code: null as string | null,
     },
   }),
 
@@ -95,6 +103,9 @@ export const useMenuStore = defineStore('menu', {
         }
         if (this.searchFilters.is_active !== null) {
           queryParams.append('is_active', this.searchFilters.is_active.toString());
+        }
+        if (this.searchFilters.module_code) {
+          queryParams.append('module_code', this.searchFilters.module_code);
         }
 
         const headers: HeadersInit = {
@@ -168,7 +179,8 @@ export const useMenuStore = defineStore('menu', {
       permission?: string | null,
       order?: number,
       is_active?: boolean,
-      type?: string
+      type?: string,
+      module_code?: string | null,
     ): Promise<Menu | null> {
       this.isLoading = true;
       this.error = null;
@@ -191,6 +203,7 @@ export const useMenuStore = defineStore('menu', {
         if (order !== undefined) body.order = order;
         if (is_active !== undefined) body.is_active = is_active;
         if (type !== undefined) body.type = type;
+        body.module_code = module_code ?? DEFAULT_MENU_MODULE;
 
         const response = await fetch(`${API_URL}/menus`, {
           method: 'POST',
@@ -239,7 +252,8 @@ export const useMenuStore = defineStore('menu', {
       permission?: string | null,
       order?: number,
       is_active?: boolean,
-      type?: string
+      type?: string,
+      module_code?: string | null,
     ): Promise<Menu | null> {
       this.isLoading = true;
       this.error = null;
@@ -263,6 +277,7 @@ export const useMenuStore = defineStore('menu', {
         if (order !== undefined) body.order = order;
         if (is_active !== undefined) body.is_active = is_active;
         if (type !== undefined) body.type = type;
+        if (module_code !== undefined) body.module_code = module_code;
 
         const response = await fetch(`${API_URL}/menus/${id}`, {
           method: 'PUT',

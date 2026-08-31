@@ -1,8 +1,9 @@
 import type { RouteRecordRaw } from 'vue-router';
+import { MODULE_ROUTES, reportPath } from '@core/config/module-routes';
 
 export const payrollRoutes: RouteRecordRaw[] = [
   {
-    path: '/payroll',
+    path: MODULE_ROUTES.payroll,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
@@ -47,11 +48,11 @@ export const payrollRoutes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/reports',
+    path: MODULE_ROUTES.reports,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true, fullHeight: true },
     children: [
-      { path: '', redirect: '/reports/journal-entries' },
+      { path: '', redirect: reportPath('journal-entries') },
       {
         path: ':reportId',
         component: () => import('@payroll/pages/ReportsPage.vue'),
@@ -60,51 +61,60 @@ export const payrollRoutes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/settings',
+    path: MODULE_ROUTES.settings,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
       {
-        path: '/settings/payroll-earning-codes',
+        path: '/payroll/settings/payroll-earning-codes',
         component: () => import('@payroll/components/settings/payroll-earning-code/ManagePayrollEarningCode.vue'),
         props: { title: 'Payroll Earning Codes' },
       },
-      { path: '/settings/general/payroll-earning-codes', redirect: '/settings/payroll-earning-codes' },
       {
-        path: '/settings/pool-distribution-types',
+        path: '/payroll/settings/general/payroll-earning-codes',
+        redirect: '/payroll/settings/payroll-earning-codes',
+      },
+      {
+        path: '/payroll/settings/pool-distribution-types',
         component: () => import('@payroll/components/settings/pool-distribution/ManagePoolDistributionType.vue'),
         props: { title: 'Pool Distribution' },
       },
-      { path: '/settings/general/pool-distribution-types', redirect: '/settings/pool-distribution-types' },
       {
-        path: '/settings/accounts',
+        path: '/payroll/settings/general/pool-distribution-types',
+        redirect: '/payroll/settings/pool-distribution-types',
+      },
+      {
+        path: '/payroll/settings/accounts',
         component: () => import('@payroll/components/settings/account/ManageAccounts.vue'),
         props: { title: 'Accounts' },
       },
       {
-        path: '/settings/account-mapping',
+        path: '/payroll/settings/account-mapping',
         component: () => import('@payroll/components/settings/account-mapping/ManagePayrollAccountMapping.vue'),
         props: { title: 'Account Mapping' },
       },
-      { path: '/settings/accounts/mapping', redirect: '/settings/account-mapping' },
+      { path: '/payroll/settings/accounts/mapping', redirect: '/payroll/settings/account-mapping' },
       {
-        path: '/settings/social-security',
+        path: '/payroll/settings/social-security',
         component: () => import('@payroll/components/settings/social-security/ManageSocialSecurity.vue'),
       },
       {
-        path: '/settings/personal-relief',
+        path: '/payroll/settings/personal-relief',
         component: () => import('@payroll/components/settings/personal-relief/ManagePersonalRelief.vue'),
       },
       {
-        path: '/settings/payroll-settings',
+        path: '/payroll/settings/payroll-settings',
         component: () => import('@payroll/components/settings/payroll-settings/ManagePayrollSettings.vue'),
       },
       {
-        path: '/settings/tax-calculator-accounts',
+        path: '/payroll/settings/tax-calculator-accounts',
         component: () => import('@payroll/components/settings/tax-calculator/ManageTaxCalculatorAccounts.vue'),
         props: { title: 'GST Calculator' },
       },
-      { path: '/settings/tax-calculator-rates', redirect: '/settings/tax-calculator-accounts' },
+      {
+        path: '/payroll/settings/tax-calculator-rates',
+        redirect: '/payroll/settings/tax-calculator-accounts',
+      },
     ],
   },
 ];

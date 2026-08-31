@@ -19,6 +19,7 @@ import EmployeeLeftPane from '@hr/components/employee/search/EmployeeLeftPane.vu
 import SchedulerLeftPane from '@hr/components/settings/calendar/SchedulerLeftPane.vue';
 import TimesheetLeftPane from '@hr/components/timesheet/TimesheetLeftPane.vue';
 import { useEmployeeLeaveStore } from '@hr/stores/employee-leave-store';
+import { MODULE_ROUTES, pathInModule } from '../../../config/module-routes';
 
 const menuStore = useMenuStore();
 const leaveStore = useEmployeeLeaveStore();
@@ -28,10 +29,10 @@ const selectedMenu = ref<MenuItem | null>(null);
 
 function isDrawerPaneRoute(path: string) {
   return (
-    path.startsWith('/employees') ||
-    path.startsWith('/scheduler') ||
-    path.startsWith('/timesheet') ||
-    path.startsWith('/leaves')
+    pathInModule(path, 'employees') ||
+    pathInModule(path, 'scheduler') ||
+    pathInModule(path, 'timesheet') ||
+    pathInModule(path, 'leaves')
   );
 }
 
@@ -99,20 +100,22 @@ watch(
   { deep: true },
 );
 
-const isEmployeeRoute = computed(() => route.path.startsWith('/employees'));
-const isSchedulerRoute = computed(() => route.path.startsWith('/scheduler'));
-const isTimesheetRoute = computed(() => route.path.startsWith('/timesheet'));
+const isEmployeeRoute = computed(() => pathInModule(route.path, 'employees'));
+const isSchedulerRoute = computed(() => pathInModule(route.path, 'scheduler'));
+const isTimesheetRoute = computed(() => pathInModule(route.path, 'timesheet'));
 const selectedChildren = computed(() => {
   const children = selectedMenu.value?.children || [];
   const isLeavesMenu =
-    selectedMenu.value?.route === '/leaves' || selectedMenu.value?.title === 'Leaves';
+    selectedMenu.value?.route === MODULE_ROUTES.leaves || selectedMenu.value?.title === 'Leaves';
 
   if (!isLeavesMenu || leaveStore.teamAccess?.canAccess) {
     return children;
   }
 
   return children.filter(
-    (item) => item.route !== '/leaves/list' && item.route !== '/leaves/entitlement',
+    (item) =>
+      item.route !== `${MODULE_ROUTES.leaves}/list` &&
+      item.route !== `${MODULE_ROUTES.leaves}/entitlement`,
   );
 });
 const hasSideMenu = computed(

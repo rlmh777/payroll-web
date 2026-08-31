@@ -19,14 +19,14 @@ import { watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useEmployeeStore } from '@/stores/employee-store';
 import EmployeeList from './EmployeeList.vue';
-import MiniSearchEmployeeComponent from './MiniSearchEmployeeComponent.vue';
+import { employeePath, pathInModule } from '@core/config/module-routes';
 
 const route = useRoute();
 const router = useRouter();
 const employeeStore = useEmployeeStore();
 
 function isEmployeeRoute(path: string) {
-  return path.startsWith('/employees');
+  return pathInModule(path, 'employees');
 }
 
 function isEmployeesIndexRoute() {
@@ -36,8 +36,8 @@ function isEmployeesIndexRoute() {
 function isCreateOrImportRoute() {
   return route.name === 'employees-new'
     || route.name === 'employees-import'
-    || route.path === '/employees/new'
-    || route.path === '/employees/import';
+    || route.path === `${employeePath()}/new`
+    || route.path === `${employeePath()}/import`;
 }
 
 function selectFirstEmployeeIfNeeded() {
@@ -50,7 +50,7 @@ function selectFirstEmployeeIfNeeded() {
     return;
   }
 
-  void router.replace(`/employees/${firstEmployee.id}`);
+  void router.replace(employeePath(firstEmployee.id));
 }
 
 async function loadEmployeesForRoute(enteringFromAnotherMenu: boolean) {

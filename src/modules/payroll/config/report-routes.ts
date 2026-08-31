@@ -85,6 +85,8 @@ export function reportLabel(id: string): string | null {
   return REPORT_OPTIONS.find((report) => report.id === id)?.label ?? null;
 }
 
+import { reportPath as moduleReportPath } from '@core/config/module-routes';
+
 export function reportPath(id: ReportId): string {
-  return `/reports/${id}`;
+  return moduleReportPath(id);
 }

@@ -36,6 +36,8 @@
             hint="Leave empty for root menu"
           />
 
+          <ModuleSelect v-model="form.module_code" :disable="menuStore.isLoading" />
+
           <q-input
             v-model="form.route"
             label="Route"
@@ -112,9 +114,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { useMenuStore } from '../../stores/menu-store';
+import { useMenuStore, DEFAULT_MENU_MODULE } from '../../stores/menu-store';
 import type { Menu } from '../../stores/menu-store';
 import PermissionSelect from './PermissionSelect.vue';
+import ModuleSelect from './ModuleSelect.vue';
 
 const $q = useQuasar();
 
@@ -159,6 +162,7 @@ const form = ref({
   order: 0,
   type: 'menu' as string,
   is_active: true,
+  module_code: DEFAULT_MENU_MODULE,
 });
 
 const onSubmit = async () => {
@@ -176,7 +180,8 @@ const onSubmit = async () => {
       form.value.permission || null,
       form.value.order,
       form.value.is_active,
-      form.value.type
+      form.value.type,
+      form.value.module_code,
     );
 
     if (updatedMenu) {
@@ -226,6 +231,7 @@ watch(isOpen, async (newValue) => {
       order: props.menu.order || 0,
       type: props.menu.type || 'menu',
       is_active: props.menu.is_active !== undefined ? props.menu.is_active : true,
+      module_code: props.menu.module_code || DEFAULT_MENU_MODULE,
     };
   }
 });

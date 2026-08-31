@@ -1,8 +1,9 @@
 import type { RouteRecordRaw } from 'vue-router';
+import { MODULE_ROUTES } from '@core/config/module-routes';
 
 export const hrRoutes: RouteRecordRaw[] = [
   {
-    path: '/scheduler',
+    path: MODULE_ROUTES.scheduler,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true, fullHeight: true },
     children: [
@@ -13,7 +14,7 @@ export const hrRoutes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/timesheet',
+    path: MODULE_ROUTES.timesheet,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true, fullHeight: true },
     children: [
@@ -24,7 +25,7 @@ export const hrRoutes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/employees',
+    path: MODULE_ROUTES.employees,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
@@ -50,11 +51,11 @@ export const hrRoutes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/leaves',
+    path: MODULE_ROUTES.leaves,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: '', redirect: '/leaves/list' },
+      { path: '', redirect: `${MODULE_ROUTES.leaves}/list` },
       {
         path: 'list',
         component: () => import('@hr/pages/LeaveListPage.vue'),
@@ -86,77 +87,71 @@ export const hrRoutes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/',
+    path: MODULE_ROUTES.settings,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
+      { path: '/payroll/settings/calendars', redirect: MODULE_ROUTES.scheduler },
       {
-        path: 'employee/:id',
-        component: () => import('@hr/pages/ViewEmployeePage.vue'),
-      },
-    ],
-  },
-  {
-    path: '/settings',
-    component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true },
-    children: [
-      { path: '/settings/calendars', redirect: '/scheduler' },
-      {
-        path: '/settings/timesheet-templates',
+        path: '/payroll/settings/timesheet-templates',
         component: () => import('@hr/pages/DefineTimesheetTemplatePage.vue'),
       },
-      { path: '/settings/working-hours-timesheet', redirect: '/settings/timesheet-templates' },
-      { path: '/settings/general/working-hours-timesheet', redirect: '/settings/timesheet-templates' },
       {
-        path: '/settings/holidays',
+        path: '/payroll/settings/working-hours-timesheet',
+        redirect: '/payroll/settings/timesheet-templates',
+      },
+      {
+        path: '/payroll/settings/general/working-hours-timesheet',
+        redirect: '/payroll/settings/timesheet-templates',
+      },
+      {
+        path: '/payroll/settings/holidays',
         component: () => import('@hr/components/settings/holiday/ManagePublicHolidays.vue'),
         props: { title: 'Public Holidays' },
       },
-      { path: '/settings/general/holidays', redirect: '/settings/holidays' },
+      { path: '/payroll/settings/general/holidays', redirect: '/payroll/settings/holidays' },
       {
-        path: '/settings/attendance',
+        path: '/payroll/settings/attendance',
         component: () => import('@hr/components/settings/attendance/ManageAttendanceSettings.vue'),
         props: { title: 'Attendance Settings' },
       },
-      { path: '/settings/general/attendance', redirect: '/settings/attendance' },
+      { path: '/payroll/settings/general/attendance', redirect: '/payroll/settings/attendance' },
       {
-        path: '/settings/leave-types',
-        redirect: '/leaves/types',
+        path: '/payroll/settings/leave-types',
+        redirect: `${MODULE_ROUTES.leaves}/types`,
       },
-      { path: '/settings/general/leave-types', redirect: '/leaves/types' },
+      { path: '/payroll/settings/general/leave-types', redirect: `${MODULE_ROUTES.leaves}/types` },
       {
-        path: '/settings/department-heads',
+        path: '/payroll/settings/department-heads',
         component: () => import('@hr/components/settings/department-head/ManageDepartmentHead.vue'),
         props: { title: 'Department Heads' },
       },
-      { path: '/settings/general/department-heads', redirect: '/settings/department-heads' },
       {
-        path: '/settings/department',
+        path: '/payroll/settings/general/department-heads',
+        redirect: '/payroll/settings/department-heads',
+      },
+      {
+        path: '/payroll/settings/department',
         component: () => import('@hr/components/settings/department/ManageDepartment.vue'),
         props: { title: 'Setting Department' },
       },
-      { path: '/settings/general/department', redirect: '/settings/department' },
+      { path: '/payroll/settings/general/department', redirect: '/payroll/settings/department' },
       {
-        path: '/settings/worksite',
+        path: '/payroll/settings/worksite',
         component: () => import('@hr/components/settings/worksite/ManageWorksite.vue'),
         props: { title: 'Setting Work Site' },
       },
       {
-        path: '/settings/employee-groups',
+        path: '/payroll/settings/employee-groups',
         component: () => import('@hr/components/settings/employee-group/ManageEmployeeGroups.vue'),
         props: { title: 'Employee Groups' },
       },
-      { path: '/settings/general/worksite', redirect: '/settings/worksite' },
-      { path: '/settings/general/calendar', redirect: '/settings/timesheet-templates' },
+      { path: '/payroll/settings/general/worksite', redirect: '/payroll/settings/worksite' },
+      { path: '/payroll/settings/general/calendar', redirect: '/payroll/settings/timesheet-templates' },
       {
-        path: '/settings/general/calendar/define-work-timesheet',
-        redirect: '/settings/timesheet-templates',
+        path: '/payroll/settings/general/calendar/define-work-timesheet',
+        redirect: '/payroll/settings/timesheet-templates',
       },
     ],
-  },
-  {
-    path: '/calendars',
-    redirect: '/scheduler',
   },
 ];

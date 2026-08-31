@@ -1,4 +1,4 @@
-import type { MenuItem } from '../stores/menus';
+import type { MenuItem } from '../types/menu-item';
 
 function routeMatches(menuRoute: string | null, path: string): boolean {
   if (!menuRoute) {
@@ -49,7 +49,14 @@ export function findTopMenuForPath(path: string, tree: MenuItem[]): MenuItem | n
 }
 
 export function findSettingsMenu(tree: MenuItem[]): MenuItem | null {
-  return tree.find((item) => item.route === '/settings' || item.title === 'Settings') ?? null;
+  return (
+    tree.find(
+      (item) =>
+        item.route === '/payroll/settings' ||
+        item.route === '/settings' ||
+        item.title === 'Settings',
+    ) ?? null
+  );
 }
 
 export function findGeneralSettingsMenu(tree: MenuItem[]): MenuItem | null {
@@ -58,7 +65,7 @@ export function findGeneralSettingsMenu(tree: MenuItem[]): MenuItem | null {
 }
 
 export function isGeneralSettingsPath(path: string, generalMenu: MenuItem | null): boolean {
-  if (path === '/settings') {
+  if (path === '/payroll/settings' || path === '/settings') {
     return true;
   }
 

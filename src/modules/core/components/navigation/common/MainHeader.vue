@@ -60,6 +60,7 @@
 
       <q-space />
 
+      <ModuleLauncher />
       <NotificationBell />
       <LogoutCard />
     </q-toolbar>
@@ -71,6 +72,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMenuStore, type MenuItem } from '../../../stores/menus';
 import { findTopMenuForPath } from '../../../utils/menu-navigation';
+import ModuleLauncher from '../common/ModuleLauncher.vue';
 import LogoutCard from '../common/LogoutCard.vue';
 import NotificationBell from '../common/NotificationBell.vue';
 
