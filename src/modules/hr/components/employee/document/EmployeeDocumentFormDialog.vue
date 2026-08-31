@@ -1,66 +1,81 @@
 <template>
   <q-dialog :model-value="open" position="right" @update:model-value="onDialogUpdate">
-    <q-card class="drawer-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ isEdit ? 'Edit document' : 'Add document' }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense :disable="saving" @click="close" />
-      </q-card-section>
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="save">
-          <DocumentTagSelect v-model="form.documentTagId" :disable="saving" />
-          <q-file
-            v-model="form.documentFile"
-            :label="isEdit ? 'Document file' : 'Document file *'"
-            hint="PDF, Word, Excel, images, or text. Max 20 MB."
-            :accept="EMPLOYEE_DOCUMENT_ACCEPT"
-            dense
-            outlined
-            clearable
-            :disable="saving"
-            @update:model-value="onFileSelected"
-          >
-            <template #prepend>
-              <q-icon name="upload_file" />
-            </template>
-          </q-file>
-          <div
-            v-if="existingFileName && !form.documentFile"
-            class="text-caption text-grey-7"
-          >
-            Current file:
-            <a
-              v-if="existingFileUrl"
-              :href="existingFileUrl"
-              target="_blank"
-              rel="noopener noreferrer"
+      </AppDialogHeader>
+
+      <AppDialogBody>
+        <q-form @submit.prevent="save">
+          <AppDialogForm>
+            <div class="col-12">
+              <DocumentTagSelect v-model="form.documentTagId" :disable="saving" />
+            </div>
+            <div class="col-12">
+              <q-file
+                v-model="form.documentFile"
+                :label="isEdit ? 'Document file' : 'Document file *'"
+                hint="PDF, Word, Excel, images, or text. Max 20 MB."
+                :accept="EMPLOYEE_DOCUMENT_ACCEPT"
+                dense
+                outlined
+                clearable
+                :disable="saving"
+                @update:model-value="onFileSelected"
+              >
+                <template #prepend>
+                  <q-icon name="upload_file" />
+                </template>
+              </q-file>
+            </div>
+            <div
+              v-if="existingFileName && !form.documentFile"
+              class="col-12 text-caption text-grey-7"
             >
-              {{ existingFileName }}
-            </a>
-            <span v-else>{{ existingFileName }}</span>
-          </div>
-          <q-input v-model="form.name" label="Name *" dense outlined :disable="saving" @update:model-value="onNameInput" />
-          <q-input
-            v-model="form.description"
-            type="textarea"
-            label="Description"
-            dense
-            outlined
-            :disable="saving"
-          />
-          <div class="row justify-end q-gutter-sm">
-            <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
-            <q-btn type="submit" color="primary" :loading="saving" label="Save" />
-          </div>
+              Current file:
+              <a
+                v-if="existingFileUrl"
+                :href="existingFileUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {{ existingFileName }}
+              </a>
+              <span v-else>{{ existingFileName }}</span>
+            </div>
+            <div class="col-12">
+              <q-input v-model="form.name" label="Name *" dense outlined :disable="saving" @update:model-value="onNameInput" />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.description"
+                type="textarea"
+                label="Description"
+                dense
+                outlined
+                :disable="saving"
+              />
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
+        <q-btn color="primary" :loading="saving" label="Save" @click="save" />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import DocumentTagSelect from './DocumentTagSelect.vue';
 import {
   EMPLOYEE_DOCUMENT_ACCEPT,
@@ -198,11 +213,3 @@ async function save() {
   }
 }
 </script>
-
-<style scoped>
-.drawer-card {
-  width: 30vw;
-  max-width: 420px;
-  height: 100vh;
-}
-</style>

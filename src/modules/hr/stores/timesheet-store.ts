@@ -2,6 +2,7 @@ import { defineStore, acceptHMRUpdate } from 'pinia';
 import { date } from 'quasar';
 import { useAttendanceStore, type TimesheetRow } from '@payroll/stores/attendance-store';
 import { useSchedulerStore } from './scheduler-store';
+import { useEmployeeGroupStore } from './employee-group-store';
 import { canViewAllSchedulerEmployees } from '@hr/utils/scheduler-access';
 import { getActiveEmploymentDetail } from '@hr/utils/calendar-employment-utils';
 import { getDateRangeForView } from '@hr/utils/scheduler-utils';
@@ -55,6 +56,7 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
 
       return (
         schedulerStore.filterDepartmentId != null ||
+        schedulerStore.filterEmployeeGroupId != null ||
         schedulerStore.filterEmployeeId != null ||
         schedulerStore.employeeSearch.trim().length > 0 ||
         this.filterApprovalStatus != null
@@ -93,8 +95,18 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
     groupedTimesheets(): TimesheetEmployeeGroup[] {
       const attendanceStore = useAttendanceStore();
       const schedulerStore = useSchedulerStore();
+      const employeeGroupStore = useEmployeeGroupStore();
       const search = schedulerStore.employeeSearch.trim().toLowerCase();
       const groups = new Map<string, TimesheetEmployeeGroup>();
+
+      const matchesEmployeeGroup = (employeeId: string) => {
+        if (!schedulerStore.filterEmployeeGroupId) {
+          return true;
+        }
+
+        const memberIds = employeeGroupStore.employeeIdsByGroupId.get(schedulerStore.filterEmployeeGroupId);
+        return memberIds?.has(employeeId) ?? false;
+      };
 
       for (const row of attendanceStore.timesheets) {
         if (search) {
@@ -109,6 +121,10 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
           if (rowDepartmentId !== schedulerStore.filterDepartmentId) {
             continue;
           }
+        }
+
+        if (!matchesEmployeeGroup(row.employeeId)) {
+          continue;
         }
 
         if (schedulerStore.filterEmployeeId && row.employeeId !== schedulerStore.filterEmployeeId) {
@@ -155,6 +171,10 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
           if (departmentId !== schedulerStore.filterDepartmentId) {
             continue;
           }
+        }
+
+        if (!matchesEmployeeGroup(employee.id)) {
+          continue;
         }
 
         const employmentDetailId = activeEmployment?.id ?? null;

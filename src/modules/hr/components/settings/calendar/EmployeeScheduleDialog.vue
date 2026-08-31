@@ -1,13 +1,11 @@
 <template>
   <q-dialog v-model="dialogModel" position="right" :maximized="false">
-    <q-card class="employee-schedule-dialog">
-      <q-card-section class="row items-center q-pb-none employee-schedule-dialog-header">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ title }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
-      </q-card-section>
+      </AppDialogHeader>
 
-      <q-card-section class="employee-schedule-dialog-body">
+      <AppDialogBody>
         <q-form class="employee-schedule-form" @submit.prevent="submitForm">
           <div class="employee-schedule-field">
             <q-select
@@ -144,9 +142,9 @@
             />
           </div>
         </q-form>
-      </q-card-section>
+      </AppDialogBody>
 
-      <q-card-actions align="between" class="employee-schedule-dialog-actions">
+      <q-card-actions align="between" class="app-dialog-actions">
         <div class="row q-gutter-sm">
           <q-btn
             v-if="isEditing"
@@ -162,7 +160,7 @@
           <q-btn color="primary" label="Save" :disable="!canSave" @click="submitForm" />
         </div>
       </q-card-actions>
-    </q-card>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
@@ -181,6 +179,9 @@ import {
 import { getEmploymentContractOptions } from '@hr/utils/calendar-employment-utils';
 import { rankFuzzyMatches } from '@core/utils/fuzzy-search';
 import IncludeLunchHourFields from '@core/components/common/IncludeLunchHourFields.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -423,24 +424,6 @@ watch(
 </script>
 
 <style scoped>
-.employee-schedule-dialog {
-  width: min(520px, 95vw);
-  height: 100vh;
-  max-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.employee-schedule-dialog-header {
-  padding: 24px 24px 0;
-}
-
-.employee-schedule-dialog-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-}
-
 .employee-schedule-form {
   display: flex;
   flex-direction: column;
@@ -464,9 +447,5 @@ watch(
   max-width: 100%;
   border-radius: 12px;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-}
-
-.employee-schedule-dialog-actions {
-  padding: 0 24px 24px;
 }
 </style>

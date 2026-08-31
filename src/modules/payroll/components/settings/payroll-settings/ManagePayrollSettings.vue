@@ -4,7 +4,7 @@
       <q-card-section>
         <div class="text-h6">Payroll settings</div>
         <div class="text-body2 text-grey-7 q-mt-xs">
-          Company-wide payroll calculation defaults.
+          Company-wide payroll calculation defaults and timesheet auto-lock policy.
         </div>
       </q-card-section>
 
@@ -50,14 +50,52 @@
             ]"
           />
 
-          <q-banner rounded class="bg-blue-1 text-grey-9">
-            <template #avatar>
-              <q-icon name="lock" color="primary" />
-            </template>
-            Timesheet date locks are managed on the
-            <router-link to="/payroll" class="text-primary text-weight-medium">Payroll</router-link>
-            page.
-          </q-banner>
+          <q-separator />
+
+          <div class="text-subtitle1 text-weight-bold">Timesheet auto-lock</div>
+          <div class="text-body2 text-grey-7">
+            Posted payroll runs automatically lock their period timesheets after the configured delay.
+            Temporary unlocks and manual overrides are managed on
+            <router-link to="/payroll/overview" class="text-primary text-weight-medium">Payroll Overview</router-link>.
+          </div>
+
+          <q-toggle
+            v-model="form.timesheetAutoLockEnabled"
+            label="Enable automatic timesheet lock after payroll"
+            :disable="store.isLoading || store.isSaving"
+          />
+
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model="form.timesheetAutoLockTime"
+                type="time"
+                label="Lock time"
+                hint="App timezone. Default is 5:00 PM."
+                outlined
+                :disable="store.isLoading || store.isSaving || !form.timesheetAutoLockEnabled"
+                :rules="[(value) => Boolean(value) || 'Lock time is required']"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model.number="form.timesheetAutoLockDaysAfterPayDate"
+                type="number"
+                min="0"
+                max="30"
+                step="1"
+                label="Days after pay date"
+                hint="1 means lock on the day after pay date at the lock time."
+                outlined
+                :disable="store.isLoading || store.isSaving || !form.timesheetAutoLockEnabled"
+                :rules="[
+                  (value) => value != null && value !== '' || 'Days after pay date is required',
+                  (value) => Number(value) >= 0 || 'Minimum is 0',
+                  (value) => Number(value) <= 30 || 'Maximum is 30',
+                ]"
+              />
+            </div>
+          </div>
 
           <div class="row q-gutter-sm">
             <q-btn
@@ -84,7 +122,7 @@
 import { onMounted, reactive, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { storeToRefs } from 'pinia';
-import { usePayrollSettingStore } from 'src/stores/payroll-setting-store';
+import { usePayrollSettingStore } from '@payroll/stores/payroll-setting-store';
 
 const $q = useQuasar();
 const store = usePayrollSettingStore();
@@ -93,6 +131,9 @@ const { settings } = storeToRefs(store);
 const form = reactive({
   incomeTaxRatePercent: 25,
   secondReliefAmount: 100,
+  timesheetAutoLockEnabled: true,
+  timesheetAutoLockTime: '17:00',
+  timesheetAutoLockDaysAfterPayDate: 1,
 });
 
 function syncFormFromStore() {
@@ -102,6 +143,9 @@ function syncFormFromStore() {
 
   form.incomeTaxRatePercent = settings.value.incomeTaxRatePercent;
   form.secondReliefAmount = settings.value.secondReliefAmount;
+  form.timesheetAutoLockEnabled = settings.value.timesheetAutoLockEnabled;
+  form.timesheetAutoLockTime = settings.value.timesheetAutoLockTime;
+  form.timesheetAutoLockDaysAfterPayDate = settings.value.timesheetAutoLockDaysAfterPayDate;
 }
 
 function resetForm() {
@@ -113,6 +157,9 @@ async function save() {
     await store.updateSettings({
       incomeTaxRate: Number((Number(form.incomeTaxRatePercent) / 100).toFixed(4)),
       secondReliefAmount: Number(form.secondReliefAmount),
+      timesheetAutoLockEnabled: form.timesheetAutoLockEnabled,
+      timesheetAutoLockTime: form.timesheetAutoLockTime,
+      timesheetAutoLockDaysAfterPayDate: Number(form.timesheetAutoLockDaysAfterPayDate),
     });
 
     $q.notify({

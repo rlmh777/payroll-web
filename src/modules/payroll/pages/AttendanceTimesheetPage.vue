@@ -251,6 +251,9 @@
           :pay-periods="filteredPayPeriods"
           :employee-summaries="employeeTimesheetSummaries"
           :summary="timesheetSummary"
+          :period-summary="periodSummary"
+          :previous-summary="previousSummary"
+          :missing-payroll-employees="missingPayrollEmployees"
           :is-loading-timesheets="isLoadingEmployeeSummaries"
           :is-loading-pay-periods="isLoadingPayPeriods"
           :pagination="employeeSummaryPagination"
@@ -266,7 +269,7 @@
 
       <q-step
         name="import"
-        title="Allowances & deductions"
+        title="Other Payments & deductions"
         icon="upload_file"
         :done="payrollStep === 'pools' || payrollStep === 'summary' || payrollStep === 'process'"
       >
@@ -275,7 +278,7 @@
             <div class="row items-start q-col-gutter-lg">
               <div class="col-12 col-lg-5">
                 <div class="text-overline text-primary">Step 3</div>
-                <div class="text-h6 text-weight-bold">Upload allowances and deductions</div>
+                <div class="text-h6 text-weight-bold">Upload other payments and deductions</div>
                 <div class="text-body2 text-grey-7 q-mt-xs">
                   Upload an Excel or CSV file with employee id, employee name, then repeating columns for code, date, quantity, and rate.
                   Negative quantities are treated as deductions.
@@ -287,7 +290,7 @@
                   clearable
                   accept=".csv,.xls,.xlsx"
                   :model-value="importFile"
-                  label="Allowance and deduction file"
+                  label="Other Payment and deduction file"
                   :disable="!selectedPayPeriodId || selectedPeriodProcessed"
                   @update:model-value="void handleImportFile(($event as File | null) ?? null)"
                 >
@@ -319,7 +322,7 @@
                   class="bg-amber-1 text-amber-10 q-mt-md"
                 >
                   <template #avatar><q-icon name="info" /></template>
-                  Select the pay period you are running before importing allowances or deductions.
+                  Select the pay period you are running before importing other payments or deductions.
                 </q-banner>
 
                 <q-banner
@@ -328,7 +331,7 @@
                   class="bg-grey-2 text-grey-9 q-mt-md"
                 >
                   <template #avatar><q-icon name="lock" /></template>
-                  This payroll run has been processed. Importing new allowance or deduction rows is disabled.
+                  This payroll run has been processed. Importing new other payment or deduction rows is disabled.
                 </q-banner>
 
                 <q-banner
@@ -373,7 +376,7 @@
                   <div class="col-12 col-sm-4">
                     <q-card flat bordered class="import-stat-card">
                       <q-card-section>
-                        <div class="text-caption text-grey-7">Allowances</div>
+                        <div class="text-caption text-grey-7">Other Payments</div>
                         <div class="text-h6 text-positive">{{ formatCurrency(importPreview?.allowanceTotal ?? 0) }}</div>
                       </q-card-section>
                     </q-card>
@@ -498,7 +501,7 @@
           <div class="col-12 col-md">
             <div class="text-h6 text-weight-bold">Employee payroll summary</div>
             <div class="text-body2 text-grey-7">
-              Review gross pay, allowances, deductions, taxes, social security, YTD figures, and net pay for this payroll run.
+              Review gross pay, other payments, deductions, taxes, social security, YTD figures, and net pay for this payroll run.
             </div>
           </div>
           <div class="col-12 col-md-auto row q-gutter-sm justify-end">
@@ -720,7 +723,7 @@
             </div>
             <div class="text-body2 text-grey-7">
               {{ selectedImportEmployee?.recordCount ?? 0 }} records ·
-              {{ formatCurrency(selectedImportEmployee?.allowanceTotal ?? 0) }} allowances ·
+              {{ formatCurrency(selectedImportEmployee?.allowanceTotal ?? 0) }} other payments ·
               {{ formatCurrency(selectedImportEmployee?.deductionTotal ?? 0) }} deductions
             </div>
           </div>
@@ -901,6 +904,7 @@ import {
 import { usePayPeriodGroupStore } from '@payroll/stores/pay-period-group-store';
 import { usePayPeriodScheduleStore } from '@payroll/stores/pay-period-schedule-store';
 import { formatDate } from '../components/attendance/utils';
+import { keepCurrentAndOneAhead } from '@payroll/utils/pay-period-horizon';
 
 type EditableImportDetailRow = PayrollAllowanceDeductionImportRow & PayrollAllowanceDeductionImportPreview['employees'][number]['details'][number];
 
@@ -913,6 +917,9 @@ const {
   employeeTimesheetSummaries,
   employeeTimesheetDetails,
   timesheetSummary,
+  periodSummary,
+  previousSummary,
+  missingPayrollEmployees,
   employeeSummaryPagination,
   payPeriods,
   payrollRunEmployeeSummary,
@@ -978,11 +985,13 @@ const timesheetIssueCount = computed(() => timesheetSummary.value.issueCount);
 const isLoadingPayRunSetup = computed(() =>
   isLoadingPayPeriods.value || isLoadingPayrollRuns.value || payPeriodGroupStore.isLoadingPayPeriodGroups,
 );
-const filteredPayPeriods = computed(() =>
-  selectedPayPeriodGroupId.value
+const filteredPayPeriods = computed(() => {
+  const groupPeriods = selectedPayPeriodGroupId.value
     ? payPeriods.value.filter((period) => period.payPeriodGroupId === selectedPayPeriodGroupId.value)
-    : [],
-);
+    : [];
+
+  return keepCurrentAndOneAhead(groupPeriods);
+});
 const selectedPeriod = computed(() =>
   payPeriods.value.find((period) => period.id === selectedPayPeriodId.value) ?? null,
 );
@@ -1061,7 +1070,7 @@ const selectedImportDetailRows = computed<EditableImportDetailRow[]>(() =>
 const importPreviewColumns = [
   { name: 'employeeName', label: 'Employee', field: 'employeeName', align: 'left' as const, sortable: true },
   { name: 'recordCount', label: 'Records', field: 'recordCount', align: 'right' as const, sortable: true },
-  { name: 'allowanceTotal', label: 'Allowances', field: 'allowanceTotal', align: 'right' as const, sortable: true },
+  { name: 'allowanceTotal', label: 'Other Payments', field: 'allowanceTotal', align: 'right' as const, sortable: true },
   { name: 'deductionTotal', label: 'Deductions', field: 'deductionTotal', align: 'right' as const, sortable: true },
   { name: 'errorCount', label: 'Errors', field: 'errorCount', align: 'center' as const, sortable: true },
 ];
@@ -1096,7 +1105,7 @@ const payrollMoneyColumnNames = [
 const payrollSummaryColumns = [
   { name: 'employeeName', label: 'Employee', field: 'employeeName', align: 'left' as const, sortable: true },
   { name: 'baseEarnings', label: 'Base pay', field: 'baseEarnings', align: 'right' as const, sortable: true },
-  { name: 'nonTaxableAllowances', label: 'Other deductions', field: 'nonTaxableAllowances', align: 'right' as const, sortable: true },
+  { name: 'nonTaxableAllowances', label: 'Non-taxable other payments', field: 'nonTaxableAllowances', align: 'right' as const, sortable: true },
   { name: 'deductions', label: 'Deduction', field: 'deductions', align: 'right' as const, sortable: true },
   { name: 'employerSocialSecurity', label: 'SS employer', field: 'employerSocialSecurity', align: 'right' as const, sortable: true },
   { name: 'employeeSocialSecurity', label: 'SS employee', field: 'employeeSocialSecurity', align: 'right' as const, sortable: true },
@@ -1279,7 +1288,11 @@ function goToImportStep() {
   payrollStep.value = 'import';
 }
 
-function goToPoolsStep() {
+async function goToPoolsStep() {
+  const payrollRunId = await ensureSelectedPayrollRunId();
+  if (!payrollRunId) {
+    return;
+  }
   payrollStep.value = 'pools';
 }
 
@@ -1296,7 +1309,9 @@ function goToReviewStep() {
 }
 
 watch(payrollStep, async (step) => {
-  if (step === 'review') {
+  if (step === 'pools') {
+    await ensureSelectedPayrollRunId();
+  } else if (step === 'review') {
     await loadTimesheets(1);
   } else if (step === 'summary' || step === 'process') {
     await refreshPayrollSummary();
@@ -1710,7 +1725,7 @@ async function handleImportFile(file: File | null) {
     const parsedRows = parseAllowanceDeductionRows(rows);
 
     if (parsedRows.length === 0) {
-      $q.notify({ type: 'negative', message: 'No allowance or deduction rows were found in the file.' });
+      $q.notify({ type: 'negative', message: 'No other payment or deduction rows were found in the file.' });
       return;
     }
 
@@ -1885,8 +1900,8 @@ function confirmAllowanceDeductionImport() {
   }
 
   $q.dialog({
-    title: 'Post imported allowances and deductions?',
-    message: `This will insert ${importPreview.value?.recordCount ?? importRows.value.length} allowance/deduction records into the selected draft payroll run.`,
+    title: 'Post imported other payments and deductions?',
+    message: `This will insert ${importPreview.value?.recordCount ?? importRows.value.length} other payment/deduction records into the selected draft payroll run.`,
     cancel: true,
     ok: {
       label: 'Post import',
@@ -1918,7 +1933,7 @@ async function postAllowanceDeductionImport() {
   }
   $q.notify({
     type: 'positive',
-    message: `Posted ${result.inserted?.total ?? result.recordCount} allowance/deduction records.`,
+    message: `Posted ${result.inserted?.total ?? result.recordCount} other payment/deduction records.`,
   });
 }
 
@@ -1953,9 +1968,11 @@ function resolveDefaultPayPeriodGroupId(): string | null {
 
 function resolveDefaultPayPeriodId(payPeriodGroupId = selectedPayPeriodGroupId.value): string | null {
   const today = localDateString(new Date());
-  const candidates = payPeriodGroupId
-    ? payPeriods.value.filter((period) => period.payPeriodGroupId === payPeriodGroupId)
-    : payPeriods.value;
+  const candidates = keepCurrentAndOneAhead(
+    payPeriodGroupId
+      ? payPeriods.value.filter((period) => period.payPeriodGroupId === payPeriodGroupId)
+      : payPeriods.value,
+  );
   const draftPeriods = candidates
     .filter((period) => period.payrollRunStatus?.toLowerCase() === 'draft')
     .sort((left, right) => left.startDate.localeCompare(right.startDate));

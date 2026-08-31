@@ -59,6 +59,21 @@ watch(
   },
 );
 
+watch(
+  () => schedulerStore.filterEmployeeGroupId,
+  () => {
+    if (
+      !schedulerStore.hasLoadedEmployees
+      || !canViewAllSchedulerEmployees()
+      || schedulerStore.employeesMode !== 'paginated'
+    ) {
+      return;
+    }
+
+    void schedulerStore.fetchEmployees(true);
+  },
+);
+
 onMounted(async () => {
   if (!schedulerStore.hasLoadedEmployees || schedulerStore.employees.length === 0) {
     await prepareSchedulerEmployees();

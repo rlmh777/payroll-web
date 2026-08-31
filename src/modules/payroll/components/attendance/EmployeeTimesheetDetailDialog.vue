@@ -158,6 +158,12 @@
                 <span v-else>{{ formatTime(tableProps.row.roundOffClockOutTime) }}</span>
               </q-td>
             </template>
+            <template #body-cell-scheduledHours="tableProps">
+              <q-td :props="tableProps">{{ formatHours(tableProps.row.scheduledHours) }}</q-td>
+            </template>
+            <template #body-cell-rawClockedHours="tableProps">
+              <q-td :props="tableProps">{{ formatHours(rawClockedHoursForRow(tableProps.row)) }}</q-td>
+            </template>
             <template #body-cell-clockedHoursWorked="tableProps">
               <q-td :props="tableProps">{{ formatHours(tableProps.row.clockedHoursWorked) }}</q-td>
             </template>
@@ -206,24 +212,7 @@
             <template #body-cell-issues="tableProps">
               <q-td :props="tableProps">
                 <div class="column q-gutter-xs">
-                  <q-chip
-                    v-if="tableProps.row.hasIssues"
-                    dense
-                    square
-                    color="orange-1"
-                    text-color="orange-10"
-                    icon="warning_amber"
-                    label="Review"
-                  >
-                    <q-tooltip style="max-width: 320px; white-space: pre-line">
-                      {{ issuesTooltipText(tableProps.row) }}
-                    </q-tooltip>
-                  </q-chip>
-                  <q-icon v-else name="check_circle" color="positive" size="20px">
-                    <q-tooltip style="max-width: 320px; white-space: pre-line">
-                      {{ rowTooltipText(tableProps.row) || 'No attendance issues' }}
-                    </q-tooltip>
-                  </q-icon>
+                  <TimesheetExceptionsCell :row="tableProps.row" />
                   <q-btn
                     v-if="canAuthorizeLeaveWork(tableProps.row)"
                     dense
@@ -240,14 +229,14 @@
             </template>
             <template #body-cell-actions="tableProps">
               <q-td :props="tableProps">
-                <div v-if="tableProps.row.approvalStatus === 'PENDING'" class="row no-wrap q-gutter-xs">
+                <div v-if="isPendingApprovalStatus(tableProps.row.approvalStatus)" class="row no-wrap q-gutter-xs">
                   <q-btn
                     dense
                     flat
                     color="positive"
                     icon="check"
                     label="Approve"
-                    :disable="props.isUpdatingApproval || tableProps.row.hasLeaveConflict || isDateLocked(tableProps.row)"
+                    :disable="props.isUpdatingApproval || tableProps.row.hasLeaveConflict || isDateLocked(tableProps.row) || timesheetHasBlockingExceptions(tableProps.row)"
                     @click="emitApproval(tableProps.row, 'APPROVED')"
                   >
                     <q-tooltip v-if="isDateLocked(tableProps.row)">
@@ -255,6 +244,9 @@
                     </q-tooltip>
                     <q-tooltip v-else-if="tableProps.row.hasLeaveConflict">
                       Resolve the leave conflict before approving.
+                    </q-tooltip>
+                    <q-tooltip v-else-if="timesheetHasBlockingExceptions(tableProps.row)">
+                      Resolve attendance exceptions before approving.
                     </q-tooltip>
                   </q-btn>
                   <q-btn
@@ -283,6 +275,18 @@
                 <div class="text-subtitle2">No daily timesheets found</div>
               </div>
             </template>
+            <template #bottom-row>
+              <q-tr v-if="props.details.length > 0" class="detail-table__totals-row">
+                <q-td colspan="7" class="text-weight-bold">Period total</q-td>
+                <q-td class="text-right text-weight-bold">{{ formatHours(detailTotals.scheduledHours) }}</q-td>
+                <q-td class="text-right text-weight-bold">{{ formatHours(detailTotals.rawClockedHours) }}</q-td>
+                <q-td class="text-right text-weight-bold">{{ formatHours(detailTotals.roundedHours) }}</q-td>
+                <q-td class="text-right text-weight-bold text-primary">{{ formatHours(detailTotals.payableHours) }}</q-td>
+                <q-td class="text-right text-weight-bold">{{ formatHours(detailTotals.regularHours) }}</q-td>
+                <q-td class="text-right text-weight-bold">{{ formatHours(detailTotals.overtimeHours) }}</q-td>
+                <q-td colspan="5" />
+              </q-tr>
+            </template>
           </q-table>
         </q-card>
       </q-card-section>
@@ -297,17 +301,24 @@ import type { TimesheetApprovalAction } from './types';
 import {
   approvalIcon,
   formatDate,
-  formatDateTime,
   formatOvertimeForPayType,
   formatPayType,
   humanizeStatus,
   statusColor,
+  timesheetLastUpdatedTooltip,
 } from './utils';
 import { useAttendanceStore, type EmployeeTimesheetSummary, type TimesheetRow } from '@payroll/stores/attendance-store';
 import {
   buildRoundOffDateTimes,
+  rawClockedHoursForRow,
+  sumTimesheetPeriodTotals,
   toTimeInputValue,
 } from '@hr/utils/timesheet-time-utils';
+import TimesheetExceptionsCell from '@hr/components/timesheet/TimesheetExceptionsCell.vue';
+import {
+  isPendingApprovalStatus,
+  timesheetHasBlockingExceptions,
+} from '@hr/utils/timesheet-exception-utils';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -337,26 +348,9 @@ function rowTooltipText(row: TimesheetRow): string {
     lines.push(`Comment: ${comment}`);
   }
 
-  if (row.updatedByName || row.updatedAt) {
-    const who = row.updatedByName || 'Unknown user';
-    const when = row.updatedAt ? formatDateTime(row.updatedAt) : 'unknown time';
-    lines.push(`Last updated by ${who} on ${when}`);
-  }
-
-  return lines.join('\n');
-}
-
-function issuesTooltipText(row: TimesheetRow): string {
-  const lines: string[] = [];
-  if (row.remarks?.trim()) {
-    lines.push(row.remarks.trim());
-  } else {
-    lines.push('Attendance issue');
-  }
-
-  const meta = rowTooltipText(row);
-  if (meta) {
-    lines.push(meta);
+  const updateLine = timesheetLastUpdatedTooltip(row);
+  if (updateLine) {
+    lines.push(updateLine);
   }
 
   return lines.join('\n');
@@ -384,7 +378,9 @@ const columns = [
   { name: 'clockOutTime', label: 'Clock out / site', field: 'clockOutTime', align: 'left' as const },
   { name: 'roundOffClockInTime', label: 'Rounded in', field: 'roundOffClockInTime', align: 'left' as const },
   { name: 'roundOffClockOutTime', label: 'Rounded out', field: 'roundOffClockOutTime', align: 'left' as const },
-  { name: 'clockedHoursWorked', label: 'Clocked hrs', field: 'clockedHoursWorked', align: 'right' as const },
+  { name: 'scheduledHours', label: 'Scheduled hrs', field: 'scheduledHours', align: 'right' as const },
+  { name: 'rawClockedHours', label: 'Clocked hrs', field: 'rawClockedHours', align: 'right' as const },
+  { name: 'clockedHoursWorked', label: 'Rounded hrs', field: 'clockedHoursWorked', align: 'right' as const },
   { name: 'hoursWorked', label: 'Payable hrs', field: 'hoursWorked', align: 'right' as const },
   { name: 'regularHours', label: 'Regular hrs', field: 'regularHours', align: 'right' as const },
   { name: 'overtimeHours', label: 'OT hrs', field: 'overtimeHours', align: 'right' as const },
@@ -396,7 +392,9 @@ const columns = [
 ];
 
 const cleanPendingRows = computed(() =>
-  props.details.filter((row) => row.approvalStatus === 'PENDING' && !row.hasIssues),
+  props.details.filter(
+    (row) => isPendingApprovalStatus(row.approvalStatus) && !timesheetHasBlockingExceptions(row) && !row.hasLeaveConflict,
+  ),
 );
 
 const periodLabel = computed(() => {
@@ -405,13 +403,15 @@ const periodLabel = computed(() => {
   return `${formatDate(startDate)} – ${formatDate(endDate)}`;
 });
 
+const detailTotals = computed(() => sumTimesheetPeriodTotals(props.details));
+
 const metricCards = computed(() => [
-  { label: 'Total hours', value: formatHours(props.summary?.hoursWorked), className: 'text-primary' },
+  { label: 'Scheduled hours', value: formatHours(detailTotals.value.scheduledHours), className: 'text-indigo' },
+  { label: 'Clocked hours', value: formatHours(detailTotals.value.rawClockedHours), className: 'text-blue-grey' },
+  { label: 'Rounded hours', value: formatHours(detailTotals.value.roundedHours), className: 'text-cyan-8' },
+  { label: 'Payable hours', value: formatHours(detailTotals.value.payableHours), className: 'text-primary' },
   { label: 'Regular hours', value: formatHours(props.summary?.regularHours), className: 'text-positive' },
   { label: 'Overtime hours', value: formatHours(props.summary?.overtimeHours), className: 'text-deep-orange' },
-  { label: 'Holiday hours', value: formatHours(props.summary?.holidayHours), className: 'text-teal' },
-  { label: 'Paid hours', value: formatHours(props.summary?.paidHours), className: 'text-positive' },
-  { label: 'Unpaid hours', value: formatHours(props.summary?.unpaidHours), className: 'text-negative' },
   { label: 'Work days', value: props.summary?.workDays ?? 0, className: '' },
 ]);
 
@@ -497,7 +497,7 @@ function isDateLocked(row: TimesheetRow) {
 function lockTooltip(row: TimesheetRow) {
   return row.lockReason
     || (row.lockBeforeDate
-      ? `Locked because work date is before ${row.lockBeforeDate}. Change the lock date under Payroll.`
+      ? `Locked because work date is before ${row.lockBeforeDate}. Open a temporary unlock under Payroll Overview if needed.`
       : 'This timesheet is locked and cannot be edited.');
 }
 
@@ -615,5 +615,13 @@ async function saveRoundOff(row: TimesheetRow) {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+:deep(.detail-table__totals-row) {
+  background: #eef3fb;
+}
+
+:deep(.detail-table__totals-row td) {
+  border-top: 2px solid #cbd5e1;
 }
 </style>

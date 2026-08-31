@@ -2,8 +2,33 @@
   <div class="purchase-ledger-panel">
     <div class="purchase-ledger-toolbar q-mb-md">
       <div class="purchase-ledger-view-toggle">
+        <q-btn-dropdown
+          split
+          dense
+          no-caps
+          :unelevated="viewMode === 'summary'"
+          :outline="viewMode !== 'summary'"
+          :color="viewMode === 'summary' ? 'primary' : 'grey-8'"
+          label="BTS210a"
+          :loading="isExporting"
+          @click="viewMode = 'summary'"
+        >
+          <q-list>
+            <q-item
+              v-close-popup
+              clickable
+              :disable="!hasData || isExporting"
+              @click="exportBts210a"
+            >
+              <q-item-section avatar>
+                <q-icon name="file_download" />
+              </q-item-section>
+              <q-item-section>Export</q-item-section>
+            </q-item>
+          </q-list>
+        </q-btn-dropdown>
         <q-btn
-          v-for="option in viewOptions"
+          v-for="option in secondaryViewOptions"
           :key="option.value"
           :label="option.label"
           no-caps
@@ -14,6 +39,22 @@
           @click="viewMode = option.value as ViewMode"
         />
       </div>
+
+      <q-input
+        v-if="viewMode === 'summary' || viewMode === 'non_taxable'"
+        v-model="summaryFilterDraft"
+        outlined
+        dense
+        clearable
+        :loading="isSummaryFiltering"
+        :label="viewMode === 'summary' ? 'Filter BTS210a' : 'Filter Non Taxable'"
+        placeholder="Date, invoice, name, or TIN"
+        class="purchase-ledger-filter"
+      >
+        <template #prepend>
+          <q-icon name="search" />
+        </template>
+      </q-input>
 
       <q-select
         v-model="selectedExclusion"
@@ -55,18 +96,34 @@
     </div>
 
     <q-banner v-if="!hasData" class="bg-blue-1 text-grey-9" rounded>
-      Upload the monthly purchase ledger workbook to view summary totals by company and class, or the full detail sheet.
+      Upload the monthly purchase ledger workbook to view the BTS210a summary or the full detail sheet.
     </q-banner>
 
-    <div v-else class="purchase-ledger-table-wrap">
+    <div
+      v-else
+      class="purchase-ledger-table-wrap"
+      :class="{ 'purchase-ledger-table-wrap--summary': viewMode === 'summary' }"
+    >
       <q-markup-table flat bordered dense class="purchase-ledger-table">
         <thead>
+          <tr v-if="viewMode === 'summary'" class="purchase-ledger-line-header">
+            <th colspan="5" class="text-left text-weight-bold text-uppercase">
+              Line # on GST Return
+            </th>
+            <th
+              v-for="line in summaryLineHeaders"
+              :key="line"
+              class="text-center text-weight-bold text-uppercase"
+            >
+              {{ line }}
+            </th>
+          </tr>
           <tr>
             <th v-if="viewMode === 'detail'" class="purchase-ledger-row-num text-right">#</th>
             <th
               v-for="column in displayColumns"
               :key="column.key"
-              :class="headerClass(column.key)"
+              :class="[headerClass(column.key), viewMode === 'summary' ? 'text-uppercase' : '']"
             >
               {{ column.label }}
             </th>
@@ -86,15 +143,64 @@
               :key="column.key"
               :class="cellClass(column.key)"
             >
-              <template v-if="column.key === 'calculated_debit'">
+              <template v-if="column.key === 'total_purchases' && isSummaryRow(row)">
+                <span :class="{ 'text-negative': row.total_purchases < 0 }">
+                  {{ money(row.total_purchases) }}
+                </span>
+              </template>
+              <template v-else-if="column.key === 'imports' && isSummaryRow(row)">
+                <span :class="{ 'text-negative': row.imports < 0 }">
+                  {{ money(row.imports) }}
+                </span>
+              </template>
+              <template v-else-if="column.key === 'standard_rated' && isSummaryRow(row)">
+                <span :class="{ 'text-negative': row.standard_rated < 0 }">
+                  {{ money(row.standard_rated) }}
+                </span>
+              </template>
+              <template v-else-if="column.key === 'zero_rated' && isSummaryRow(row)">
+                <span :class="{ 'text-negative': row.zero_rated < 0 }">
+                  {{ money(row.zero_rated) }}
+                </span>
+              </template>
+              <template v-else-if="column.key === 'exempt' && isSummaryRow(row)">
                 <span
-                  v-if="formatCalculatedDebit(row)"
                   :class="{
-                    'text-negative': isNegativeCalculatedDebit(row),
-                    'purchase-ledger-calculated--adjusted': isAdjustedCalculatedDebit(row),
+                    'text-negative': row.exempt < 0,
+                    'purchase-ledger-calculated--adjusted': row.partial_adjusted,
                   }"
                 >
-                  {{ formatCalculatedDebit(row) }}
+                  {{ money(row.exempt) }}
+                </span>
+              </template>
+              <template v-else-if="column.key === 'imported_gst' && isSummaryRow(row)">
+                <span :class="{ 'text-negative': row.imported_gst < 0 }">
+                  {{ money(row.imported_gst) }}
+                </span>
+              </template>
+              <template v-else-if="column.key === 'domestic_gst' && isSummaryRow(row)">
+                <span
+                  :class="{
+                    'text-negative': row.domestic_gst < 0,
+                    'purchase-ledger-calculated--adjusted': row.partial_adjusted,
+                  }"
+                >
+                  {{ money(row.domestic_gst) }}
+                </span>
+              </template>
+              <template v-else-if="column.key === 'debit_credit_notes' && isSummaryRow(row)">
+                <span :class="{ 'text-negative': row.debit_credit_notes < 0 }">
+                  {{ money(row.debit_credit_notes) }}
+                </span>
+              </template>
+              <template v-else-if="column.key === 'total_input_tax' && isSummaryRow(row)">
+                <span
+                  :class="{
+                    'text-negative': row.total_input_tax < 0,
+                    'purchase-ledger-calculated--adjusted': row.partial_adjusted,
+                  }"
+                >
+                  {{ money(row.total_input_tax) }}
                 </span>
               </template>
               <span v-else :class="{ 'text-negative': isNegative(column.key, row) }">
@@ -107,17 +213,36 @@
           <tr class="purchase-ledger-row--total">
             <td class="text-weight-bold">Total</td>
             <td />
-            <td class="text-right text-weight-bold">{{ money(summaryTotal) }}</td>
-            <td class="text-right text-weight-bold">{{ money(summaryCalculatedTotal) }}</td>
+            <td />
+            <td />
+            <td class="text-right text-weight-bold">{{ money(summaryPurchasesTotal) }}</td>
+            <td class="text-right text-weight-bold">{{ money(summaryImportsTotal) }}</td>
+            <td class="text-right text-weight-bold">{{ money(summaryStandardRatedTotal) }}</td>
+            <td class="text-right text-weight-bold">{{ money(summaryZeroRatedTotal) }}</td>
+            <td class="text-right text-weight-bold">{{ money(summaryExemptTotal) }}</td>
+            <td class="text-right text-weight-bold">{{ money(summaryImportedGstTotal) }}</td>
+            <td class="text-right text-weight-bold">{{ money(summaryDomesticGstTotal) }}</td>
+            <td class="text-right text-weight-bold">{{ money(summaryDebitCreditNotesTotal) }}</td>
+            <td class="text-right text-weight-bold">{{ money(summaryTotalInputTaxTotal) }}</td>
+          </tr>
+        </tfoot>
+        <tfoot v-else-if="viewMode === 'non_taxable' && displayRows.length">
+          <tr class="purchase-ledger-row--total">
+            <td class="text-weight-bold">Total</td>
+            <td />
+            <td />
+            <td />
+            <td class="text-right text-weight-bold">{{ money(nonTaxablePurchasesTotal) }}</td>
           </tr>
         </tfoot>
       </q-markup-table>
+      <q-inner-loading :showing="(viewMode === 'summary' || viewMode === 'non_taxable') && isSummaryFiltering" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import {
   useTaxCalculatorStore,
@@ -125,32 +250,113 @@ import {
   type TaxCalculatorPurchaseLedgerExcludedName,
   type TaxCalculatorPurchaseLedgerSheet,
 } from '@payroll/stores/tax-calculator-store';
+import { useOrganizationStore } from '@core/stores/organization-store';
+import { exportBts210aPurchaseLedger } from '@payroll/utils/bts210a-purchase-ledger-export';
 
-type ViewMode = 'summary' | 'detail';
-type SummaryRow = {
+type ViewMode = 'summary' | 'non_taxable' | 'detail';
+type InvoiceGroup = {
+  date: string | number;
+  date_sort: number;
+  invoice_no: string;
   name: string;
-  class: string;
-  debit: number;
-  calculated_debit: number;
-  adjusted: boolean;
+  tin: string;
+  non_taxable: number;
+  taxable: number;
+  partial_raw: number;
+  imported: number;
+  zero_rated: number;
+  exempt: number;
+  imported_gst: number;
+  gst: number;
+  debit_credit_notes: number;
+  other: number;
+  all_classes: number;
+  has_other_class: boolean;
+};
+type SummaryRow = {
+  date: string | number;
+  date_sort: number;
+  invoice_no: string;
+  name: string;
+  tin: string;
+  total_purchases: number;
+  imports: number;
+  standard_rated: number;
+  zero_rated: number;
+  exempt: number;
+  imported_gst: number;
+  domestic_gst: number;
+  debit_credit_notes: number;
+  total_input_tax: number;
+  partial_adjusted: boolean;
 };
 type DisplayRow = TaxCalculatorGstSheetRow | SummaryRow;
+type TaxClassBucket = 'non_taxable' | 'taxable' | 'partial' | 'imported' | 'imported_gst' | 'gst' | 'zero_rated' | 'exempt' | 'debit_credit_notes' | 'other';
 
 const props = defineProps<{
   sheet: TaxCalculatorPurchaseLedgerSheet;
   excludedNames: TaxCalculatorPurchaseLedgerExcludedName[];
   taxableRatio?: number;
+  complementRatio?: number;
+  gstRate?: number;
+  year: number;
+  month: number;
 }>();
 
 const store = useTaxCalculatorStore();
+const organizationStore = useOrganizationStore();
 const $q = useQuasar();
 const viewMode = ref<ViewMode>('summary');
+const isExporting = ref(false);
 const selectedExclusion = ref<string | null>(null);
+const summaryFilterDraft = ref('');
+const summaryFilter = ref('');
+const isSummaryFiltering = ref(false);
+let summaryFilterTimer: ReturnType<typeof setTimeout> | null = null;
+const SUMMARY_FILTER_DEBOUNCE_MS = 200;
+
+watch(summaryFilterDraft, (value) => {
+  const next = value ?? '';
+  isSummaryFiltering.value = true;
+  if (summaryFilterTimer) clearTimeout(summaryFilterTimer);
+  summaryFilterTimer = setTimeout(() => {
+    summaryFilter.value = next;
+    requestAnimationFrame(() => {
+      isSummaryFiltering.value = false;
+      summaryFilterTimer = null;
+    });
+  }, SUMMARY_FILTER_DEBOUNCE_MS);
+});
+
+onBeforeUnmount(() => {
+  if (summaryFilterTimer) clearTimeout(summaryFilterTimer);
+});
+
+const summaryLineHeaders = [
+  'Line 200',
+  'Line 210',
+  'Line 220',
+  'Line 230',
+  'Line 240',
+  'Line 250',
+  'Line 260',
+  'Line 270',
+] as const;
 
 const viewOptions = [
-  { label: 'By Name & Class', value: 'summary' },
+  { label: 'BTS210a', value: 'summary' },
+  { label: 'Non Taxable', value: 'non_taxable' },
   { label: 'Raw Data', value: 'detail' },
 ];
+const secondaryViewOptions = viewOptions.filter((option) => option.value !== 'summary');
+
+const taxableRatio = computed(() => Number(props.taxableRatio ?? 0));
+const partialFactor = computed(() => {
+  if (props.complementRatio != null && Number.isFinite(Number(props.complementRatio))) {
+    return Math.max(0, Number(props.complementRatio));
+  }
+  return Math.max(0, 1 - taxableRatio.value);
+});
 
 const excludedNameSet = computed(() => new Set(
   props.excludedNames.map((item) => item.name.trim().toLowerCase()),
@@ -161,6 +367,8 @@ const nameColumn = computed(() => props.sheet.name_column || 'F');
 const classColumn = computed(() => props.sheet.class_column || 'L');
 const debitColumn = computed(() => props.sheet.debit_column || 'N');
 const dateColumn = computed(() => props.sheet.date_column || 'B');
+const tinColumn = computed(() => props.sheet.tin_column || 'J');
+const invoiceColumn = computed(() => props.sheet.invoice_column || 'D');
 
 const headerRow = computed(() => props.sheet.rows.find((row) => row.row === 1) ?? null);
 
@@ -171,57 +379,206 @@ const detailRows = computed(() => props.sheet.rows.filter((row) => {
   return !excludedNameSet.value.has(name.toLowerCase());
 }));
 
-const summaryRows = computed(() => {
-  const groups = new Map<string, SummaryRow>();
-  const ratio = Number(props.taxableRatio ?? 0);
-  const partialFactor = Math.max(0, 1 - ratio);
+const groupedInvoices = computed(() => {
+  const groups = new Map<string, InvoiceGroup>();
+  let carryDate: string | number = '';
+  let carryInvoice = '';
+  let carryName = '';
+  let carryTin = '';
+  let carryClass = '';
 
   for (const row of props.sheet.rows) {
     if (row.row === 1) continue;
-    if (isPeriodMarkerRow(row)) continue;
-    const name = String(row[nameColumn.value] ?? '').trim();
+    if (isPeriodMarkerRow(row)) {
+      carryDate = '';
+      carryInvoice = '';
+      carryName = '';
+      carryTin = '';
+      carryClass = '';
+      continue;
+    }
+
+    const rawName = String(row[nameColumn.value] ?? '').trim();
+    const rawTin = String(row[tinColumn.value] ?? '').trim();
+    const rawClass = String(row[classColumn.value] ?? '').trim();
+    const rawInvoice = String(row[invoiceColumn.value] ?? '').trim();
+    const rawDate = row[dateColumn.value];
+    const hasDate = rawDate !== undefined && rawDate !== null && String(rawDate).trim() !== '';
+
+    if (hasDate) carryDate = rawDate;
+    if (rawInvoice) carryInvoice = rawInvoice;
+    if (rawName) carryName = rawName;
+    if (rawTin) carryTin = rawTin;
+    if (rawClass) carryClass = rawClass;
+
+    const name = rawName || carryName;
+    const tin = stripLeadingTinPrefix(rawTin || carryTin);
+    const cls = rawClass || carryClass;
+    const invoiceNo = rawInvoice || carryInvoice;
+    const date = hasDate ? rawDate : carryDate;
+
     if (!name || excludedNameSet.value.has(name.toLowerCase())) continue;
-    const cls = String(row[classColumn.value] ?? '').trim();
     const debit = Number(row[debitColumn.value] ?? 0);
     if (!Number.isFinite(debit) || debit === 0) continue;
-    const key = `${name}\u0000${cls}`;
+
+    const dateSort = Number(date);
+    const key = `${String(date)}\u0000${invoiceNo}`;
     const existing = groups.get(key) ?? {
+      date,
+      date_sort: Number.isFinite(dateSort) ? dateSort : Number.POSITIVE_INFINITY,
+      invoice_no: invoiceNo,
       name,
-      class: cls,
-      debit: 0,
-      calculated_debit: 0,
-      adjusted: false,
+      tin,
+      non_taxable: 0,
+      taxable: 0,
+      partial_raw: 0,
+      imported: 0,
+      zero_rated: 0,
+      exempt: 0,
+      imported_gst: 0,
+      gst: 0,
+      debit_credit_notes: 0,
+      other: 0,
+      all_classes: 0,
+      has_other_class: false,
     };
-    existing.debit += debit;
+
+    if (!existing.name && name) existing.name = name;
+    if (!existing.tin && tin) existing.tin = tin;
+    if (!existing.invoice_no && invoiceNo) existing.invoice_no = invoiceNo;
+
+    existing.all_classes += debit;
+
+    const bucket = taxClassBucket(cls);
+    if (bucket === 'non_taxable') existing.non_taxable += debit;
+    else {
+      existing.has_other_class = true;
+      if (bucket === 'taxable') existing.taxable += debit;
+      else if (bucket === 'partial') existing.partial_raw += debit;
+      else if (bucket === 'imported') existing.imported += debit;
+      else if (bucket === 'imported_gst') existing.imported_gst += debit;
+      else if (bucket === 'gst') existing.gst += debit;
+      else if (bucket === 'zero_rated') existing.zero_rated += debit;
+      else if (bucket === 'exempt') existing.exempt += debit;
+      else if (bucket === 'debit_credit_notes') existing.debit_credit_notes += debit;
+      else existing.other += debit;
+    }
+
     groups.set(key, existing);
   }
 
-  return [...groups.values()]
-    .map((row) => {
-      const adjusted = isPartialClass(row.class);
-      const calculated = adjusted ? row.debit * partialFactor : row.debit;
-      return {
-        ...row,
-        calculated_debit: calculated,
-        adjusted,
-      };
-    })
-    .sort((a, b) => (
-      a.name.localeCompare(b.name) || a.class.localeCompare(b.class)
-    ));
+  return [...groups.values()];
 });
 
-const displayRows = computed<DisplayRow[]>(() => (
-  viewMode.value === 'summary' ? summaryRows.value : detailRows.value
+function stripLeadingTinPrefix(tin: string): string {
+  return tin.replace(/^00-/, '');
+}
+
+function isNonTaxableOnlyInvoice(row: InvoiceGroup) {
+  return row.non_taxable !== 0 && !row.has_other_class;
+}
+
+function toSummaryRow(row: InvoiceGroup): SummaryRow {
+  const factor = partialFactor.value;
+  const untaxedPartial = row.partial_raw * factor;
+  const taxedPartial = row.partial_raw - untaxedPartial;
+  const gstBase = row.taxable + row.partial_raw;
+  const taxedGstBase = row.taxable + taxedPartial;
+  const payableGst = gstBase > 0 ? row.gst * (taxedGstBase / gstBase) : row.gst;
+  const nonPayableGst = row.gst - payableGst;
+  return {
+    date: row.date,
+    date_sort: row.date_sort,
+    invoice_no: row.invoice_no,
+    name: row.name,
+    tin: row.tin,
+    total_purchases: row.all_classes,
+    imports: row.imported,
+    standard_rated: row.taxable + taxedPartial,
+    zero_rated: row.zero_rated,
+    exempt: row.exempt + untaxedPartial + nonPayableGst + row.non_taxable + row.other,
+    imported_gst: row.imported_gst,
+    domestic_gst: payableGst,
+    debit_credit_notes: row.debit_credit_notes,
+    total_input_tax: payableGst + row.imported_gst - row.debit_credit_notes,
+    partial_adjusted: row.partial_raw !== 0 && factor !== 1,
+  };
+}
+
+function sortSummaryRows(rows: SummaryRow[]) {
+  return [...rows].sort((a, b) => (
+    a.date_sort - b.date_sort
+    || a.invoice_no.localeCompare(b.invoice_no, undefined, { numeric: true })
+    || a.name.localeCompare(b.name)
+  ));
+}
+
+function matchesInvoiceFilter(row: SummaryRow, needle: string) {
+  const dateLabel = formatSummaryDate(row.date).toLowerCase();
+  return (
+    dateLabel.includes(needle)
+    || row.invoice_no.toLowerCase().includes(needle)
+    || row.name.toLowerCase().includes(needle)
+    || row.tin.toLowerCase().includes(needle)
+  );
+}
+
+const summaryRows = computed(() => sortSummaryRows(
+  groupedInvoices.value
+    .filter((row) => !isNonTaxableOnlyInvoice(row))
+    .map(toSummaryRow),
 ));
+
+const nonTaxableRows = computed(() => sortSummaryRows(
+  groupedInvoices.value
+    .filter(isNonTaxableOnlyInvoice)
+    .map(toSummaryRow),
+));
+
+const filteredSummaryRows = computed(() => {
+  const needle = summaryFilter.value.trim().toLowerCase();
+  if (!needle) return summaryRows.value;
+  return summaryRows.value.filter((row) => matchesInvoiceFilter(row, needle));
+});
+
+const filteredNonTaxableRows = computed(() => {
+  const needle = summaryFilter.value.trim().toLowerCase();
+  if (!needle) return nonTaxableRows.value;
+  return nonTaxableRows.value.filter((row) => matchesInvoiceFilter(row, needle));
+});
+
+const displayRows = computed<DisplayRow[]>(() => {
+  if (viewMode.value === 'summary') return filteredSummaryRows.value;
+  if (viewMode.value === 'non_taxable') return filteredNonTaxableRows.value;
+  return detailRows.value;
+});
 
 const displayColumns = computed(() => {
   if (viewMode.value === 'summary') {
     return [
+      { key: 'date', label: 'Date' },
+      { key: 'invoice_no', label: 'Invoice No' },
       { key: 'name', label: 'Name' },
-      { key: 'class', label: 'Class' },
-      { key: 'debit', label: 'Debit' },
-      { key: 'calculated_debit', label: 'Calculated Debit' },
+      { key: 'tin', label: 'Supplier TIN' },
+      { key: 'total_purchases', label: 'Total Purchases (GST inclusive)' },
+      { key: 'imports', label: 'Value of Imports (GST exclusive)' },
+      { key: 'standard_rated', label: 'Value of standard rated purchases GST exclusive' },
+      { key: 'zero_rated', label: 'Value for zero rated purchases' },
+      { key: 'exempt', label: 'Value of exempt purchases' },
+      { key: 'imported_gst', label: 'GST paid on imports at 12.5%' },
+      { key: 'domestic_gst', label: 'GST Paid on domestic taxable purchases @ 12.5%' },
+      { key: 'debit_credit_notes', label: 'Debit/Credit Notes' },
+      { key: 'total_input_tax', label: 'Total input tax @12.5%' },
+    ];
+  }
+
+  if (viewMode.value === 'non_taxable') {
+    return [
+      { key: 'date', label: 'Date' },
+      { key: 'invoice_no', label: 'Invoice No' },
+      { key: 'name', label: 'Name' },
+      { key: 'tin', label: 'Supplier TIN' },
+      { key: 'total_purchases', label: 'Total Purchases' },
     ];
   }
 
@@ -229,79 +586,100 @@ const displayColumns = computed(() => {
     key: column,
     label: headerLabel(column),
   }));
-  const calculatedCol = { key: 'calculated_debit', label: 'Calculated Debit' };
-  const debitIndex = columns.findIndex((column) => column.key === debitColumn.value);
-  if (debitIndex >= 0) {
-    columns.splice(debitIndex + 1, 0, calculatedCol);
-  } else {
-    columns.push(calculatedCol);
-  }
   return columns;
 });
 
-const summaryTotal = computed(() => summaryRows.value.reduce((sum, row) => sum + row.debit, 0));
-const summaryCalculatedTotal = computed(() =>
-  summaryRows.value.reduce((sum, row) => sum + row.calculated_debit, 0),
+const summaryPurchasesTotal = computed(() =>
+  filteredSummaryRows.value.reduce((sum, row) => sum + row.total_purchases, 0),
+);
+const summaryImportsTotal = computed(() =>
+  filteredSummaryRows.value.reduce((sum, row) => sum + row.imports, 0),
+);
+const summaryStandardRatedTotal = computed(() =>
+  filteredSummaryRows.value.reduce((sum, row) => sum + row.standard_rated, 0),
+);
+const summaryZeroRatedTotal = computed(() =>
+  filteredSummaryRows.value.reduce((sum, row) => sum + row.zero_rated, 0),
+);
+const summaryExemptTotal = computed(() =>
+  filteredSummaryRows.value.reduce((sum, row) => sum + row.exempt, 0),
+);
+const summaryImportedGstTotal = computed(() =>
+  filteredSummaryRows.value.reduce((sum, row) => sum + row.imported_gst, 0),
+);
+const summaryDomesticGstTotal = computed(() =>
+  filteredSummaryRows.value.reduce((sum, row) => sum + row.domestic_gst, 0),
+);
+const summaryDebitCreditNotesTotal = computed(() =>
+  filteredSummaryRows.value.reduce((sum, row) => sum + row.debit_credit_notes, 0),
+);
+const summaryTotalInputTaxTotal = computed(() =>
+  filteredSummaryRows.value.reduce((sum, row) => sum + row.total_input_tax, 0),
+);
+const nonTaxablePurchasesTotal = computed(() =>
+  filteredNonTaxableRows.value.reduce((sum, row) => sum + row.total_purchases, 0),
 );
 
-function isPartialClass(className: string) {
-  const normalized = className.trim().toLowerCase().replace(/\s+/g, '');
-  return normalized === 'taxes:partial' || normalized.endsWith(':partial');
+function taxClassBucket(className: string): TaxClassBucket {
+  const normalized = className.trim().toLowerCase().replace(/\s+/g, '').replace(/:+/g, ':');
+  if (normalized === 'taxes:non-taxable' || normalized.endsWith(':non-taxable')) return 'non_taxable';
+  if (
+    normalized === 'taxes:partial'
+    || normalized.endsWith(':partial')
+    || normalized.endsWith('taxes-partial')
+    || normalized.includes(':taxes-partial')
+    || /(?:^|:)taxes?-?partial$/.test(normalized)
+  ) {
+    return 'partial';
+  }
+  if (normalized === 'taxes:taxable' || normalized.endsWith(':taxable')) return 'taxable';
+  // Check imported-gst before Taxes:GST so "Taxes:Imported-gst" is not treated as domestic GST.
+  if (
+    normalized === 'taxes:imported-gst'
+    || normalized === 'taxes:taxes:imported-gst'
+    || normalized.endsWith(':imported-gst')
+    || normalized.endsWith('imported-gst')
+  ) {
+    return 'imported_gst';
+  }
+  if (
+    normalized === 'taxes:gst'
+    || normalized.endsWith(':gst')
+    || normalized.endsWith(':taxes:gst')
+  ) {
+    return 'gst';
+  }
+  if (normalized === 'taxes:imported' || normalized.endsWith(':imported')) return 'imported';
+  if (
+    normalized === 'taxes:zero-rated'
+    || normalized === 'taxes:zerorated'
+    || normalized.endsWith(':zero-rated')
+    || normalized.endsWith(':zerorated')
+  ) {
+    return 'zero_rated';
+  }
+  if (
+    normalized === 'taxes:exempted'
+    || normalized === 'taxes:exempt'
+    || normalized.endsWith(':exempted')
+    || normalized.endsWith(':exempt')
+  ) {
+    return 'exempt';
+  }
+  if (
+    normalized === 'taxes:debit-creditnotes'
+    || normalized === 'taxes:debit-credit-notes'
+    || normalized.endsWith(':debit-creditnotes')
+    || normalized.endsWith(':debit-credit-notes')
+    || normalized.includes('debit-creditnote')
+  ) {
+    return 'debit_credit_notes';
+  }
+  return 'other';
 }
 
 function isSummaryRow(row: DisplayRow): row is SummaryRow {
-  return !('row' in row) && 'calculated_debit' in row;
-}
-
-function calculatedDebitInfo(row: DisplayRow): { value: number | null; adjusted: boolean; headerLabel: boolean } {
-  if (isSummaryRow(row)) {
-    return { value: row.calculated_debit, adjusted: row.adjusted, headerLabel: false };
-  }
-  if (!('row' in row)) {
-    return { value: null, adjusted: false, headerLabel: false };
-  }
-  if (isHeaderRow(row)) {
-    return { value: null, adjusted: false, headerLabel: true };
-  }
-  if (isPeriodMarkerRow(row)) {
-    return { value: null, adjusted: false, headerLabel: false };
-  }
-
-  const rawDebit = row[debitColumn.value];
-  if (rawDebit === undefined || rawDebit === null || rawDebit === '') {
-    return { value: null, adjusted: false, headerLabel: false };
-  }
-
-  const debit = Number(rawDebit);
-  if (!Number.isFinite(debit)) {
-    return { value: null, adjusted: false, headerLabel: false };
-  }
-
-  const cls = String(row[classColumn.value] ?? '').trim();
-  const adjusted = isPartialClass(cls);
-  const ratio = Number(props.taxableRatio ?? 0);
-  const partialFactor = Math.max(0, 1 - ratio);
-  return {
-    value: adjusted ? debit * partialFactor : debit,
-    adjusted,
-    headerLabel: false,
-  };
-}
-
-function formatCalculatedDebit(row: DisplayRow) {
-  const info = calculatedDebitInfo(row);
-  if (info.headerLabel) return 'Calculated Debit';
-  if (info.value === null) return '';
-  return money(info.value);
-}
-
-function isNegativeCalculatedDebit(row: DisplayRow) {
-  const value = calculatedDebitInfo(row).value;
-  return value !== null && value < 0;
-}
-
-function isAdjustedCalculatedDebit(row: DisplayRow) {
-  return calculatedDebitInfo(row).adjusted;
+  return !('row' in row) && 'total_purchases' in row;
 }
 
 type NameOption = { label: string; value: string };
@@ -338,10 +716,19 @@ function filterNameOptions(val: string, update: (callback: () => void) => void) 
 }
 
 function cellValue(row: DisplayRow, column: string) {
+  if (column === 'date') return 'date' in row ? row.date : '';
+  if (column === 'invoice_no') return 'invoice_no' in row ? row.invoice_no : '';
   if (column === 'name') return 'name' in row ? row.name : '';
-  if (column === 'class') return 'class' in row ? row.class : '';
-  if (column === 'debit') return 'debit' in row ? row.debit : '';
-  if (column === 'calculated_debit') return 'calculated_debit' in row ? row.calculated_debit : '';
+  if (column === 'tin') return 'tin' in row ? row.tin : '';
+  if (column === 'total_purchases') return 'total_purchases' in row ? row.total_purchases : '';
+  if (column === 'imports') return 'imports' in row ? row.imports : '';
+  if (column === 'standard_rated') return 'standard_rated' in row ? row.standard_rated : '';
+  if (column === 'zero_rated') return 'zero_rated' in row ? row.zero_rated : '';
+  if (column === 'exempt') return 'exempt' in row ? row.exempt : '';
+  if (column === 'imported_gst') return 'imported_gst' in row ? row.imported_gst : '';
+  if (column === 'domestic_gst') return 'domestic_gst' in row ? row.domestic_gst : '';
+  if (column === 'debit_credit_notes') return 'debit_credit_notes' in row ? row.debit_credit_notes : '';
+  if (column === 'total_input_tax') return 'total_input_tax' in row ? row.total_input_tax : '';
   if (!('row' in row)) return '';
   const value = row[column];
   if (value === undefined || value === null || value === '') return '';
@@ -366,7 +753,7 @@ function isPeriodMarkerRow(row: TaxCalculatorGstSheetRow) {
 
 function rowKey(row: DisplayRow, index: number) {
   if ('row' in row) return `detail-${row.row}`;
-  return `summary-${row.name}-${row.class}-${index}`;
+  return `summary-${row.date}-${row.invoice_no}-${row.name}-${index}`;
 }
 
 function rowClass(row: DisplayRow) {
@@ -380,8 +767,19 @@ function headerClass(column: string) {
   const classes = ['text-weight-bold'];
   if (
     column === 'debit'
-    || column === 'calculated_debit'
+    || column === 'total_purchases'
+    || column === 'imports'
+    || column === 'standard_rated'
+    || column === 'zero_rated'
+    || column === 'exempt'
+    || column === 'imported_gst'
+    || column === 'domestic_gst'
+    || column === 'debit_credit_notes'
+    || column === 'total_input_tax'
     || column === debitColumn.value
+    || column === 'date'
+    || column === dateColumn.value
+    || column === 'invoice_no'
   ) {
     classes.push('text-right');
   } else {
@@ -394,17 +792,33 @@ function cellClass(column: string) {
   const classes = ['purchase-ledger-cell'];
   if (
     column === 'debit'
-    || column === 'calculated_debit'
+    || column === 'total_purchases'
+    || column === 'imports'
+    || column === 'standard_rated'
+    || column === 'zero_rated'
+    || column === 'exempt'
+    || column === 'imported_gst'
+    || column === 'domestic_gst'
+    || column === 'debit_credit_notes'
+    || column === 'total_input_tax'
     || column === debitColumn.value
+    || column === 'date'
     || column === dateColumn.value
+    || column === 'invoice_no'
   ) {
     classes.push('text-right');
   } else {
     classes.push('text-left');
   }
   if (column === nameColumn.value || column === 'name') classes.push('purchase-ledger-cell--name');
-  if (column === classColumn.value || column === 'class') classes.push('purchase-ledger-cell--class');
-  if (column === 'calculated_debit') classes.push('purchase-ledger-cell--calculated');
+  if (column === classColumn.value) classes.push('purchase-ledger-cell--class');
+  if (
+    column === 'total_purchases'
+    || column === 'domestic_gst'
+    || column === 'total_input_tax'
+  ) {
+    classes.push('purchase-ledger-cell--calculated');
+  }
   return classes;
 }
 
@@ -415,7 +829,15 @@ function formatExcelDate(serial: number) {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
+    timeZone: 'UTC',
   }).format(date);
+}
+
+function formatSummaryDate(value: string | number) {
+  if (value === '') return '';
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 1000) return formatExcelDate(numeric);
+  return String(value);
 }
 
 function money(value: number) {
@@ -435,17 +857,43 @@ function formatCell(column: string, row: DisplayRow) {
   const value = cellValue(row, column);
   if (value === '') return '';
   if ('row' in row && isHeaderRow(row)) return String(value);
-  if (column === 'debit' || column === 'calculated_debit') return money(Number(value));
+  if (
+    column === 'total_purchases'
+    || column === 'imports'
+    || column === 'standard_rated'
+    || column === 'zero_rated'
+    || column === 'exempt'
+    || column === 'imported_gst'
+    || column === 'domestic_gst'
+    || column === 'debit_credit_notes'
+    || column === 'total_input_tax'
+    || column === 'debit'
+  ) {
+    return money(Number(value));
+  }
   if (column === debitColumn.value) return formatNumber(value);
-  if (column === dateColumn.value) {
-    const numeric = Number(value);
-    if (Number.isFinite(numeric) && numeric > 1000) return formatExcelDate(numeric);
+  if (column === 'date' || column === dateColumn.value) {
+    return formatSummaryDate(value);
   }
   return String(value);
 }
 
 function isNegative(column: string, row: DisplayRow) {
-  if (column !== 'debit' && column !== 'calculated_debit' && column !== debitColumn.value) return false;
+  if (
+    column !== 'debit'
+    && column !== 'total_purchases'
+    && column !== 'imports'
+    && column !== 'standard_rated'
+    && column !== 'zero_rated'
+    && column !== 'exempt'
+    && column !== 'imported_gst'
+    && column !== 'domestic_gst'
+    && column !== 'debit_credit_notes'
+    && column !== 'total_input_tax'
+    && column !== debitColumn.value
+  ) {
+    return false;
+  }
   const value = cellValue(row, column);
   if (value === '') return false;
   const numeric = Number(value);
@@ -468,6 +916,42 @@ async function removeExclusion(id: string) {
     await store.removePurchaseLedgerExclusion(id);
   } catch {
     // store.error banner handles message
+  }
+}
+
+onMounted(() => {
+  if (!organizationStore.organizations.length) {
+    void organizationStore.fetchOrganizations();
+  }
+});
+
+async function exportBts210a() {
+  if (!summaryRows.value.length) {
+    $q.notify({ type: 'negative', message: 'There are no BTS210a rows to export.' });
+    return;
+  }
+
+  isExporting.value = true;
+  try {
+    if (!organizationStore.organizationToEdit && !organizationStore.organizations.length) {
+      await organizationStore.fetchOrganizations();
+    }
+    const organization = organizationStore.organizationToEdit ?? organizationStore.organizations[0];
+    await exportBts210aPurchaseLedger({
+      rows: summaryRows.value,
+      year: props.year,
+      month: props.month,
+      companyTin: organization?.taxIdentificationNumber?.trim() ?? '',
+      companyName: (organization?.legalName || organization?.alias || '').trim(),
+    });
+    $q.notify({ type: 'positive', message: 'BTS210a purchase ledger exported.' });
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error instanceof Error ? error.message : 'Unable to export BTS210a.',
+    });
+  } finally {
+    isExporting.value = false;
   }
 }
 </script>
@@ -502,10 +986,20 @@ async function removeExclusion(id: string) {
   padding-right: 10px;
 }
 
+.purchase-ledger-view-toggle :deep(.q-btn-dropdown .q-btn) {
+  min-width: 0;
+}
+
 .purchase-ledger-exclude {
   flex: 1 1 220px;
   min-width: 220px;
   max-width: 360px;
+}
+
+.purchase-ledger-filter {
+  flex: 1 1 200px;
+  min-width: 180px;
+  max-width: 280px;
 }
 
 .purchase-ledger-toolbar :deep(.q-field--with-bottom) {
@@ -513,6 +1007,7 @@ async function removeExclusion(id: string) {
 }
 
 .purchase-ledger-table-wrap {
+  position: relative;
   flex: 1 1 0;
   min-height: 0;
   overflow: auto;
@@ -544,6 +1039,20 @@ async function removeExclusion(id: string) {
   z-index: 2;
   background: #f5f5f5;
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.purchase-ledger-table-wrap--summary :deep(thead tr:first-child th) {
+  top: 0;
+  z-index: 3;
+}
+
+.purchase-ledger-table-wrap--summary :deep(thead tr:nth-child(2) th) {
+  top: 29px;
+  z-index: 2;
+}
+
+.purchase-ledger-table-wrap :deep(thead .purchase-ledger-line-header th) {
+  background: #eeeeee;
 }
 
 .purchase-ledger-table-wrap :deep(tfoot td) {

@@ -19,6 +19,14 @@
     </div>
 
     <div class="q-mt-md">
+      <EmployeeGroupSelect
+        :model-value="schedulerStore.filterEmployeeGroupId"
+        label="Employee group"
+        @update:model-value="schedulerStore.setFilterEmployeeGroupId($event)"
+      />
+    </div>
+
+    <div class="q-mt-md">
       <DepartmentSelect
         :model-value="schedulerStore.filterDepartmentId"
         label="Department"
@@ -78,6 +86,7 @@
 import { computed, ref } from 'vue';
 import DateField from '@core/components/common/DateField.vue';
 import DepartmentSelect from '@hr/components/department/DepartmentSelect.vue';
+import EmployeeGroupSelect from '@hr/components/employee-group/EmployeeGroupSelect.vue';
 import { useAttendanceStore } from '@payroll/stores/attendance-store';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
 import { useTimesheetStore } from '@hr/stores/timesheet-store';

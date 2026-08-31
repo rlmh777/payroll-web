@@ -23,7 +23,7 @@
             max="120"
             step="1"
             label="Clock round-off interval (minutes)"
-            hint="Clock-in and clock-out round up to this interval. Example at 30 min: 7:51 in → 8:00, 4:52 out → 5:00."
+            hint="Clock-in and clock-out round to the nearest interval. Midpoints go forward. Example at 30 min: 3:15 → 3:30, 3:37 → 3:30, 3:46 → 4:00."
             outlined
             :disable="store.isLoading || store.isSaving"
             :rules="[

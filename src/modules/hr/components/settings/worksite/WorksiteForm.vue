@@ -1,6 +1,6 @@
 <template>
-  <q-card-section>
-    <q-form class="q-gutter-md" @submit.prevent="$emit('submit')">
+  <q-form class="app-dialog-form row q-col-gutter-md" @submit.prevent="$emit('submit')">
+    <div class="col-12">
       <q-input
         :model-value="modelValue.name"
         label="Work site name *"
@@ -10,7 +10,9 @@
         :disable="saving"
         @update:model-value="updateField('name', String($event ?? ''))"
       />
+    </div>
 
+    <div class="col-12">
       <q-input
         :model-value="modelValue.address1"
         label="Address line 1 *"
@@ -20,7 +22,9 @@
         :disable="saving"
         @update:model-value="updateField('address1', String($event ?? ''))"
       />
+    </div>
 
+    <div class="col-12">
       <q-input
         :model-value="modelValue.address2 ?? ''"
         label="Address line 2"
@@ -29,7 +33,9 @@
         :disable="saving"
         @update:model-value="updateField('address2', String($event ?? '') || null)"
       />
+    </div>
 
+    <div class="col-12">
       <q-select
         :model-value="modelValue.localityId"
         :options="localityOptions"
@@ -48,13 +54,15 @@
         @filter="filterLocalities"
         @update:model-value="updateField('localityId', String($event ?? ''))"
       />
+    </div>
 
-      <div class="row q-gutter-sm justify-end q-mt-lg">
+    <div v-if="showActions" class="col-12">
+      <div class="row justify-end q-gutter-sm app-dialog-form-actions">
         <q-btn flat label="Cancel" color="grey" :disable="saving" @click="$emit('cancel')" />
         <q-btn type="submit" color="primary" :label="submitLabel" :loading="saving" />
       </div>
-    </q-form>
-  </q-card-section>
+    </div>
+  </q-form>
 </template>
 
 <script setup lang="ts">
@@ -68,11 +76,13 @@ const props = withDefaults(
     localityLoading?: boolean;
     saving?: boolean;
     submitLabel?: string;
+    showActions?: boolean;
   }>(),
   {
     localityLoading: false,
     saving: false,
     submitLabel: 'Save',
+    showActions: true,
   },
 );
 

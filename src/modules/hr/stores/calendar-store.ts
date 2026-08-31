@@ -161,6 +161,7 @@ export const useCalendarStore = defineStore('calendar', {
       employeeId?: string;
       employeeIds?: string[];
       departmentId?: number;
+      employeeGroupId?: string;
       scheduler?: boolean;
     }) {
       this.isLoadingCalendars = true;
@@ -193,6 +194,9 @@ export const useCalendarStore = defineStore('calendar', {
         }
         if (params?.departmentId != null) {
           queryParams.append('department_id', String(params.departmentId));
+        }
+        if (params?.employeeGroupId) {
+          queryParams.append('employee_group_id', params.employeeGroupId);
         }
 
         const headers: HeadersInit = {
@@ -236,7 +240,7 @@ export const useCalendarStore = defineStore('calendar', {
       worksiteId?: number | null;
       includeLunchHour?: boolean;
       lunchHourHours?: number;
-      description: string;
+      description?: string;
       type?: CalendarEntry['type'];
       rate?: number | string;
     }): Promise<CalendarEntry | null> {

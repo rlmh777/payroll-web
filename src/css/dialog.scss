@@ -1,0 +1,52 @@
+.app-dialog-card,
+.drawer-card,
+.q-drawer-card,
+.schedule-drawer-card,
+.incident-drawer-card {
+  width: min(520px, 94vw);
+  height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-dialog-card--modal {
+  width: min(520px, 94vw);
+  height: auto;
+  max-height: min(90vh, 800px);
+}
+
+.app-dialog-card > .q-card__section.app-dialog-header {
+  flex: 0 0 auto;
+  padding: 24px 24px 0;
+}
+
+.app-dialog-card > .q-card__section.app-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 24px 24px;
+}
+
+.app-dialog-card--modal > .q-card__section.app-dialog-body {
+  flex: 0 1 auto;
+}
+
+.app-dialog-card > .q-card__actions.app-dialog-actions,
+.app-dialog-card > .q-card__section.app-dialog-actions {
+  flex: 0 0 auto;
+  padding: 0 24px 24px;
+}
+
+.app-dialog-form {
+  width: 100%;
+}
+
+.app-dialog-form :where(.q-field, .q-select) {
+  width: 100%;
+}
+
+.app-dialog-form-actions {
+  width: 100%;
+  padding-top: 8px;
+}

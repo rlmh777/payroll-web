@@ -97,7 +97,7 @@ export const useAllowanceStore = defineStore('allowance', {
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch allowances: ${response.statusText}`);
+          throw new Error(`Failed to fetch other payments: ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -115,8 +115,8 @@ export const useAllowanceStore = defineStore('allowance', {
           this.allowances = [];
         }
       } catch (error) {
-        console.error('Error fetching allowances:', error);
-        this.error = error instanceof Error ? error.message : 'Error fetching allowances';
+        console.error('Error fetching other payments:', error);
+        this.error = error instanceof Error ? error.message : 'Error fetching other payments';
       } finally {
         this.isLoadingAllowances = false;
       }
@@ -166,7 +166,7 @@ export const useAllowanceStore = defineStore('allowance', {
         if (!response.ok) {
           const errorData: ApiErrorData = await response.json().catch(() => ({}));
           // Extract error message from errors object if present
-          let errorMessage = errorData.error || `Failed to create allowance: ${response.statusText}`;
+          let errorMessage = errorData.error || `Failed to create other payment: ${response.statusText}`;
           if (errorData.errors) {
             // Get first error message from errors object
             const errorKeys = Object.keys(errorData.errors);
@@ -193,8 +193,8 @@ export const useAllowanceStore = defineStore('allowance', {
 
         return newAllowance;
       } catch (error) {
-        console.error('Error creating allowance:', error);
-        this.error = error instanceof Error ? error.message : 'Error creating allowance';
+        console.error('Error creating other payment:', error);
+        this.error = error instanceof Error ? error.message : 'Error creating other payment';
         return null;
       } finally {
         this.isLoading = false;
@@ -249,7 +249,7 @@ export const useAllowanceStore = defineStore('allowance', {
         if (!response.ok) {
           const errorData: ApiErrorData = await response.json().catch(() => ({}));
           // Extract error message from errors object if present
-          let errorMessage = errorData.error || `Failed to update allowance: ${response.statusText}`;
+          let errorMessage = errorData.error || `Failed to update other payment: ${response.statusText}`;
           if (errorData.errors) {
             // Get first error message from errors object
             const errorKeys = Object.keys(errorData.errors);
@@ -279,8 +279,8 @@ export const useAllowanceStore = defineStore('allowance', {
 
         return updatedAllowance;
       } catch (error) {
-        console.error('Error updating allowance:', error);
-        this.error = error instanceof Error ? error.message : 'Error updating allowance';
+        console.error('Error updating other payment:', error);
+        this.error = error instanceof Error ? error.message : 'Error updating other payment';
         return null;
       } finally {
         this.isLoading = false;
@@ -308,7 +308,7 @@ export const useAllowanceStore = defineStore('allowance', {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to delete allowance: ${response.statusText}`);
+          throw new Error(errorData.error || `Failed to delete other payment: ${response.statusText}`);
         }
 
         // Remove from allowances list
@@ -316,8 +316,8 @@ export const useAllowanceStore = defineStore('allowance', {
 
         return true;
       } catch (error) {
-        console.error('Error deleting allowance:', error);
-        this.error = error instanceof Error ? error.message : 'Error deleting allowance';
+        console.error('Error deleting other payment:', error);
+        this.error = error instanceof Error ? error.message : 'Error deleting other payment';
         return false;
       } finally {
         this.isLoading = false;

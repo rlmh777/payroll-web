@@ -1,49 +1,64 @@
 <template>
   <q-dialog :model-value="open" position="right" @update:model-value="onDialogUpdate">
-    <q-card class="drawer-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ isEdit ? 'Edit skill' : 'Add skill' }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense :disable="saving" @click="close" />
-      </q-card-section>
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="save">
-          <q-input v-model="form.name" label="Skill *" dense outlined :disable="saving" />
-          <q-select
-            v-model="form.proficiencyLevel"
-            :options="proficiencyOptions"
-            emit-value
-            map-options
-            outlined
-            dense
-            clearable
-            label="Proficiency"
-            :disable="saving"
-          />
-          <q-input
-            v-model.number="form.yearsExperience"
-            type="number"
-            min="0"
-            step="0.5"
-            label="Years of experience"
-            dense
-            outlined
-            :disable="saving"
-          />
-          <q-input v-model="form.notes" type="textarea" label="Notes" dense outlined :disable="saving" />
-          <div class="row justify-end q-gutter-sm">
-            <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
-            <q-btn type="submit" color="primary" :loading="saving" label="Save" />
-          </div>
+      </AppDialogHeader>
+
+      <AppDialogBody>
+        <q-form @submit.prevent="save">
+          <AppDialogForm>
+            <div class="col-12">
+              <q-input v-model="form.name" label="Skill *" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12">
+              <q-select
+                v-model="form.proficiencyLevel"
+                :options="proficiencyOptions"
+                emit-value
+                map-options
+                outlined
+                dense
+                clearable
+                label="Proficiency"
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model.number="form.yearsExperience"
+                type="number"
+                min="0"
+                step="0.5"
+                label="Years of experience"
+                dense
+                outlined
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-input v-model="form.notes" type="textarea" label="Notes" dense outlined :disable="saving" />
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
+        <q-btn color="primary" :loading="saving" label="Save" @click="save" />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import {
   PROFICIENCY_LEVELS,
   useEmployeeSkillStore,
@@ -135,11 +150,3 @@ async function save() {
   }
 }
 </script>
-
-<style scoped>
-.drawer-card {
-  width: 30vw;
-  max-width: 420px;
-  height: 100vh;
-}
-</style>

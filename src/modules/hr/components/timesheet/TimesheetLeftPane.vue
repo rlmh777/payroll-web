@@ -27,6 +27,7 @@ const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null);
 watch(
   () => [
     schedulerStore.filterDepartmentId,
+    schedulerStore.filterEmployeeGroupId,
     schedulerStore.filterEmployeeId,
     timesheetStore.filterApprovalStatus,
   ],

@@ -19,6 +19,7 @@ export const useSchedulerStore = defineStore('scheduler', {
     viewBy: 'users' as SchedulerViewBy,
     sortBy: 'lastName' as SchedulerSortBy,
     filterDepartmentId: null as number | null,
+    filterEmployeeGroupId: null as string | null,
     filterEmployeeId: null as string | null,
     hideUnscheduledUsers: false,
     employeeSearch: '',
@@ -38,6 +39,7 @@ export const useSchedulerStore = defineStore('scheduler', {
     hasActiveFilters(state): boolean {
       return (
         state.filterDepartmentId != null ||
+        state.filterEmployeeGroupId != null ||
         state.filterEmployeeId != null ||
         state.hideUnscheduledUsers ||
         state.employeeSearch.trim().length > 0
@@ -58,6 +60,10 @@ export const useSchedulerStore = defineStore('scheduler', {
       this.filterDepartmentId = value;
     },
 
+    setFilterEmployeeGroupId(value: string | null) {
+      this.filterEmployeeGroupId = value;
+    },
+
     setFilterEmployeeId(value: string | null) {
       this.filterEmployeeId = value;
     },
@@ -72,6 +78,7 @@ export const useSchedulerStore = defineStore('scheduler', {
 
     clearFilters() {
       this.filterDepartmentId = null;
+      this.filterEmployeeGroupId = null;
       this.filterEmployeeId = null;
       this.hideUnscheduledUsers = false;
       this.employeeSearch = '';
@@ -123,6 +130,10 @@ export const useSchedulerStore = defineStore('scheduler', {
 
       if (this.filterDepartmentId != null) {
         queryParams.append('department_id', String(this.filterDepartmentId));
+      }
+
+      if (this.filterEmployeeGroupId) {
+        queryParams.append('employee_group_id', this.filterEmployeeGroupId);
       }
 
       try {

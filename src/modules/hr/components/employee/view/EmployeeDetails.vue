@@ -1,7 +1,7 @@
 <template>
   <q-card class="q-gutter-y-md q-mt-sm">
     <q-tabs v-model="tab" dense no-caps inline-label class="bg-primary text-white shadow-4" align="left">
-      <q-tab name="allowances" icon="movie" label="Default Allowances" />
+      <q-tab name="allowances" icon="movie" label="Default Other Payments" />
       <q-tab name="deductions" icon="movie" label="Default Deductions" />
       <!-- <q-tab name="historical-deductions" icon="history" label="Historical Deductions" /> -->
       <q-tab name="ss-benefit" icon="health_and_safety" label="SS Benefit" />

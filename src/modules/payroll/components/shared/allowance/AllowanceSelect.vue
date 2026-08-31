@@ -33,7 +33,7 @@
             <q-icon name="add" color="primary" />
           </q-item-section>
           <q-item-section>
-            <q-item-label>Add New Allowance</q-item-label>
+            <q-item-label>Add New Other Payment</q-item-label>
           </q-item-section>
         </q-item>
         <q-item v-else v-bind="scope.itemProps">
@@ -53,7 +53,7 @@
               size="sm"
               @click.stop="openEditAllowanceDialog(scope.opt as Allowance)"
             >
-              <q-tooltip>Edit Allowance</q-tooltip>
+              <q-tooltip>Edit Other Payment</q-tooltip>
             </q-btn>
           </q-item-section>
         </q-item>
@@ -97,7 +97,7 @@ const props = withDefaults(defineProps<Props>(), {
   disable: false,
   rules: () => [],
   clearable: false,
-  label: 'Allowance',
+  label: 'Other Payment',
   showAddNew: false,
   showEdit: false,
 });
@@ -121,7 +121,7 @@ function buildOptions(items: Allowance[], search = '') {
     : [...items];
   const list: (Allowance | { id: string; name: string; defaultAmount?: number })[] = filtered;
   if (props.showAddNew && !props.readonly) {
-    list.unshift({ id: 'add-new', name: 'Add New Allowance' });
+    list.unshift({ id: 'add-new', name: 'Add New Other Payment' });
   }
   return list;
 }

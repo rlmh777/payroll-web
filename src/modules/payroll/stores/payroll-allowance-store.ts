@@ -9,7 +9,35 @@ export interface PayrollAllowanceEmployeeOption {
   code?: string | null;
   firstName?: string;
   lastName?: string;
+  departmentName?: string | null;
   displayName: string;
+}
+
+export interface PayrollAllowanceImportPreviewRow {
+  rowNumber: number;
+  employeeIdentifier: string;
+  employeeId?: string | null;
+  employeeName?: string | null;
+  allowanceName: string;
+  allowanceId?: string | null;
+  accountCode?: string | null;
+  accountId?: string | null;
+  accountName?: string | null;
+  allowanceDate: string;
+  quantity: number;
+  unitAmount: number;
+  amount: number;
+  note?: string | null;
+  errors: string[];
+}
+
+export interface PayrollAllowanceImportPreview {
+  payrollRunId: string;
+  recordCount: number;
+  errorCount: number;
+  allowanceTotal: number;
+  rows: PayrollAllowanceImportPreviewRow[];
+  inserted?: number;
 }
 
 export interface PayrollAllowanceDraftRun {
@@ -18,6 +46,8 @@ export interface PayrollAllowanceDraftRun {
   payPeriodSchedule?: {
     startDate?: string;
     endDate?: string;
+    start_date?: string;
+    end_date?: string;
     payPeriodGroup?: { name?: string } | null;
   } | null;
   payrateFrequency?: { name?: string } | null;
@@ -36,6 +66,8 @@ export interface HistoricalEmployeeAllowance {
   quantity: number;
   unitAmount: number;
   amount: number;
+  allowanceDate?: string | null;
+  allowance_date?: string | null;
   note?: string | null;
   employee?: {
     id: string;
@@ -55,6 +87,7 @@ interface PayrollAllowancePayload {
   payrollRunId: string;
   quantity: number;
   unitAmount: number;
+  allowanceDate: string;
   note?: string;
 }
 
@@ -95,6 +128,7 @@ export const usePayrollAllowanceStore = defineStore('payrollAllowance', {
     isBootstrapping: false,
     isLoading: false,
     isSaving: false,
+    isImporting: false,
     currentPage: 1,
     lastPage: 1,
     total: 0,
@@ -117,7 +151,7 @@ export const usePayrollAllowanceStore = defineStore('payrollAllowance', {
         });
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          throw new Error(extractError(body, 'Failed to load payroll allowance options.'));
+          throw new Error(extractError(body, 'Failed to load payroll other payment options.'));
         }
 
         const data = await response.json();
@@ -126,11 +160,18 @@ export const usePayrollAllowanceStore = defineStore('payrollAllowance', {
         this.allowanceOptions = data.allowances ?? [];
         this.accountOptions = data.accounts ?? [];
 
+        if (
+          this.selectedPayrollRunId
+          && !this.draftRuns.some((run) => run.id === this.selectedPayrollRunId)
+        ) {
+          this.selectedPayrollRunId = null;
+        }
+
         if (!this.selectedPayrollRunId && this.draftRuns[0]) {
           this.selectedPayrollRunId = this.draftRuns[0].id;
         }
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to load payroll allowance options.';
+        this.error = error instanceof Error ? error.message : 'Failed to load payroll other payment options.';
       } finally {
         this.isBootstrapping = false;
       }
@@ -163,7 +204,7 @@ export const usePayrollAllowanceStore = defineStore('payrollAllowance', {
         });
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          throw new Error(extractError(body, 'Failed to load payroll allowances.'));
+          throw new Error(extractError(body, 'Failed to load payroll other payments.'));
         }
 
         const data = await response.json();
@@ -172,7 +213,7 @@ export const usePayrollAllowanceStore = defineStore('payrollAllowance', {
         this.lastPage = data.last_page ?? 1;
         this.total = data.total ?? 0;
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to load payroll allowances.';
+        this.error = error instanceof Error ? error.message : 'Failed to load payroll other payments.';
         this.allowances = [];
       } finally {
         this.isLoading = false;
@@ -190,11 +231,11 @@ export const usePayrollAllowanceStore = defineStore('payrollAllowance', {
         });
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          throw new Error(extractError(body, 'Failed to create payroll allowance.'));
+          throw new Error(extractError(body, 'Failed to create payroll other payment.'));
         }
         await this.fetchAllowances(this.currentPage);
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to create payroll allowance.';
+        this.error = error instanceof Error ? error.message : 'Failed to create payroll other payment.';
         throw error;
       } finally {
         this.isSaving = false;
@@ -212,11 +253,11 @@ export const usePayrollAllowanceStore = defineStore('payrollAllowance', {
         });
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          throw new Error(extractError(body, 'Failed to update payroll allowance.'));
+          throw new Error(extractError(body, 'Failed to update payroll other payment.'));
         }
         await this.fetchAllowances(this.currentPage);
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to update payroll allowance.';
+        this.error = error instanceof Error ? error.message : 'Failed to update payroll other payment.';
         throw error;
       } finally {
         this.isSaving = false;
@@ -233,14 +274,95 @@ export const usePayrollAllowanceStore = defineStore('payrollAllowance', {
         });
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          throw new Error(extractError(body, 'Failed to delete payroll allowance.'));
+          throw new Error(extractError(body, 'Failed to delete payroll other payment.'));
         }
         await this.fetchAllowances(this.currentPage);
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to delete payroll allowance.';
+        this.error = error instanceof Error ? error.message : 'Failed to delete payroll other payment.';
         throw error;
       } finally {
         this.isSaving = false;
+      }
+    },
+
+    async previewImport(rows: Array<{
+      employeeIdentifier: string;
+      employeeName?: string | null;
+      allowanceName: string;
+      accountCode: string;
+      allowanceDate: string;
+      quantity: number;
+      unitAmount: number;
+      note?: string | null;
+    }>): Promise<PayrollAllowanceImportPreview | null> {
+      if (!this.selectedPayrollRunId) {
+        this.error = 'Select an upcoming payroll run before importing other payments.';
+        return null;
+      }
+
+      this.isImporting = true;
+      this.error = null;
+      try {
+        const response = await fetch(`${API_URL}/historical-employee-allowances/import/preview`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({
+            payroll_run_id: this.selectedPayrollRunId,
+            rows,
+          }),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(extractError(body, 'Failed to preview payroll other payment import.'));
+        }
+
+        return body as PayrollAllowanceImportPreview;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to preview payroll other payment import.';
+        return null;
+      } finally {
+        this.isImporting = false;
+      }
+    },
+
+    async confirmImport(rows: Array<{
+      employeeIdentifier: string;
+      employeeName?: string | null;
+      allowanceName: string;
+      accountCode: string;
+      allowanceDate: string;
+      quantity: number;
+      unitAmount: number;
+      note?: string | null;
+    }>): Promise<boolean> {
+      if (!this.selectedPayrollRunId) {
+        this.error = 'Select an upcoming payroll run before importing other payments.';
+        return false;
+      }
+
+      this.isImporting = true;
+      this.error = null;
+      try {
+        const response = await fetch(`${API_URL}/historical-employee-allowances/import/confirm`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({
+            payroll_run_id: this.selectedPayrollRunId,
+            rows,
+          }),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(extractError(body, 'Failed to import payroll other payments.'));
+        }
+
+        await this.fetchAllowances(this.currentPage);
+        return true;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to import payroll other payments.';
+        return false;
+      } finally {
+        this.isImporting = false;
       }
     },
   },

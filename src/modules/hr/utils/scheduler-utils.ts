@@ -13,11 +13,11 @@ export { todayDateString } from './calendar-event-utils';
 
 export type SchedulerViewMode = 'day' | 'week';
 
-export type SchedulerViewBy = 'users' | 'department';
+export type SchedulerViewBy = 'users' | 'department' | 'group';
 
 export type SchedulerSortBy = 'firstName' | 'lastName';
 
-export type SchedulerRowKind = 'employee' | 'department-header';
+export type SchedulerRowKind = 'employee' | 'department-header' | 'group-header';
 
 export interface SchedulerGridRow {
   key: string;
@@ -28,6 +28,7 @@ export interface SchedulerGridRow {
   subtitle?: string;
   employee?: CalendarEmployee;
   departmentId?: number | null;
+  employeeGroupId?: string | null;
 }
 
 export interface SchedulerEmployeeColor {
@@ -320,6 +321,79 @@ export function buildDepartmentGroupedGridRows(
   return rows;
 }
 
+export interface EmployeeGroupRow {
+  employeeGroupId: string;
+  groupName: string;
+  color?: string | null;
+  employees: CalendarEmployee[];
+}
+
+export function groupEmployeesByEmployeeGroup(
+  employees: CalendarEmployee[],
+  groups: Array<{ id: string; name: string; color?: string | null; members?: Array<{ employeeId: string }> }>,
+): EmployeeGroupRow[] {
+  const assignedEmployeeIds = new Set<string>();
+  const rows: EmployeeGroupRow[] = [];
+
+  const sortedGroups = [...groups].sort((left, right) =>
+    left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }),
+  );
+
+  for (const group of sortedGroups) {
+    const memberIds = new Set((group.members ?? []).map((member) => member.employeeId));
+    const groupEmployees = employees.filter((employee) => memberIds.has(employee.id));
+
+    for (const employee of groupEmployees) {
+      assignedEmployeeIds.add(employee.id);
+    }
+
+    if (groupEmployees.length === 0) {
+      continue;
+    }
+
+    rows.push({
+      employeeGroupId: group.id,
+      groupName: group.name,
+      color: group.color ?? null,
+      employees: groupEmployees,
+    });
+  }
+
+  const unassigned = employees.filter((employee) => !assignedEmployeeIds.has(employee.id));
+  if (unassigned.length) {
+    rows.push({
+      employeeGroupId: 'unassigned',
+      groupName: 'No group',
+      employees: unassigned,
+    });
+  }
+
+  return rows;
+}
+
+export function buildEmployeeGroupGridRows(
+  employees: CalendarEmployee[],
+  sortBy: SchedulerSortBy,
+  groups: Array<{ id: string; name: string; color?: string | null; members?: Array<{ employeeId: string }> }>,
+): SchedulerGridRow[] {
+  const rows: SchedulerGridRow[] = [];
+  const grouped = groupEmployeesByEmployeeGroup(employees, groups);
+
+  for (const group of grouped) {
+    rows.push({
+      key: `group-header-${group.employeeGroupId}`,
+      rowKind: 'group-header',
+      type: 'group',
+      id: group.employeeGroupId,
+      label: group.groupName,
+      employeeGroupId: group.employeeGroupId,
+    });
+    rows.push(...buildEmployeeGridRows(group.employees, sortBy));
+  }
+
+  return rows;
+}
+
 export function employeeInitials(employee: CalendarEmployee): string {
   const first = employee.firstName?.charAt(0) ?? '';
   const last = employee.lastName?.charAt(0) ?? '';
@@ -331,7 +405,7 @@ export function eventsForCell(
   row: SchedulerGridRow,
   day: string,
 ): CalendarEntry[] {
-  if (row.rowKind === 'department-header') {
+  if (row.rowKind === 'department-header' || row.rowKind === 'group-header') {
     return [];
   }
 
@@ -454,7 +528,7 @@ export function expectedPayoutForRow(
     'totalDailyHoursBeforeOvertime' | 'includeLunchHour' | 'lunchHourHours'
   > | null,
 ): number | null {
-  if (row.rowKind === 'department-header') {
+  if (row.rowKind === 'department-header' || row.rowKind === 'group-header') {
     return null;
   }
 
@@ -553,7 +627,7 @@ export function formatSchedulerHourlyRate(amount: number): string {
 }
 
 export function shiftHoursForRow(events: CalendarEntry[], row: SchedulerGridRow, days: string[]): number {
-  if (row.rowKind === 'department-header') {
+  if (row.rowKind === 'department-header' || row.rowKind === 'group-header') {
     return 0;
   }
 

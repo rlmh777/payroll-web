@@ -201,7 +201,7 @@ const departmentStackOption = computed(() => {
       { name: 'Regular', type: 'bar', stack: 'total', data: cost.regular },
       { name: 'Overtime', type: 'bar', stack: 'total', data: cost.overtime },
       { name: 'Holiday', type: 'bar', stack: 'total', data: cost.holiday },
-      { name: 'Allowances', type: 'bar', stack: 'total', data: cost.allowances },
+      { name: 'Other Payments', type: 'bar', stack: 'total', data: cost.allowances },
     ],
   };
 });

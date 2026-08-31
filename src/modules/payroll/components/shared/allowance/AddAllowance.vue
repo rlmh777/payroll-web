@@ -7,7 +7,7 @@
   >
     <q-card class="add-allowance-card">
       <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">Add Allowance</div>
+        <div class="text-h6">Add Other Payment</div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
       </q-card-section>
@@ -132,7 +132,7 @@ const onSubmit = async () => {
         color: 'positive',
         position: 'top',
         icon: 'check_circle',
-        message: 'Allowance created successfully!',
+        message: 'Other Payment created successfully!',
       });
       emit('saved', newAllowance.id);
       onClose();
@@ -145,7 +145,7 @@ const onSubmit = async () => {
       });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to create allowance';
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create other payment';
     $q.notify({
       color: 'negative',
       position: 'top',

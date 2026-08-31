@@ -31,7 +31,7 @@
       <div class="scheduler-grid-table" :style="gridStyle">
         <template v-for="row in rows" :key="row.key">
           <div
-            v-if="row.rowKind === 'department-header'"
+            v-if="row.rowKind === 'department-header' || row.rowKind === 'group-header'"
             class="scheduler-department-header"
           >
             {{ row.label }}
@@ -98,7 +98,7 @@
               >
                 <q-tooltip>{{ shiftTooltip(shift) }}</q-tooltip>
                 <div class="scheduler-shift-time">{{ formatShiftTime(shift) }}</div>
-                <div class="scheduler-shift-title">{{ shift.description }}</div>
+                <div v-if="shift.description?.trim()" class="scheduler-shift-title">{{ shift.description }}</div>
                 <div v-if="shift.department_name" class="scheduler-shift-meta">{{ shift.department_name }}</div>
                 <div v-if="shift.employment_contract_label" class="scheduler-shift-meta">
                   {{ shift.employment_contract_label }}
@@ -202,7 +202,7 @@ const rowStatsByKey = computed(() => {
   }>();
 
   for (const row of props.rows) {
-    if (row.rowKind === 'department-header') {
+    if (row.rowKind === 'department-header' || row.rowKind === 'group-header') {
       continue;
     }
 
@@ -328,10 +328,13 @@ function shiftStyle(shift: CalendarEntry, row: SchedulerGridRow) {
 }
 
 function shiftTooltip(shift: CalendarEntry) {
-  const lines = [shift.description, formatShiftTime(shift)];
-  if (shift.employee_name) lines.push(shift.employee_name);
-  if (shift.department_name) lines.push(shift.department_name);
-  if (shift.worksite_name) lines.push(shift.worksite_name);
+  const lines = [
+    shift.description?.trim(),
+    formatShiftTime(shift),
+    shift.employee_name,
+    shift.department_name,
+    shift.worksite_name,
+  ].filter(Boolean) as string[];
   if (shift.include_lunch_hour) {
     const hours = shift.lunch_hour_hours ?? 1;
     lines.push(`Lunch: ${hours}h deducted`);

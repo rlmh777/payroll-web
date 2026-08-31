@@ -18,7 +18,7 @@
       <div class="col-12 col-md-2">
         <AllowanceSelect
           v-model="searchFilters.allowanceId"
-          label="Filter by Allowance"
+          label="Filter by Other Payment"
           clearable
           @update:model-value="onSearch"
         />
@@ -44,7 +44,7 @@
       <div class="col-auto">
         <q-btn
           color="primary"
-          label="Add Default Allowance"
+          label="Add Default Other Payment"
           icon="add"
           @click="showAddDialog = true"
         />

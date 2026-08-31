@@ -116,7 +116,7 @@ const resourceOptions = [
   { label: 'Person', value: 'person' },
   { label: 'Employment detail', value: 'employment_detail' },
   { label: 'Compensation', value: 'employee_compensation' },
-  { label: 'Default allowance', value: 'employee_default_allowance' },
+  { label: 'Default other payment', value: 'employee_default_allowance' },
   { label: 'Default deduction', value: 'employee_default_deduction' },
   { label: 'Bank', value: 'employee_bank' },
   { label: 'Contact', value: 'employee_contact' },

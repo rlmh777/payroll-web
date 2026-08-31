@@ -137,6 +137,108 @@
     </div>
   </div>
 
+  <q-card
+    v-if="props.missingPayrollEmployees && props.missingPayrollEmployees.missingEmployeeCount > 0"
+    flat
+    bordered
+    class="missing-employees-card q-mb-md"
+  >
+    <q-card-section class="row items-center q-col-gutter-md">
+      <div class="col-12 col-lg">
+        <div class="text-overline text-warning">Missing from payroll review</div>
+        <div class="text-h6 text-weight-bold">
+          {{ props.missingPayrollEmployees.missingEmployeeCount }} active employee{{ props.missingPayrollEmployees.missingEmployeeCount === 1 ? '' : 's' }} not on this payroll
+        </div>
+        <div class="text-body2 text-grey-7">
+          These employees are active in this pay period group for the selected period but have no timesheets or day work.
+          Base-rate staff on paid leave should still be paid; leave without pay should still be noted on payroll.
+        </div>
+      </div>
+      <div class="col-12 col-sm-4 col-lg-auto">
+        <div class="queue-stat queue-stat--warning">
+          <div class="text-h6 text-weight-bold">{{ props.missingPayrollEmployees.missingEmployeeCount }}</div>
+          <div class="text-caption">Missing</div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-4 col-lg-auto">
+        <div class="queue-stat queue-stat--primary">
+          <div class="text-h6 text-weight-bold">{{ props.missingPayrollEmployees.expectedEmployeeCount }}</div>
+          <div class="text-caption">Expected active</div>
+        </div>
+      </div>
+    </q-card-section>
+
+    <q-separator />
+
+    <q-table
+      class="attendance-table missing-employees-table"
+      :rows="props.missingPayrollEmployees.missingEmployees"
+      :columns="missingEmployeeColumns"
+      row-key="employeeId"
+      flat
+      hide-bottom
+      separator="horizontal"
+      :pagination="{ rowsPerPage: 0 }"
+    >
+      <template #body-cell-employeeName="tableProps">
+        <q-td :props="tableProps" class="employee-cell">
+          <div class="row items-center no-wrap q-gutter-sm">
+            <q-avatar color="orange-1" text-color="orange-10" size="36px">
+              {{ employeeInitials(tableProps.row.employeeName) }}
+            </q-avatar>
+            <div>
+              <div class="text-weight-bold">{{ tableProps.row.employeeName || 'Unknown employee' }}</div>
+              <div class="text-caption text-grey-7">{{ tableProps.row.employeeCode || tableProps.row.employeeId }}</div>
+            </div>
+          </div>
+        </q-td>
+      </template>
+      <template #body-cell-status="tableProps">
+        <q-td :props="tableProps">
+          <q-chip
+            dense
+            square
+            outline
+            :color="missingStatusColor(tableProps.row.status)"
+            :icon="missingStatusIcon(tableProps.row.status)"
+            :label="missingStatusLabel(tableProps.row.status)"
+          />
+        </q-td>
+      </template>
+      <template #body-cell-leave="tableProps">
+        <q-td :props="tableProps">
+          <template v-if="tableProps.row.leaveDaysInPeriod > 0">
+            <div class="text-weight-medium">{{ tableProps.row.leaveDaysInPeriod }} day{{ tableProps.row.leaveDaysInPeriod === 1 ? '' : 's' }}</div>
+            <div v-if="tableProps.row.leaveTypes.length" class="text-caption text-grey-7">
+              {{ tableProps.row.leaveTypes.join(', ') }}
+            </div>
+          </template>
+          <span v-else class="text-grey-6">—</span>
+        </q-td>
+      </template>
+      <template #body-cell-reason="tableProps">
+        <q-td :props="tableProps" class="reason-cell">{{ tableProps.row.reason }}</q-td>
+      </template>
+    </q-table>
+  </q-card>
+
+  <q-card
+    v-else-if="props.missingPayrollEmployees && props.missingPayrollEmployees.expectedEmployeeCount > 0"
+    flat
+    bordered
+    class="missing-employees-card missing-employees-card--complete q-mb-md"
+  >
+    <q-card-section class="row items-center q-gutter-md">
+      <q-icon name="verified_user" color="positive" size="28px" />
+      <div>
+        <div class="text-subtitle1 text-weight-bold">All active employees are on this payroll review</div>
+        <div class="text-caption text-grey-7">
+          {{ props.missingPayrollEmployees.expectedEmployeeCount }} active employee{{ props.missingPayrollEmployees.expectedEmployeeCount === 1 ? '' : 's' }} assigned to this pay period group appear in timesheets or day work.
+        </div>
+      </div>
+    </q-card-section>
+  </q-card>
+
   <q-card flat bordered class="attendance-data-card">
     <q-card-section class="row items-center justify-between q-col-gutter-md">
       <div class="col-12 col-sm">
@@ -294,8 +396,11 @@ import type { TimesheetFilterForm } from './types';
 import { approvalIcon, formatDate, formatOvertimeForPayType, formatPayType, humanizeStatus, statusColor } from './utils';
 import type {
   EmployeeTimesheetSummary,
+  MissingPayrollEmployeesPayload,
+  MissingPayrollEmployeeStatus,
   PaginationState,
   PayPeriodSchedule,
+  PayrollPeriodComparisonSummary,
   TimesheetSummary,
 } from '@payroll/stores/attendance-store';
 
@@ -304,6 +409,9 @@ const props = defineProps<{
   payPeriods: PayPeriodSchedule[];
   employeeSummaries: EmployeeTimesheetSummary[];
   summary: TimesheetSummary;
+  periodSummary?: PayrollPeriodComparisonSummary | null;
+  previousSummary?: PayrollPeriodComparisonSummary | null;
+  missingPayrollEmployees?: MissingPayrollEmployeesPayload | null;
   isLoadingTimesheets: boolean;
   isLoadingPayPeriods: boolean;
   pagination: PaginationState;
@@ -328,6 +436,7 @@ const approvalOptions = [
 const workingStatusOptions = [
   { label: 'Regular', value: 'REGULAR' },
   { label: 'Overtime', value: 'OVERTIME' },
+  { label: 'Leave', value: 'LEAVE' },
   { label: 'Unpaid', value: 'UNPAID' },
   { label: 'Holiday', value: 'HOLIDAY' },
 ];
@@ -355,6 +464,15 @@ const columns = [
   { name: 'actions', label: '', field: 'actions', align: 'right' as const },
 ];
 
+const missingEmployeeColumns = [
+  { name: 'employeeName', label: 'Employee', field: 'employeeName', align: 'left' as const },
+  { name: 'departmentName', label: 'Department', field: 'departmentName', align: 'left' as const },
+  { name: 'payType', label: 'Pay type', field: 'payType', align: 'left' as const },
+  { name: 'leave', label: 'Leave in period', field: 'leaveDaysInPeriod', align: 'left' as const },
+  { name: 'status', label: 'Status', field: 'status', align: 'left' as const },
+  { name: 'reason', label: 'Notes', field: 'reason', align: 'left' as const },
+];
+
 function summaryRowKey(row: EmployeeTimesheetSummary): string {
   return `${row.employeeId}:${row.employmentDetailId ?? 'none'}`;
 }
@@ -379,20 +497,129 @@ const activeFilterCount = computed(
     ].filter(Boolean).length,
 );
 
-const summaryCards = computed(() => [
-  { label: 'Employees', value: props.summary.employeeCount, icon: 'groups', tone: 'primary' as const },
-  { label: 'Total hours', value: formatHours(props.summary.hoursWorked), icon: 'timer', tone: 'primary' as const },
-  { label: 'Regular hours', value: formatHours(props.summary.regularHours), icon: 'schedule', tone: 'positive' as const },
-  {
-    label: 'Overtime hours',
-    value: formatHours(props.summary.overtimeHours),
-    icon: 'more_time',
-    tone: 'warning' as const,
-  },
-  { label: 'Holiday hours', value: formatHours(props.summary.holidayHours), icon: 'beach_access', tone: 'teal' as const },
-  { label: 'Paid hours', value: formatHours(props.summary.paidHours), icon: 'payments', tone: 'positive' as const },
-  { label: 'Unpaid hours', value: formatHours(props.summary.unpaidHours), icon: 'money_off', tone: 'negative' as const },
-]);
+const comparisonSummary = computed(() => props.periodSummary ?? props.summary);
+
+const previousPeriodCaption = computed(() => {
+  if (!props.previousSummary?.startDate || !props.previousSummary?.endDate) {
+    return undefined;
+  }
+
+  return `Previous payroll: ${formatDate(props.previousSummary.startDate)} – ${formatDate(props.previousSummary.endDate)}`;
+});
+
+function formatPreviousCount(value: number | undefined) {
+  return value === undefined ? '—' : value;
+}
+
+function formatPreviousHours(value: number | undefined) {
+  return value === undefined ? '—' : formatHours(value);
+}
+
+type SummaryMetricCardProps = {
+  label: string;
+  value: string | number;
+  previousValue: string | number;
+  icon: string;
+  tone: 'primary' | 'positive' | 'warning' | 'negative' | 'teal';
+  caption?: string;
+};
+
+const summaryCards = computed((): SummaryMetricCardProps[] => {
+  const current = comparisonSummary.value;
+  const previous = props.previousSummary ?? undefined;
+
+  return [
+    {
+      label: 'Employees',
+      value: current.employeeCount,
+      previousValue: formatPreviousCount(previous?.employeeCount),
+      icon: 'groups',
+      tone: 'primary',
+      ...(previousPeriodCaption.value ? { caption: previousPeriodCaption.value } : {}),
+    },
+    {
+      label: 'Total hours',
+      value: formatHours(current.hoursWorked),
+      previousValue: formatPreviousHours(previous?.hoursWorked),
+      icon: 'timer',
+      tone: 'primary',
+    },
+    {
+      label: 'Regular hours',
+      value: formatHours(current.regularHours),
+      previousValue: formatPreviousHours(previous?.regularHours),
+      icon: 'schedule',
+      tone: 'positive',
+    },
+    {
+      label: 'Overtime hours',
+      value: formatHours(current.overtimeHours),
+      previousValue: formatPreviousHours(previous?.overtimeHours),
+      icon: 'more_time',
+      tone: 'warning',
+    },
+    {
+      label: 'Holiday hours',
+      value: formatHours(current.holidayHours),
+      previousValue: formatPreviousHours(previous?.holidayHours),
+      icon: 'beach_access',
+      tone: 'teal',
+    },
+    {
+      label: 'Paid hours',
+      value: formatHours(current.paidHours),
+      previousValue: formatPreviousHours(previous?.paidHours),
+      icon: 'payments',
+      tone: 'positive',
+    },
+    {
+      label: 'Unpaid hours',
+      value: formatHours(current.unpaidHours),
+      previousValue: formatPreviousHours(previous?.unpaidHours),
+      icon: 'money_off',
+      tone: 'negative',
+    },
+  ];
+});
+
+function missingStatusLabel(status: MissingPayrollEmployeeStatus) {
+  switch (status) {
+    case 'leave_without_pay':
+      return 'Leave without pay';
+    case 'paid_leave_missing_timesheets':
+      return 'Paid leave';
+    case 'daily_rate_missing_entries':
+      return 'Daily rate';
+    default:
+      return 'Missing timesheets';
+  }
+}
+
+function missingStatusColor(status: MissingPayrollEmployeeStatus) {
+  switch (status) {
+    case 'leave_without_pay':
+      return 'blue-grey';
+    case 'paid_leave_missing_timesheets':
+      return 'teal';
+    case 'daily_rate_missing_entries':
+      return 'purple';
+    default:
+      return 'warning';
+  }
+}
+
+function missingStatusIcon(status: MissingPayrollEmployeeStatus) {
+  switch (status) {
+    case 'leave_without_pay':
+      return 'event_busy';
+    case 'paid_leave_missing_timesheets':
+      return 'beach_access';
+    case 'daily_rate_missing_entries':
+      return 'today';
+    default:
+      return 'person_off';
+  }
+}
 
 function formatHours(value: number) {
   return Number(value || 0).toFixed(2);
@@ -448,6 +675,30 @@ function updateFilter(field: keyof TimesheetFilterForm, value: TimesheetFilterFo
 .queue-stat--positive {
   color: #166534;
   background: #e8f7ed;
+}
+
+.queue-stat--primary {
+  color: #1d4ed8;
+  background: #e8f0ff;
+}
+
+.missing-employees-card {
+  border-color: #f0c987;
+  background: linear-gradient(135deg, #fff 0%, #fffaf2 100%);
+}
+
+.missing-employees-card--complete {
+  border-color: #b7dfc6;
+  background: linear-gradient(135deg, #fff 0%, #f4fbf6 100%);
+}
+
+:deep(.missing-employees-table tbody tr) {
+  cursor: default;
+}
+
+:deep(.reason-cell) {
+  max-width: 420px;
+  white-space: normal;
 }
 
 :deep(.attendance-table .q-table__middle) {

@@ -1,191 +1,214 @@
 <template>
   <q-dialog v-model="isOpen" position="right" @hide="onHide">
-    <q-card class="incident-drawer-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ isEdit ? 'Edit Incident' : 'Add Incident' }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense :disable="saving" v-close-popup />
-      </q-card-section>
+      </AppDialogHeader>
 
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="save">
-          <DateField
-            v-model="form.incidentDate"
-            label="Incident date *"
-            required
-            :disable="saving"
-          />
-          <DateField
-            v-model="form.reportedDate"
-            label="Reported date"
-            clearable
-            :disable="saving"
-          />
-
-          <q-select
-            v-model="form.incidentType"
-            :options="[...INCIDENT_TYPE_OPTIONS]"
-            emit-value
-            map-options
-            outlined
-            dense
-            label="Type *"
-            :rules="[(v) => !!v || 'Type is required']"
-            :disable="saving"
-          />
-
-          <q-select
-            v-model="form.severity"
-            :options="[...INCIDENT_SEVERITY_OPTIONS]"
-            emit-value
-            map-options
-            outlined
-            dense
-            label="Severity *"
-            :rules="[(v) => !!v || 'Severity is required']"
-            :disable="saving"
-          />
-
-          <q-input
-            v-model="form.title"
-            label="Title *"
-            outlined
-            dense
-            :rules="[(v) => !!v?.trim() || 'Title is required']"
-            :disable="saving"
-          />
-
-          <q-input
-            v-model="form.description"
-            type="textarea"
-            label="Description"
-            outlined
-            dense
-            autogrow
-            :disable="saving"
-          />
-
-          <q-select
-            v-model="form.status"
-            :options="[...INCIDENT_STATUS_OPTIONS]"
-            emit-value
-            map-options
-            outlined
-            dense
-            label="Status"
-            :disable="saving"
-          />
-
-          <DepartmentSelect
-            v-model="form.departmentId"
-            label="Department"
-            clearable
-            :disable="saving"
-          />
-
-          <WorksiteSelect
-            v-model="form.worksiteId"
-            label="Worksite"
-            clearable
-            :show-add-new="false"
-            :show-edit="false"
-            :disable="saving"
-          />
-
-          <q-select
-            v-model="form.actionTaken"
-            :options="[...INCIDENT_ACTION_OPTIONS]"
-            emit-value
-            map-options
-            outlined
-            dense
-            clearable
-            label="Action taken"
-            :disable="saving"
-          />
-
-          <DateField
-            v-model="form.actionDate"
-            label="Action date"
-            clearable
-            :disable="saving"
-          />
-
-          <DateField
-            v-model="form.followUpDate"
-            label="Follow-up date"
-            clearable
-            :disable="saving"
-          />
-
-          <q-input
-            v-model="form.resolutionNotes"
-            type="textarea"
-            label="Resolution notes"
-            outlined
-            dense
-            autogrow
-            :disable="saving"
-          />
-
-          <q-toggle
-            v-model="form.employeeAcknowledged"
-            label="Employee acknowledged"
-            :disable="saving"
-          />
-
-          <q-input
-            v-model="form.notes"
-            type="textarea"
-            label="Internal notes"
-            outlined
-            dense
-            autogrow
-            :disable="saving"
-          />
-
-          <div v-if="existingAttachments.length" class="text-caption">
-            <div class="text-grey-7 q-mb-xs">Existing attachments</div>
-            <div class="q-gutter-xs">
-              <a
-                v-for="file in existingAttachments"
-                :key="file.id"
-                class="text-primary"
-                :href="file.fileUrl || '#'"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {{ file.fileName }}
-              </a>
+      <AppDialogBody>
+        <q-form id="employee-incident-form" @submit.prevent="save">
+          <AppDialogForm>
+            <div class="col-12 col-sm-6">
+              <DateField
+                v-model="form.incidentDate"
+                label="Incident date *"
+                required
+                :disable="saving"
+              />
             </div>
-          </div>
-
-          <q-file
-            v-model="attachments"
-            label="Attachments"
-            outlined
-            dense
-            multiple
-            clearable
-            use-chips
-            counter
-            max-files="10"
-            :accept="EMPLOYEE_DOCUMENT_ACCEPT"
-            :disable="saving"
-            hint="Optional. Up to 10 files, 20 MB each."
-          >
-            <template #prepend>
-              <q-icon name="attach_file" />
-            </template>
-          </q-file>
-
-          <div class="row justify-end q-gutter-sm">
-            <q-btn flat label="Cancel" color="grey" :disable="saving" v-close-popup />
-            <q-btn type="submit" color="primary" :loading="saving" :label="isEdit ? 'Update' : 'Save'" />
-          </div>
+            <div class="col-12 col-sm-6">
+              <DateField
+                v-model="form.reportedDate"
+                label="Reported date"
+                clearable
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-select
+                v-model="form.incidentType"
+                :options="[...INCIDENT_TYPE_OPTIONS]"
+                emit-value
+                map-options
+                outlined
+                dense
+                label="Type *"
+                :rules="[(v) => !!v || 'Type is required']"
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-select
+                v-model="form.severity"
+                :options="[...INCIDENT_SEVERITY_OPTIONS]"
+                emit-value
+                map-options
+                outlined
+                dense
+                label="Severity *"
+                :rules="[(v) => !!v || 'Severity is required']"
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.title"
+                label="Title *"
+                outlined
+                dense
+                :rules="[(v) => !!v?.trim() || 'Title is required']"
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.description"
+                type="textarea"
+                label="Description"
+                outlined
+                dense
+                autogrow
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                v-model="form.status"
+                :options="[...INCIDENT_STATUS_OPTIONS]"
+                emit-value
+                map-options
+                outlined
+                dense
+                label="Status"
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <DepartmentSelect
+                v-model="form.departmentId"
+                label="Department"
+                clearable
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <WorksiteSelect
+                v-model="form.worksiteId"
+                label="Worksite"
+                clearable
+                :show-add-new="false"
+                :show-edit="false"
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                v-model="form.actionTaken"
+                :options="[...INCIDENT_ACTION_OPTIONS]"
+                emit-value
+                map-options
+                outlined
+                dense
+                clearable
+                label="Action taken"
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <DateField
+                v-model="form.actionDate"
+                label="Action date"
+                clearable
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <DateField
+                v-model="form.followUpDate"
+                label="Follow-up date"
+                clearable
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.resolutionNotes"
+                type="textarea"
+                label="Resolution notes"
+                outlined
+                dense
+                autogrow
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-toggle
+                v-model="form.employeeAcknowledged"
+                label="Employee acknowledged"
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.notes"
+                type="textarea"
+                label="Internal notes"
+                outlined
+                dense
+                autogrow
+                :disable="saving"
+              />
+            </div>
+            <div v-if="existingAttachments.length" class="col-12 text-caption">
+              <div class="text-grey-7 q-mb-xs">Existing attachments</div>
+              <div class="q-gutter-xs">
+                <a
+                  v-for="file in existingAttachments"
+                  :key="file.id"
+                  class="text-primary"
+                  :href="file.fileUrl || '#'"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {{ file.fileName }}
+                </a>
+              </div>
+            </div>
+            <div class="col-12">
+              <q-file
+                v-model="attachments"
+                label="Attachments"
+                outlined
+                dense
+                multiple
+                clearable
+                use-chips
+                counter
+                max-files="10"
+                :accept="EMPLOYEE_DOCUMENT_ACCEPT"
+                :disable="saving"
+                hint="Optional. Up to 10 files, 20 MB each."
+              >
+                <template #prepend>
+                  <q-icon name="attach_file" />
+                </template>
+              </q-file>
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="saving" v-close-popup />
+        <q-btn
+          type="submit"
+          form="employee-incident-form"
+          color="primary"
+          :loading="saving"
+          :label="isEdit ? 'Update' : 'Save'"
+        />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
@@ -193,6 +216,11 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import DateField from '@core/components/common/DateField.vue';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import DepartmentSelect from '@hr/components/department/DepartmentSelect.vue';
 import WorksiteSelect from '@hr/components/worksite/WorksiteSelect.vue';
 import { EMPLOYEE_DOCUMENT_ACCEPT } from '@hr/components/employee/document/employee-document-form';
@@ -373,11 +401,3 @@ watch(
   },
 );
 </script>
-
-<style scoped>
-.incident-drawer-card {
-  width: min(480px, 92vw);
-  max-height: 100vh;
-  overflow-y: auto;
-}
-</style>

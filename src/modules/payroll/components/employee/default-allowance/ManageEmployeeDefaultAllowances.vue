@@ -61,7 +61,7 @@
               class="action-btn"
               @click="openEditDialog(props.row)"
             >
-              <q-tooltip>Edit Default Allowance</q-tooltip>
+              <q-tooltip>Edit Default Other Payment</q-tooltip>
             </q-btn>
             <q-btn
               flat
@@ -73,7 +73,7 @@
               class="action-btn"
               @click="confirmDelete(props.row)"
             >
-              <q-tooltip>Delete Default Allowance</q-tooltip>
+              <q-tooltip>Delete Default Other Payment</q-tooltip>
             </q-btn>
           </div>
         </q-td>
@@ -92,7 +92,7 @@
         </q-card-section>
 
         <q-card-section>
-          <span>Are you sure you want to delete this default allowance? This action cannot be undone.</span>
+          <span>Are you sure you want to delete this default other payment? This action cannot be undone.</span>
         </q-card-section>
 
         <q-card-actions align="right">
@@ -139,7 +139,7 @@ watch(
 const columns = [
   {
     name: 'allowance',
-    label: 'Allowance',
+    label: 'Other Payment',
     field: (row: EmployeeDefaultAllowance) => row.allowance,
     align: 'left' as const,
     sortable: true,
@@ -240,7 +240,7 @@ const openEditDialog = (employeeDefaultAllowance: EmployeeDefaultAllowance) => {
 };
 
 const onEmployeeDefaultAllowanceUpdated = async () => {
-  // Refresh the list after a default allowance is updated (keep current page)
+  // Refresh the list after a default other payment is updated (keep current page)
   await employeeDefaultAllowanceStore.fetchEmployeeDefaultAllowances(
     employeeDefaultAllowanceStore.currentPage,
     pagination.value.rowsPerPage
@@ -259,7 +259,7 @@ const handleDelete = async () => {
   if (success) {
     $q.notify({
       type: 'positive',
-      message: 'Default allowance deleted successfully',
+      message: 'Default other payment deleted successfully',
       position: 'top',
     });
     showDeleteDialog.value = false;
@@ -272,7 +272,7 @@ const handleDelete = async () => {
   } else {
     $q.notify({
       type: 'negative',
-      message: employeeDefaultAllowanceStore.error || 'Failed to delete default allowance',
+      message: employeeDefaultAllowanceStore.error || 'Failed to delete default other payment',
       position: 'top',
     });
   }

@@ -1,13 +1,13 @@
 <template>
   <q-dialog v-model="isOpen" position="right" @hide="onClose">
-    <q-card class="drawer-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">Edit Work Site</div>
-        <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
-      </q-card-section>
-      <q-card-section v-if="form">
+      </AppDialogHeader>
+
+      <AppDialogBody>
         <WorksiteForm
+          v-if="form"
           v-model="form"
           :localities="store.localityOptions"
           :locality-loading="store.isLoadingLocalities"
@@ -16,14 +16,17 @@
           @submit="onSubmit"
           @cancel="onClose"
         />
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import { useWorksiteStore, type Worksite, type WorksitePayload } from 'src/stores/worksite-store';
 import WorksiteForm from '@hr/components/settings/worksite/WorksiteForm.vue';
 
@@ -99,10 +102,3 @@ function onClose() {
   isOpen.value = false;
 }
 </script>
-
-<style scoped>
-.drawer-card {
-  width: min(480px, 95vw);
-  height: 100vh;
-}
-</style>

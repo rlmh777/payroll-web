@@ -1,25 +1,37 @@
 <template>
   <q-dialog :model-value="open" position="right" @update:model-value="onDialogUpdate">
-    <q-card class="drawer-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ isEdit ? 'Edit education' : 'Add education' }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense :disable="saving" @click="close" />
-      </q-card-section>
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="save">
-          <InstitutionSelect v-model="form.institutionId" :disable="saving" />
-          <DegreeSelect v-model="form.degreeId" :disable="saving" />
-          <DateField v-model="form.from" label="Start date *" :disable="saving" />
-          <DateField v-model="form.to" label="End date" clearable :disable="saving" />
-          <q-input v-model="form.note" type="textarea" label="Notes" dense outlined :disable="saving" />
-          <div class="row justify-end q-gutter-sm">
-            <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
-            <q-btn type="submit" color="primary" :loading="saving" label="Save" />
-          </div>
+      </AppDialogHeader>
+
+      <AppDialogBody>
+        <q-form @submit.prevent="save">
+          <AppDialogForm>
+            <div class="col-12">
+              <InstitutionSelect v-model="form.institutionId" :disable="saving" />
+            </div>
+            <div class="col-12">
+              <DegreeSelect v-model="form.degreeId" :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <DateField v-model="form.from" label="Start date *" :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <DateField v-model="form.to" label="End date" clearable :disable="saving" />
+            </div>
+            <div class="col-12">
+              <q-input v-model="form.note" type="textarea" label="Notes" dense outlined :disable="saving" />
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
+        <q-btn color="primary" :loading="saving" label="Save" @click="save" />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
@@ -27,6 +39,11 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import DateField from '@core/components/common/DateField.vue';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import InstitutionSelect from '../common/InstitutionSelect.vue';
 import DegreeSelect from '../common/DegreeSelect.vue';
 import {
@@ -121,11 +138,3 @@ async function save() {
   }
 }
 </script>
-
-<style scoped>
-.drawer-card {
-  width: 30vw;
-  max-width: 420px;
-  height: 100vh;
-}
-</style>

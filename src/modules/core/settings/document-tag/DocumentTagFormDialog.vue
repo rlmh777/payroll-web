@@ -1,61 +1,78 @@
 <template>
   <q-dialog :model-value="open" position="right" @update:model-value="onDialogUpdate">
-    <q-card class="drawer-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ isEdit ? 'Edit document tag' : 'Add document tag' }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense :disable="saving" @click="close" />
-      </q-card-section>
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="save">
-          <q-input v-model="form.name" label="Name *" outlined dense :disable="saving" />
-          <ParentDocumentTagSelect
-            v-model="form.parentId"
-            label="Parent tag"
-            :exclude-tag-id="tagId ?? null"
-            :disable="saving"
-            show-colors
-          />
-          <div>
-            <div class="text-caption text-grey-7 q-mb-xs">Color</div>
-            <div class="row items-center q-gutter-sm">
-              <q-color v-model="form.color" format-model="hex" :disable="saving" class="tag-color-picker" />
-              <DocumentTagChip :label="form.name || 'Preview'" :color="form.color" />
+      </AppDialogHeader>
+
+      <AppDialogBody>
+        <q-form @submit.prevent="save">
+          <AppDialogForm>
+            <div class="col-12">
+              <q-input v-model="form.name" label="Name *" outlined dense :disable="saving" />
             </div>
-          </div>
-          <q-input
-            v-model="form.description"
-            type="textarea"
-            label="Description"
-            outlined
-            dense
-            :disable="saving"
-          />
-          <template v-if="!compact">
-            <q-input
-              v-model.number="form.sortOrder"
-              type="number"
-              min="0"
-              label="Sort order"
-              outlined
-              dense
-              :disable="saving"
-            />
-            <q-toggle v-model="form.isActive" label="Active" :disable="saving" />
-          </template>
-          <div class="row justify-end q-gutter-sm">
-            <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
-            <q-btn type="submit" color="primary" :loading="saving" label="Save" />
-          </div>
+            <div class="col-12">
+              <ParentDocumentTagSelect
+                v-model="form.parentId"
+                label="Parent tag"
+                :exclude-tag-id="tagId ?? null"
+                :disable="saving"
+                show-colors
+              />
+            </div>
+            <div class="col-12">
+              <div class="text-caption text-grey-7 q-mb-xs">Color</div>
+              <div class="row items-center q-gutter-sm">
+                <q-color v-model="form.color" format-model="hex" :disable="saving" class="tag-color-picker" />
+                <DocumentTagChip :label="form.name || 'Preview'" :color="form.color" />
+              </div>
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.description"
+                type="textarea"
+                label="Description"
+                outlined
+                dense
+                :disable="saving"
+              />
+            </div>
+            <template v-if="!compact">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model.number="form.sortOrder"
+                  type="number"
+                  min="0"
+                  label="Sort order"
+                  outlined
+                  dense
+                  :disable="saving"
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-toggle v-model="form.isActive" label="Active" :disable="saving" />
+              </div>
+            </template>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
+        <q-btn color="primary" :loading="saving" label="Save" @click="save" />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import ParentDocumentTagSelect from './ParentDocumentTagSelect.vue';
 import DocumentTagChip from './DocumentTagChip.vue';
 import {
@@ -188,12 +205,6 @@ async function save() {
 </script>
 
 <style scoped>
-.drawer-card {
-  width: 32vw;
-  max-width: 440px;
-  height: 100vh;
-}
-
 .tag-color-picker {
   max-width: 220px;
 }

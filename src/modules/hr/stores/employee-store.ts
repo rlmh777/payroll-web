@@ -315,18 +315,25 @@ export const useEmployeeStore = defineStore('employee', {
     },
 
     async fetchAccounts(search?: string) {
-      if (this.isLoadingAccounts) return;
-      
       this.isLoadingAccounts = true;
       try {
+        const authStore = useAuthStore();
         const queryParams = new URLSearchParams();
-        if (search) {
-          queryParams.append('search', search);
+        if (search?.trim()) {
+          queryParams.append('search', search.trim());
         }
-        queryParams.append('per_page', '100'); // Get more accounts for select
-        const response = await fetch(`${API_URL}/accounts?${queryParams.toString()}`);
+        queryParams.append('per_page', '500');
+        queryParams.append('with_relations', '1');
+        const headers: HeadersInit = { 'Content-Type': 'application/json' };
+        if (authStore.token) {
+          headers.Authorization = `Bearer ${authStore.token}`;
+        }
+        const response = await fetch(`${API_URL}/accounts?${queryParams.toString()}`, { headers });
+        if (!response.ok) {
+          throw new Error('Failed to load accounts.');
+        }
         const data = await response.json();
-        this.accounts = data.data || data;
+        this.accounts = data.data || data || [];
       } catch (error) {
         console.error('Error fetching accounts:', error);
       } finally {
@@ -348,7 +355,7 @@ export const useEmployeeStore = defineStore('employee', {
         const data = await response.json();
         this.allowances = data.data || data;
       } catch (error) {
-        console.error('Error fetching allowances:', error);
+        console.error('Error fetching other payments:', error);
       } finally {
         this.isLoadingAllowances = false;
       }

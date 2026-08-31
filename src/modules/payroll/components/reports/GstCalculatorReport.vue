@@ -118,7 +118,7 @@
       <q-tab-panels v-model="tab" class="gst-calculator__panels">
         <q-tab-panel name="accounts" class="gst-accounts-panel q-pa-none q-pt-md">
           <q-banner v-if="workspace.lines.length === 0" class="bg-blue-1 text-grey-9 q-mb-md" rounded>
-            Upload the monthly QuickBooks workbook (Taxes Calculator + GST sheets) to populate accounts and 2251 totals.
+            Upload the monthly QuickBooks workbook. Accounts (P&amp;L or Taxes Calculator) and GST register sheets are detected from their contents.
             Map tax types under Settings → GST Calculator. Map section totals such as Total 4500 · Tour Income for tour operator income.
           </q-banner>
 
@@ -257,6 +257,10 @@
             :sheet="purchaseLedgerSheet"
             :excluded-names="purchaseLedgerExcludedNames"
             :taxable-ratio="partialExemption.gst_income_ratio"
+            :complement-ratio="partialExemption.complement_ratio"
+            :gst-rate="rateFor('GST_INCOME') || 0.125"
+            :year="year"
+            :month="month"
           />
         </q-tab-panel>
 
@@ -280,27 +284,38 @@
                 <tr>
                   <td>Total Income from GST 12.5% column:</td>
                   <td class="text-right">{{ money(partialExemption.gst_income) }}</td>
-                  <td>{{ percentWhole(partialExemption.gst_income_ratio) }}</td>
+                  <td>{{ percentWhole(partialExemption.gst_income_ratio) }} of taxable + exempt</td>
                 </tr>
                 <tr>
                   <td>Zero rated Income GST column:</td>
                   <td class="text-right">{{ money(partialExemption.zero_rated_income) }}</td>
-                  <td>{{ percentWhole(partialExemption.zero_rated_ratio) }}</td>
+                  <td>Excluded from ratio (0% GST)</td>
                 </tr>
                 <tr>
                   <td>Exempt</td>
                   <td class="text-right">{{ money(partialExemption.exempt_income) }}</td>
-                  <td>{{ percentWhole(partialExemption.exempt_ratio) }}</td>
+                  <td>{{ percentWhole(partialExemption.exempt_ratio) }} of taxable + exempt</td>
                 </tr>
                 <tr>
-                  <td>Total Value of Taxable and Zero Rated:</td>
+                  <td>Total Value of Taxable &amp; Exempt:</td>
                   <td class="text-right">{{ money(partialExemption.total_value) }}</td>
-                  <td />
+                  <td>
+                    {{ percentWhole(partialExemption.ratio_check) }}
+                    (taxable + exempt shares; zero rated excluded)
+                  </td>
                 </tr>
                 <tr class="text-weight-bold">
                   <td>Ratio of Taxable to Total Value of both Taxable &amp; Exempt</td>
                   <td class="text-right">{{ percentWhole(partialExemption.gst_income_ratio) }}</td>
-                  <td />
+                  <td>
+                    {{ money(partialExemption.gst_income) }}
+                    ÷ {{ money(partialExemption.total_value) }}
+                  </td>
+                </tr>
+                <tr>
+                  <td>Complement ratio (1 − taxable ratio)</td>
+                  <td class="text-right">{{ percentWhole(partialExemption.complement_ratio) }}</td>
+                  <td>Taxes:Partial: taxed share goes to standard rated; untaxed share plus non-payable GST goes to exempt. Only the taxable share of Taxes:GST is GST paid. Columns sum to Total Purchases (GST inclusive).</td>
                 </tr>
                 <tr>
                   <td>Total Partial Exemptions (see 2251 tab)</td>
@@ -568,6 +583,8 @@ const purchaseLedgerSheet = computed((): TaxCalculatorPurchaseLedgerSheet => (
     class_column: 'L',
     debit_column: 'N',
     date_column: 'B',
+    tin_column: 'J',
+    invoice_column: 'D',
   }
 ));
 const purchaseLedgerExcludedNames = computed((): TaxCalculatorPurchaseLedgerExcludedName[] => (
@@ -633,10 +650,11 @@ const partialExemption = computed(() => {
   const gstIncome = gstSum('GST_INCOME');
   const gstZero = gstSum('GST_ZERO_INCOME');
   const gstExempt = gstSum('GST_EXEMPT_INCOME');
-  const totalValue = gstIncome + gstZero + gstExempt;
-  const gstIncomeRatio = totalValue !== 0 ? gstIncome / totalValue : 0;
-  const zeroRatio = totalValue !== 0 ? gstZero / totalValue : 0;
-  const exemptRatio = totalValue !== 0 ? gstExempt / totalValue : 0;
+  // Zero-rated income is excluded from the taxable/exempt ratio base.
+  const totalValue = gstIncome + gstExempt;
+  const gstIncomeRatio = roundRatio(totalValue !== 0 ? gstIncome / totalValue : 0);
+  const exemptRatio = roundRatio(Math.max(0, 1 - gstIncomeRatio));
+  const complementRatio = exemptRatio;
   const partialTotal = Number(workspace.value?.partial_exemptions_total || 0);
   const ratioTimes = partialTotal * gstIncomeRatio;
   const totalDebits = Number(workspace.value?.total_debits ?? workspace.value?.gst_value_entered ?? 0);
@@ -653,8 +671,10 @@ const partialExemption = computed(() => {
     exempt_income: gstExempt,
     total_value: totalValue,
     gst_income_ratio: gstIncomeRatio,
-    zero_rated_ratio: zeroRatio,
+    zero_rated_ratio: 0,
     exempt_ratio: exemptRatio,
+    complement_ratio: complementRatio,
+    ratio_check: roundRatio(gstIncomeRatio + exemptRatio),
     partial_exemptions_total: partialTotal,
     ratio_times_partial_exemptions: ratioTimes,
     total_debits: totalDebits,
@@ -751,7 +771,11 @@ function percent(value: number | null | undefined) {
 }
 
 function percentWhole(value: number | null | undefined) {
-  return `${Math.round(Number(value ?? 0) * 100)}%`;
+  return `${(Number(value ?? 0) * 100).toFixed(2)}%`;
+}
+
+function roundRatio(value: number) {
+  return Math.round(Number(value) * 10000) / 10000;
 }
 
 function labelFor(code: string) {
@@ -900,11 +924,7 @@ async function onWorkbookSelected(file: File | File[] | null) {
       await recalculate();
     }
   } catch (error) {
-    $q.notify({
-      color: 'negative',
-      message: error instanceof Error ? error.message : 'Import failed.',
-      position: 'top',
-    });
+    showImportError(error, 'Import failed.');
   }
 }
 
@@ -913,10 +933,31 @@ async function onPurchaseLedgerSelected(file: File | File[] | null) {
   if (!selected) return;
   try {
     await store.importPurchaseLedger(year.value, month.value, selected);
+    if (store.workspace) {
+      await recalculate();
+    }
     $q.notify({ type: 'positive', message: 'Purchase ledger imported' });
-  } catch {
-    // store.error banner handles message
+  } catch (error) {
+    showImportError(error, 'Purchase ledger import failed.');
   }
+}
+
+function isUploadRejected(message: string) {
+  return /was not imported|not in |cannot be verified|without a class/i.test(message);
+}
+
+function showImportError(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : fallback;
+  if (isUploadRejected(message)) {
+    $q.dialog({
+      title: 'Upload not processed',
+      message,
+      persistent: true,
+      ok: { unelevated: true, label: 'OK', color: 'primary', noCaps: true },
+    });
+    return;
+  }
+  $q.notify({ color: 'negative', message, position: 'top' });
 }
 
 async function load() {

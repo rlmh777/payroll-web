@@ -29,9 +29,17 @@ export interface TimesheetRow {
   clockInDeviceId: string | null;
   clockOutTime: string | null;
   clockOutDeviceId: string | null;
+  clockInPunctuality?: string | null;
+  clockOutPunctuality?: string | null;
+  clockInPunctualityAuto?: boolean;
+  clockOutPunctualityAuto?: boolean;
+  scheduledStartTime?: string | null;
+  scheduledEndTime?: string | null;
   roundOffClockInTime: string | null;
   roundOffClockOutTime: string | null;
   clockedHoursWorked: number;
+  rawClockedHours?: number;
+  scheduledHours?: number;
   includeLunchHour?: boolean;
   lunchHourHours: number;
   hoursWorked: number;
@@ -66,6 +74,12 @@ export interface TimesheetRow {
   updatedAt?: string | null;
   createdAt?: string | null;
   hasIssues: boolean;
+  hasBlockingIssues?: boolean;
+  exceptions?: Array<{
+    code: string;
+    severity: 'warning' | 'error';
+    message: string;
+  }>;
   hasLeaveConflict?: boolean;
   isOutsideSchedule?: boolean;
   isLocked?: boolean;
@@ -119,6 +133,45 @@ export interface TimesheetSummary {
   holidayHours: number;
   unpaidHours: number;
   paidHours: number;
+}
+
+export interface PayrollPeriodComparisonSummary extends TimesheetSummary {
+  payPeriodScheduleId?: string | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+  payDate?: string | undefined;
+}
+
+export type MissingPayrollEmployeeStatus =
+  | 'missing_timesheets'
+  | 'paid_leave_missing_timesheets'
+  | 'leave_without_pay'
+  | 'daily_rate_missing_entries';
+
+export interface MissingPayrollEmployee {
+  employeeId: string;
+  employmentDetailId: string;
+  employeeCode: string | null;
+  employeeName: string | null;
+  departmentId: number | string | null;
+  departmentName: string | null;
+  employmentContractLabel: string | null;
+  payType: string | null;
+  isBaseRate: boolean;
+  status: MissingPayrollEmployeeStatus;
+  reason: string;
+  leaveDaysInPeriod: number;
+  unpaidLeaveDaysInPeriod: number;
+  paidLeaveDaysInPeriod: number;
+  leaveTypes: string[];
+  onLeaveWithoutPay: boolean;
+  onPaidLeave: boolean;
+}
+
+export interface MissingPayrollEmployeesPayload {
+  expectedEmployeeCount: number;
+  missingEmployeeCount: number;
+  missingEmployees: MissingPayrollEmployee[];
 }
 
 export interface TimesheetCompensationRecalculationResult {
@@ -289,6 +342,7 @@ export interface PayrollRun {
 
 type PayrollRunApiRow = {
   id?: string | null;
+  payPeriodScheduleId?: string | null;
   pay_period_schedule_id?: string | null;
   status?: string | null;
   payroll_number?: number | null;
@@ -339,6 +393,9 @@ export const useAttendanceStore = defineStore('attendance', {
       unpaidHours: 0,
       paidHours: 0,
     } as TimesheetSummary,
+    periodSummary: null as PayrollPeriodComparisonSummary | null,
+    previousSummary: null as PayrollPeriodComparisonSummary | null,
+    missingPayrollEmployees: null as MissingPayrollEmployeesPayload | null,
     clockingLogPagination: {
       page: 1,
       rowsPerPage: 25,
@@ -513,12 +570,12 @@ export const useAttendanceStore = defineStore('attendance', {
         });
 
         if (!response.ok) {
-          throw new Error(await this.parseError(response, 'Failed to preview allowance and deduction import.'));
+          throw new Error(await this.parseError(response, 'Failed to preview other payment and deduction import.'));
         }
 
         return (await response.json()) as PayrollAllowanceDeductionImportPreview;
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to preview allowance and deduction import.';
+        this.error = error instanceof Error ? error.message : 'Failed to preview other payment and deduction import.';
         return null;
       } finally {
         this.isImportingFile = false;
@@ -537,12 +594,12 @@ export const useAttendanceStore = defineStore('attendance', {
         });
 
         if (!response.ok) {
-          throw new Error(await this.parseError(response, 'Failed to post allowance and deduction import.'));
+          throw new Error(await this.parseError(response, 'Failed to post other payment and deduction import.'));
         }
 
         return (await response.json()) as PayrollAllowanceDeductionImportPreview;
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to post allowance and deduction import.';
+        this.error = error instanceof Error ? error.message : 'Failed to post other payment and deduction import.';
         return null;
       } finally {
         this.isImportingFile = false;
@@ -684,7 +741,11 @@ export const useAttendanceStore = defineStore('attendance', {
 
     normalizePayrollRun(row: PayrollRunApiRow): PayrollRun | null {
       const payPeriod = this.normalizePayPeriod(row.payPeriodSchedule ?? row.pay_period_schedule);
-      const payPeriodScheduleId = row.pay_period_schedule_id ?? payPeriod?.id ?? null;
+      const payPeriodScheduleId =
+        row.payPeriodScheduleId
+        ?? row.pay_period_schedule_id
+        ?? payPeriod?.id
+        ?? null;
 
       if (!row.id || !payPeriodScheduleId) {
         return null;
@@ -895,6 +956,13 @@ export const useAttendanceStore = defineStore('attendance', {
         const payload = await response.json();
         this.employeeTimesheetSummaries = Array.isArray(payload.data) ? payload.data : [];
         this.timesheetSummary = this.normalizeTimesheetSummary(payload.summary);
+        this.periodSummary = payload.periodSummary
+          ? this.normalizePeriodComparisonSummary(payload.periodSummary)
+          : null;
+        this.previousSummary = payload.previousSummary
+          ? this.normalizePeriodComparisonSummary(payload.previousSummary)
+          : null;
+        this.missingPayrollEmployees = this.normalizeMissingPayrollEmployees(payload.missingPayrollEmployees);
         this.employeeSummaryPagination = {
           page: payload.current_page ?? page,
           rowsPerPage: effectiveRowsPerPage,
@@ -1282,6 +1350,35 @@ export const useAttendanceStore = defineStore('attendance', {
       }
     },
 
+    async updateTimesheetPunctuality(
+      id: string,
+      payload: { clockInPunctuality?: string | null; clockOutPunctuality?: string | null },
+    ) {
+      this.error = null;
+
+      try {
+        const response = await fetch(`${API_URL}/timesheets/${id}/punctuality`, {
+          method: 'PATCH',
+          headers: this.buildJsonHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(await this.parseError(response, 'Failed to update punctuality.'));
+        }
+
+        const body = await response.json();
+        const updated = body.data as TimesheetRow;
+        const affected = Array.isArray(body.affected) ? (body.affected as TimesheetRow[]) : [updated];
+        this.mergeAffectedTimesheets(affected);
+
+        return updated;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to update punctuality.';
+        return null;
+      }
+    },
+
     buildTimesheetParams(filters: TimesheetFilters, page: number, rowsPerPage: number) {
       const params = new URLSearchParams({
         page: String(page),
@@ -1318,6 +1415,64 @@ export const useAttendanceStore = defineStore('attendance', {
         holidayHours: summary?.holidayHours ?? 0,
         unpaidHours: summary?.unpaidHours ?? 0,
         paidHours: summary?.paidHours ?? 0,
+      };
+    },
+
+    normalizePeriodComparisonSummary(
+      summary?: Partial<PayrollPeriodComparisonSummary>,
+    ): PayrollPeriodComparisonSummary {
+      const normalized: PayrollPeriodComparisonSummary = {
+        ...this.normalizeTimesheetSummary(summary),
+      };
+
+      if (summary?.payPeriodScheduleId) {
+        normalized.payPeriodScheduleId = summary.payPeriodScheduleId;
+      }
+      if (summary?.startDate) {
+        normalized.startDate = summary.startDate;
+      }
+      if (summary?.endDate) {
+        normalized.endDate = summary.endDate;
+      }
+      if (summary?.payDate) {
+        normalized.payDate = summary.payDate;
+      }
+
+      return normalized;
+    },
+
+    normalizeMissingPayrollEmployees(payload: unknown): MissingPayrollEmployeesPayload | null {
+      if (!payload || typeof payload !== 'object') {
+        return null;
+      }
+
+      const data = payload as Partial<MissingPayrollEmployeesPayload>;
+      const missingEmployees = Array.isArray(data.missingEmployees)
+        ? data.missingEmployees.map((row) => ({
+            employeeId: String(row.employeeId ?? ''),
+            employmentDetailId: String(row.employmentDetailId ?? ''),
+            employeeCode: row.employeeCode ?? null,
+            employeeName: row.employeeName ?? null,
+            departmentId: row.departmentId ?? null,
+            departmentName: row.departmentName ?? null,
+            employmentContractLabel: row.employmentContractLabel ?? null,
+            payType: row.payType ?? null,
+            isBaseRate: Boolean(row.isBaseRate),
+            status: row.status ?? 'missing_timesheets',
+            reason: String(row.reason ?? ''),
+            leaveDaysInPeriod: Number(row.leaveDaysInPeriod ?? 0),
+            unpaidLeaveDaysInPeriod: Number(row.unpaidLeaveDaysInPeriod ?? 0),
+            paidLeaveDaysInPeriod: Number(row.paidLeaveDaysInPeriod ?? 0),
+            leaveTypes: Array.isArray(row.leaveTypes) ? row.leaveTypes.map(String) : [],
+            onLeaveWithoutPay: Boolean(row.onLeaveWithoutPay),
+            onPaidLeave: Boolean(row.onPaidLeave),
+          }))
+        : [];
+
+      return {
+        expectedEmployeeCount: Number(data.expectedEmployeeCount ?? 0),
+        missingEmployeeCount: Number(data.missingEmployeeCount ?? missingEmployees.length),
+        missingEmployees,
       };
     },
   },

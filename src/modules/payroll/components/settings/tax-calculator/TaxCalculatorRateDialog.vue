@@ -1,54 +1,81 @@
 <template>
   <q-dialog v-model="isOpen" position="right">
-    <q-card class="q-drawer-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ isEdit ? 'Edit tax rate' : 'New tax rate' }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense :disable="saving" @click="close" />
-      </q-card-section>
+      </AppDialogHeader>
 
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="save">
-          <q-select
-            v-model="form.category"
-            :options="categoryOptions"
-            emit-value
-            map-options
-            label="Category *"
-            dense
-            outlined
-            :disable="saving"
-          />
-          <q-input v-model="form.code" label="Code *" dense outlined hint="Example: BUSINESS_INCOME" :disable="saving" />
-          <q-input v-model="form.name" label="Name *" dense outlined :disable="saving" />
-          <q-input
-            v-model.number="form.rateDisplay"
-            type="number"
-            step="0.01"
-            :suffix="isMultiplier ? '×' : '%'"
-            :label="isMultiplier ? 'Multiplier *' : 'Rate % *'"
-            dense
-            outlined
-            :disable="saving"
-          />
-          <q-input v-model="form.iris_line" label="IRIS line" dense outlined :disable="saving" />
-          <q-input v-model.number="form.sort_order" type="number" label="Sort order" dense outlined :disable="saving" />
-          <q-toggle v-model="form.applies_to_accounts" label="Assignable on accounts" :disable="saving" />
-          <q-toggle v-model="form.is_active" label="Active" :disable="saving" />
-
-          <q-card-actions align="right">
-            <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
-            <q-btn type="submit" color="primary" :loading="saving" :label="isEdit ? 'Save' : 'Create'" />
-          </q-card-actions>
+      <AppDialogBody>
+        <q-form id="tax-calculator-rate-form" @submit.prevent="save">
+          <AppDialogForm>
+            <div class="col-12">
+              <q-select
+                v-model="form.category"
+                :options="categoryOptions"
+                emit-value
+                map-options
+                label="Category *"
+                dense
+                outlined
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.code" label="Code *" dense outlined hint="Example: BUSINESS_INCOME" :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.name" label="Name *" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model.number="form.rateDisplay"
+                type="number"
+                step="0.01"
+                :suffix="isMultiplier ? '×' : '%'"
+                :label="isMultiplier ? 'Multiplier *' : 'Rate % *'"
+                dense
+                outlined
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.iris_line" label="IRIS line" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input v-model.number="form.sort_order" type="number" label="Sort order" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-toggle v-model="form.applies_to_accounts" label="Assignable on accounts" :disable="saving" />
+            </div>
+            <div class="col-12">
+              <q-toggle v-model="form.is_active" label="Active" :disable="saving" />
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
+        <q-btn
+          type="submit"
+          form="tax-calculator-rate-form"
+          color="primary"
+          :loading="saving"
+          :label="isEdit ? 'Save' : 'Create'"
+        />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import { useTaxCalculatorStore } from '@payroll/stores/tax-calculator-store';
 
 const $q = useQuasar();
@@ -155,11 +182,3 @@ async function save() {
   }
 }
 </script>
-
-<style scoped>
-.q-drawer-card {
-  width: 30vw;
-  max-width: 420px;
-  height: 100vh;
-}
-</style>

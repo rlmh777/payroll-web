@@ -1,129 +1,152 @@
 <template>
   <q-dialog v-model="isOpen" position="right" @hide="onClose">
-    <q-card class="payroll-allowance-dialog">
-      <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">{{ isEdit ? 'Edit allowance' : 'Add allowance' }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense v-close-popup :disable="saving" />
-      </q-card-section>
+    <AppDialogCard>
+      <AppDialogHeader>
+        <div class="text-h6">{{ isEdit ? 'Edit other payment' : 'Add other payment' }}</div>
+      </AppDialogHeader>
 
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="onSubmit">
-          <q-select
-            v-model="form.employeeId"
-            :options="employeeOptions"
-            option-value="id"
-            option-label="displayName"
-            emit-value
-            map-options
-            use-input
-            fill-input
-            hide-selected
-            input-debounce="0"
-            outlined
-            dense
-            label="Employee *"
-            :disable="saving || isEdit"
-            :rules="[(val) => !!val || 'Employee is required']"
-            @filter="filterEmployees"
-          />
-
-          <q-select
-            v-model="form.allowanceId"
-            :options="allowanceOptions"
-            option-value="id"
-            option-label="name"
-            emit-value
-            map-options
-            outlined
-            dense
-            label="Allowance *"
-            :disable="saving"
-            :rules="[(val) => !!val || 'Allowance is required']"
-            @update:model-value="onAllowanceChanged"
-          />
-
-          <q-select
-            v-model="form.accountId"
-            :options="accountOptions"
-            option-value="id"
-            option-label="name"
-            emit-value
-            map-options
-            use-input
-            fill-input
-            hide-selected
-            input-debounce="0"
-            outlined
-            dense
-            label="Account *"
-            :disable="saving"
-            :rules="[(val) => !!val || 'Account is required']"
-            @filter="filterAccounts"
-          />
-
-          <q-input
-            v-model.number="form.quantity"
-            type="number"
-            step="0.0001"
-            min="0.0001"
-            outlined
-            dense
-            label="Quantity *"
-            :disable="saving"
-            :rules="[(val) => (val !== null && val !== undefined && Number(val) > 0) || 'Quantity is required']"
-          />
-
-          <q-input
-            v-model.number="form.unitAmount"
-            type="number"
-            step="0.01"
-            min="0"
-            outlined
-            dense
-            label="Unit amount *"
-            :disable="saving"
-            :rules="[(val) => (val !== null && val !== undefined && Number(val) >= 0) || 'Unit amount is required']"
-          />
-
-          <q-input
-            :model-value="computedAmount"
-            type="number"
-            outlined
-            dense
-            readonly
-            label="Amount (total)"
-            hint="Calculated as quantity × unit amount"
-          />
-
-          <q-input
-            v-model="form.note"
-            type="textarea"
-            outlined
-            dense
-            label="Note"
-            :disable="saving"
-            rows="3"
-          />
-
-          <div class="row justify-end q-gutter-sm">
-            <q-btn flat label="Cancel" color="grey" :disable="saving" @click="onClose" />
-            <q-btn
-              unelevated
-              color="primary"
-              type="submit"
-              :label="isEdit ? 'Update' : 'Save'"
-              :loading="saving"
-            />
-          </div>
+      <AppDialogBody>
+        <q-form @submit.prevent="onSubmit">
+          <AppDialogForm>
+            <div class="col-12">
+              <q-select
+                v-model="form.employeeId"
+                :options="employeeOptions"
+                option-value="id"
+                option-label="displayName"
+                emit-value
+                map-options
+                use-input
+                fill-input
+                hide-selected
+                input-debounce="0"
+                outlined
+                dense
+                label="Employee *"
+                :disable="saving || isEdit"
+                :rules="[(val) => !!val || 'Employee is required']"
+                @filter="filterEmployees"
+              />
+            </div>
+            <div class="col-12">
+              <DateField
+                v-model="form.allowanceDate"
+                label="Date"
+                required
+                :disable="Boolean(saving)"
+                :rules="dateRules"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                v-model="form.allowanceId"
+                :options="allowanceOptions"
+                option-value="id"
+                option-label="name"
+                emit-value
+                map-options
+                outlined
+                dense
+                label="Other Payment *"
+                :disable="saving"
+                :rules="[(val) => !!val || 'Other Payment is required']"
+                @update:model-value="onAllowanceChanged"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                v-model="form.accountId"
+                :options="accountOptions"
+                option-value="id"
+                option-label="name"
+                emit-value
+                map-options
+                use-input
+                fill-input
+                hide-selected
+                input-debounce="0"
+                outlined
+                dense
+                label="Account *"
+                :disable="saving"
+                :rules="[(val) => !!val || 'Account is required']"
+                @filter="filterAccounts"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model.number="form.quantity"
+                type="number"
+                step="0.0001"
+                min="0.0001"
+                outlined
+                dense
+                label="Quantity *"
+                :disable="saving"
+                :rules="[(val) => (val !== null && val !== undefined && Number(val) > 0) || 'Quantity is required']"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model.number="form.unitAmount"
+                type="number"
+                step="0.01"
+                min="0"
+                outlined
+                dense
+                label="Unit amount *"
+                :disable="saving"
+                :rules="[(val) => (val !== null && val !== undefined && Number(val) >= 0) || 'Unit amount is required']"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                :model-value="computedAmount"
+                type="number"
+                outlined
+                dense
+                readonly
+                label="Amount (total)"
+                hint="Calculated as quantity × unit amount"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.note"
+                type="textarea"
+                outlined
+                dense
+                label="Note"
+                :disable="saving"
+                rows="3"
+              />
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="saving" @click="onClose" />
+        <q-btn
+          unelevated
+          color="primary"
+          :label="isEdit ? 'Update' : 'Save'"
+          :loading="saving"
+          @click="onSubmit"
+        />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import DateField from '@core/components/common/DateField.vue';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import type {
   HistoricalEmployeeAllowance,
   PayrollAllowanceEmployeeOption,
@@ -134,6 +157,8 @@ const props = defineProps<{
   modelValue: boolean;
   record?: HistoricalEmployeeAllowance | null;
   payrollRunId: string | null;
+  payPeriodStart?: string | null;
+  payPeriodEnd?: string | null;
   employees: PayrollAllowanceEmployeeOption[];
   allowances: Allowance[];
   accounts: Account[];
@@ -149,6 +174,7 @@ const emit = defineEmits<{
     payrollRunId: string;
     quantity: number;
     unitAmount: number;
+    allowanceDate: string;
     note?: string;
   }];
 }>();
@@ -164,10 +190,57 @@ const form = ref({
   employeeId: null as string | null,
   allowanceId: null as string | null,
   accountId: null as string | null,
+  allowanceDate: localDateString(),
   quantity: 1 as number | null,
   unitAmount: null as number | null,
   note: '',
 });
+
+function localDateString(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function clampDateToPayPeriod(date: string, start?: string | null, end?: string | null): string {
+  if (!start && !end) {
+    return date;
+  }
+
+  if (start && date < start) {
+    return start;
+  }
+
+  if (end && date > end) {
+    return end;
+  }
+
+  return date;
+}
+
+const defaultAllowanceDate = computed(() => {
+  const today = localDateString();
+  return clampDateToPayPeriod(today, props.payPeriodStart, props.payPeriodEnd);
+});
+
+const dateRules = computed(() => [
+  (val: string | null) => {
+    if (!val) {
+      return true;
+    }
+
+    if (props.payPeriodStart && val < props.payPeriodStart) {
+      return `Date must be on or after ${props.payPeriodStart}`;
+    }
+
+    if (props.payPeriodEnd && val > props.payPeriodEnd) {
+      return `Date must be on or before ${props.payPeriodEnd}`;
+    }
+
+    return true;
+  },
+]);
 
 /** Quasar @filter requires options to be assigned inside update() via a ref. */
 const employeeOptions = ref<PayrollAllowanceEmployeeOption[]>([]);
@@ -241,6 +314,7 @@ const resetForm = () => {
     employeeId: null,
     allowanceId: null,
     accountId: null,
+    allowanceDate: defaultAllowanceDate.value,
     quantity: 1,
     unitAmount: null,
     note: '',
@@ -258,6 +332,7 @@ const onSubmit = () => {
     || !form.value.employeeId
     || !form.value.allowanceId
     || !form.value.accountId
+    || !form.value.allowanceDate
     || form.value.quantity == null
     || form.value.unitAmount == null
   ) {
@@ -271,12 +346,14 @@ const onSubmit = () => {
     payrollRunId: string;
     quantity: number;
     unitAmount: number;
+    allowanceDate: string;
     note?: string;
   } = {
     employeeId: form.value.employeeId,
     allowanceId: form.value.allowanceId,
     accountId: form.value.accountId,
     payrollRunId: props.payrollRunId,
+    allowanceDate: form.value.allowanceDate,
     quantity: Number(form.value.quantity),
     unitAmount: Number(form.value.unitAmount),
   };
@@ -300,10 +377,14 @@ watch(
     syncSelectOptions();
 
     if (record) {
+      const recordDate = record.allowanceDate ?? record.allowance_date ?? null;
       form.value = {
         employeeId: record.employeeId || record.employee_id || null,
         allowanceId: record.allowanceId || record.allowance_id || null,
         accountId: record.accountId || record.account_id || null,
+        allowanceDate: recordDate
+          ? clampDateToPayPeriod(recordDate.slice(0, 10), props.payPeriodStart, props.payPeriodEnd)
+          : defaultAllowanceDate.value,
         quantity: Number(record.quantity ?? 1),
         unitAmount: Number(record.unitAmount ?? record.amount ?? 0),
         note: record.note ?? '',
@@ -323,11 +404,19 @@ watch(
     }
   },
 );
-</script>
 
-<style scoped>
-.payroll-allowance-dialog {
-  width: min(420px, 100vw);
-  max-height: 100vh;
-}
-</style>
+watch(
+  () => [props.payPeriodStart, props.payPeriodEnd, props.modelValue] as const,
+  ([start, end, open]) => {
+    if (!open) {
+      return;
+    }
+
+    form.value.allowanceDate = clampDateToPayPeriod(
+      form.value.allowanceDate || defaultAllowanceDate.value,
+      start,
+      end,
+    );
+  },
+);
+</script>

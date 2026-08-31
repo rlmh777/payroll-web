@@ -203,8 +203,13 @@ export const useAccountStore = defineStore('account', {
         const result = await response.json();
         const newAccount = result.data || result;
 
-        // Add to accounts list
         this.accounts = [...this.accounts, newAccount];
+
+        const { useEmployeeStore } = await import('@hr/stores/employee-store');
+        const employeeStore = useEmployeeStore();
+        if (!employeeStore.accounts.some((account) => account.id === newAccount.id)) {
+          employeeStore.accounts = [newAccount, ...employeeStore.accounts];
+        }
 
         return newAccount;
       } catch (error) {
@@ -294,10 +299,16 @@ export const useAccountStore = defineStore('account', {
         const result = await response.json();
         const updatedAccount = result.data || result;
 
-        // Update in accounts list
         const index = this.accounts.findIndex((a) => a.id === id);
         if (index !== -1) {
           this.accounts[index] = updatedAccount;
+        }
+
+        const { useEmployeeStore } = await import('@hr/stores/employee-store');
+        const employeeStore = useEmployeeStore();
+        const employeeIndex = employeeStore.accounts.findIndex((account) => account.id === id);
+        if (employeeIndex !== -1) {
+          employeeStore.accounts[employeeIndex] = updatedAccount;
         }
 
         return updatedAccount;
@@ -334,8 +345,11 @@ export const useAccountStore = defineStore('account', {
           throw new Error(errorData.error || `Failed to delete account: ${response.statusText}`);
         }
 
-        // Remove from accounts list
         this.accounts = this.accounts.filter((a) => a.id !== id);
+
+        const { useEmployeeStore } = await import('@hr/stores/employee-store');
+        const employeeStore = useEmployeeStore();
+        employeeStore.accounts = employeeStore.accounts.filter((account) => account.id !== id);
 
         return true;
       } catch (error) {

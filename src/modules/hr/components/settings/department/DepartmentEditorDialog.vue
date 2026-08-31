@@ -1,125 +1,143 @@
 <template>
   <q-dialog v-model="dialogModel" position="right" :maximized="false" @hide="resetForm">
-    <q-card class="department-editor-dialog-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ title }}</div>
-        <q-space />
-        <q-btn flat round dense icon="close" :disable="departmentStore.isSaving" @click="closeDialog" />
-      </q-card-section>
+        <template #close>
+          <q-btn flat round dense icon="close" :disable="departmentStore.isSaving" @click="closeDialog" />
+        </template>
+      </AppDialogHeader>
 
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="submitForm">
-          <q-input
-            v-model="form.name"
-            label="Department name"
-            outlined
-            autofocus
-            :disable="departmentStore.isSaving"
-            :rules="[(value) => !!String(value ?? '').trim() || 'Department name is required']"
-          />
-
-          <q-select
-            v-model="form.parentId"
-            clearable
-            emit-value
-            map-options
-            label="Parent department"
-            stack-label
-            :disable="departmentStore.isSaving"
-            :options="parentOptions"
-          />
-
-          <q-select
-            v-model="form.timesheet_template_id"
-            clearable
-            emit-value
-            map-options
-            label="Timesheet template"
-            stack-label
-            hint="Leave empty to assign the default template."
-            :disable="departmentStore.isSaving"
-            :options="timesheetTemplateOptions"
-          />
-
-          <q-input
-            v-model.number="form.totalDailyHoursBeforeOvertime"
-            type="number"
-            step="0.25"
-            min="0"
-            max="24"
-            label="Total daily hours before overtime"
-            outlined
-            :disable="departmentStore.isSaving"
-          />
-
-          <q-input
-            v-model.number="form.totalWeeklyHoursBeforeOvertime"
-            type="number"
-            step="0.25"
-            min="0"
-            max="168"
-            label="Total weekly hours before overtime"
-            outlined
-            :disable="departmentStore.isSaving"
-          />
-
-          <q-select
-            v-model="form.overtimeThresholdMode"
-            emit-value
-            map-options
-            label="Overtime threshold mode"
-            hint="Choose whether overtime uses the daily or weekly hour limit."
-            outlined
-            :disable="departmentStore.isSaving"
-            :options="[
-              { label: 'Daily then weekly hours before overtime', value: 'DAILY_AND_WEEKLY' },
-              { label: 'Daily hours before overtime only', value: 'DAILY' },
-              { label: 'Weekly hours before overtime only', value: 'WEEKLY' },
-            ]"
-          />
-
-          <q-select
-            v-model="form.overnightShiftMode"
-            emit-value
-            map-options
-            label="Overnight shift handling"
-            hint="Controls whether overnight work is split at midnight for daily overtime and holiday pay."
-            outlined
-            :disable="departmentStore.isSaving"
-            :options="[
-              { label: 'Split at midnight (separate rows per day)', value: 'SPLIT_AT_MIDNIGHT' },
-              { label: 'Keep on clock-in day (holiday/OT use start day)', value: 'ATTRIBUTE_TO_CLOCK_IN_DAY' },
-              { label: 'Keep on clock-out day (holiday/OT use end day)', value: 'ATTRIBUTE_TO_CLOCK_OUT_DAY' },
-            ]"
-          />
-
-          <IncludeLunchHourFields
-            :include-lunch-hour="form.includeLunchHour ?? true"
-            :lunch-hour-hours="form.lunchHourHours ?? 1"
-            :disable="departmentStore.isSaving"
-            @update:include-lunch-hour="form.includeLunchHour = $event"
-            @update:lunch-hour-hours="form.lunchHourHours = $event"
-          />
-
-          <div class="row q-gutter-sm justify-end q-mt-lg">
-            <q-btn flat label="Cancel" color="grey" :disable="departmentStore.isSaving" @click="closeDialog" />
-            <q-btn
-              type="submit"
-              label="Save"
-              color="primary"
-              :loading="departmentStore.isSaving"
-              :disable="!form.name.trim()"
-            />
-          </div>
+      <AppDialogBody>
+        <q-form id="department-editor-form" @submit.prevent="submitForm">
+          <AppDialogForm>
+            <div class="col-12">
+              <q-input
+                v-model="form.name"
+                label="Department name"
+                outlined
+                autofocus
+                :disable="departmentStore.isSaving"
+                :rules="[(value) => !!String(value ?? '').trim() || 'Department name is required']"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                v-model="form.parentId"
+                clearable
+                emit-value
+                map-options
+                label="Parent department"
+                stack-label
+                :disable="departmentStore.isSaving"
+                :options="parentOptions"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                v-model="form.timesheet_template_id"
+                clearable
+                emit-value
+                map-options
+                label="Timesheet template"
+                stack-label
+                hint="Leave empty to assign the default template."
+                :disable="departmentStore.isSaving"
+                :options="timesheetTemplateOptions"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model.number="form.totalDailyHoursBeforeOvertime"
+                type="number"
+                step="0.25"
+                min="0"
+                max="24"
+                label="Total daily hours before overtime"
+                outlined
+                :disable="departmentStore.isSaving"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model.number="form.totalWeeklyHoursBeforeOvertime"
+                type="number"
+                step="0.25"
+                min="0"
+                max="168"
+                label="Total weekly hours before overtime"
+                outlined
+                :disable="departmentStore.isSaving"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                v-model="form.overtimeThresholdMode"
+                emit-value
+                map-options
+                label="Overtime threshold mode"
+                hint="Choose whether overtime uses the daily or weekly hour limit."
+                outlined
+                :disable="departmentStore.isSaving"
+                :options="[
+                  { label: 'Daily then weekly hours before overtime', value: 'DAILY_AND_WEEKLY' },
+                  { label: 'Daily hours before overtime only', value: 'DAILY' },
+                  { label: 'Weekly hours before overtime only', value: 'WEEKLY' },
+                ]"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                v-model="form.overnightShiftMode"
+                emit-value
+                map-options
+                label="Overnight shift handling"
+                hint="Controls whether overnight work is split at midnight for daily overtime and holiday pay."
+                outlined
+                :disable="departmentStore.isSaving"
+                :options="[
+                  { label: 'Split at midnight (separate rows per day)', value: 'SPLIT_AT_MIDNIGHT' },
+                  { label: 'Keep on clock-in day (holiday/OT use start day)', value: 'ATTRIBUTE_TO_CLOCK_IN_DAY' },
+                  { label: 'Keep on clock-out day (holiday/OT use end day)', value: 'ATTRIBUTE_TO_CLOCK_OUT_DAY' },
+                ]"
+              />
+            </div>
+            <div class="col-12">
+              <IncludeLunchHourFields
+                :include-lunch-hour="form.includeLunchHour ?? true"
+                :lunch-hour-hours="form.lunchHourHours ?? 1"
+                :disable="departmentStore.isSaving"
+                @update:include-lunch-hour="form.includeLunchHour = $event"
+                @update:lunch-hour-hours="form.lunchHourHours = $event"
+              />
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="departmentStore.isSaving" @click="closeDialog" />
+        <q-btn
+          type="submit"
+          form="department-editor-form"
+          label="Save"
+          color="primary"
+          :loading="departmentStore.isSaving"
+          :disable="!form.name.trim()"
+        />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import { useDepartmentStore, type Department, type DepartmentPayload } from '@hr/stores/department-store';
 import { useTimesheetTemplateStore } from '@hr/stores/timesheet-template-store';
 import IncludeLunchHourFields from '@core/components/common/IncludeLunchHourFields.vue';
@@ -257,17 +275,3 @@ watch(
   },
 );
 </script>
-
-<style scoped>
-.department-editor-dialog-card {
-  width: 30vw;
-  height: 100vh;
-  max-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.department-editor-dialog-card :deep(.q-card__section) {
-  overflow-y: auto;
-}
-</style>

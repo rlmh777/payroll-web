@@ -1,14 +1,45 @@
 import { defineStore, acceptHMRUpdate } from 'pinia';
 import { useAuthStore } from '@core/stores/auth';
 
+export interface PendingTimesheetLock {
+  payrollRunId: string;
+  payrollNumber: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  payDate: string | null;
+  lockDueAt: string;
+  proposedLockBeforeDate: string;
+  isOverdue: boolean;
+}
+
 export interface PayrollSettings {
   incomeTaxRate: number;
   incomeTaxRatePercent: number;
   secondReliefAmount: number;
   timesheetLockBeforeDate: string | null;
+  timesheetAutoLockEnabled: boolean;
+  timesheetAutoLockTime: string;
+  timesheetAutoLockDaysAfterPayDate: number;
+  timesheetUnlockStartDate: string | null;
+  timesheetUnlockEndDate: string | null;
+  timesheetUnlockActive: boolean;
+  pendingTimesheetLocks: PendingTimesheetLock[];
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
+
+function normalizePendingLock(row: Partial<PendingTimesheetLock>): PendingTimesheetLock {
+  return {
+    payrollRunId: String(row.payrollRunId ?? ''),
+    payrollNumber: String(row.payrollNumber ?? ''),
+    periodStart: row.periodStart ?? null,
+    periodEnd: row.periodEnd ?? null,
+    payDate: row.payDate ?? null,
+    lockDueAt: String(row.lockDueAt ?? ''),
+    proposedLockBeforeDate: String(row.proposedLockBeforeDate ?? ''),
+    isOverdue: Boolean(row.isOverdue),
+  };
+}
 
 function normalizeSettings(data: Partial<PayrollSettings> | null | undefined): PayrollSettings {
   const rate = Number(data?.incomeTaxRate ?? 0.25);
@@ -20,8 +51,32 @@ function normalizeSettings(data: Partial<PayrollSettings> | null | undefined): P
     timesheetLockBeforeDate: data?.timesheetLockBeforeDate
       ? String(data.timesheetLockBeforeDate)
       : null,
+    timesheetAutoLockEnabled: data?.timesheetAutoLockEnabled !== false,
+    timesheetAutoLockTime: String(data?.timesheetAutoLockTime ?? '17:00'),
+    timesheetAutoLockDaysAfterPayDate: Number(data?.timesheetAutoLockDaysAfterPayDate ?? 1),
+    timesheetUnlockStartDate: data?.timesheetUnlockStartDate
+      ? String(data.timesheetUnlockStartDate)
+      : null,
+    timesheetUnlockEndDate: data?.timesheetUnlockEndDate
+      ? String(data.timesheetUnlockEndDate)
+      : null,
+    timesheetUnlockActive: Boolean(data?.timesheetUnlockActive),
+    pendingTimesheetLocks: Array.isArray(data?.pendingTimesheetLocks)
+      ? data.pendingTimesheetLocks.map((row) => normalizePendingLock(row))
+      : [],
   };
 }
+
+export type PayrollSettingsUpdatePayload = {
+  incomeTaxRate?: number;
+  secondReliefAmount?: number;
+  timesheetLockBeforeDate?: string | null;
+  timesheetAutoLockEnabled?: boolean;
+  timesheetAutoLockTime?: string;
+  timesheetAutoLockDaysAfterPayDate?: number;
+  timesheetUnlockStartDate?: string | null;
+  timesheetUnlockEndDate?: string | null;
+};
 
 export const usePayrollSettingStore = defineStore('payrollSetting', {
   state: () => ({
@@ -71,11 +126,7 @@ export const usePayrollSettingStore = defineStore('payrollSetting', {
       }
     },
 
-    async updateSettings(payload: {
-      incomeTaxRate?: number;
-      secondReliefAmount?: number;
-      timesheetLockBeforeDate?: string | null;
-    }) {
+    async updateSettings(payload: PayrollSettingsUpdatePayload) {
       this.isSaving = true;
       this.error = null;
 

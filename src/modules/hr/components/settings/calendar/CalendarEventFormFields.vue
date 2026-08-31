@@ -89,6 +89,7 @@
       outlined
       dense
       :disable="props.disable"
+      :hint="kind === 'work' ? 'Optional' : undefined"
       @update:model-value="emit('update:description', String($event ?? ''))"
     />
 

@@ -27,7 +27,7 @@ export const payrollRoutes: RouteRecordRaw[] = [
       {
         path: '/payroll/allowances',
         component: () => import('@payroll/pages/PayrollAllowancesPage.vue'),
-        props: { title: 'Payroll Allowances' },
+        props: { title: 'Payroll Other Payments' },
       },
       {
         path: '/payroll/day-work',

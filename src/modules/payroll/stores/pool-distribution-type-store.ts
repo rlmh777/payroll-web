@@ -3,7 +3,15 @@ import { useAuthStore } from '@core/stores/auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 
-export type PoolCalculationMode = 'weighted_points' | 'equal_share' | 'manual' | 'disabled';
+export type PoolCalculationMode = 'weighted_points' | 'equal_share' | 'department_equal_share' | 'manual' | 'disabled';
+
+export interface PoolDepartmentShare {
+  department_id?: number;
+  departmentId?: number;
+  department_name?: string | null;
+  departmentName?: string | null;
+  percent: number;
+}
 
 export interface PoolDistributionType {
   id: number;
@@ -20,6 +28,8 @@ export interface PoolDistributionType {
   notes?: string | null;
   payrollEarningCode?: { id: number; code: string; name: string } | null;
   allowance?: { id: string; name: string } | null;
+  departmentShares?: PoolDepartmentShare[];
+  department_shares?: PoolDepartmentShare[];
 }
 
 export interface PoolDistributionTypePayload {
@@ -34,11 +44,13 @@ export interface PoolDistributionTypePayload {
   is_ss_subject?: boolean;
   sort_order?: number;
   notes?: string | null;
+  department_shares?: Array<{ department_id: number; percent: number }>;
 }
 
 export const POOL_CALCULATION_MODE_OPTIONS = [
   { value: 'weighted_points', label: 'Weighted points' },
   { value: 'equal_share', label: 'Equal share among eligible' },
+  { value: 'department_equal_share', label: 'Department percent, equal share within department' },
   { value: 'manual', label: 'Manual (no auto distribution)' },
   { value: 'disabled', label: 'Disabled' },
 ] as const;

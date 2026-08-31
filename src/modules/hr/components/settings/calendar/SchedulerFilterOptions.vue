@@ -23,6 +23,14 @@
     </div>
 
     <div class="q-mt-md">
+      <EmployeeGroupSelect
+        :model-value="schedulerStore.filterEmployeeGroupId"
+        label="Employee group"
+        @update:model-value="schedulerStore.setFilterEmployeeGroupId($event)"
+      />
+    </div>
+
+    <div class="q-mt-md">
       <DepartmentSelect
         :model-value="schedulerStore.filterDepartmentId"
         label="Department"
@@ -56,6 +64,7 @@
 
 <script setup lang="ts">
 import DepartmentSelect from '@hr/components/department/DepartmentSelect.vue';
+import EmployeeGroupSelect from '@hr/components/employee-group/EmployeeGroupSelect.vue';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
 
 const schedulerStore = useSchedulerStore();
@@ -63,6 +72,7 @@ const schedulerStore = useSchedulerStore();
 const viewByOptions = [
   { label: 'Users', value: 'users' as const },
   { label: 'Department', value: 'department' as const },
+  { label: 'Group', value: 'group' as const },
 ];
 
 const sortByOptions = [

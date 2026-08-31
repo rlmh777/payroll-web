@@ -91,19 +91,13 @@
               size="16px"
               color="grey-8"
             >
-              <q-tooltip>{{ lockTooltip(tableProps.row) }}</q-tooltip>
+              <TimesheetTooltip>{{ lockTooltip(tableProps.row) }}</TimesheetTooltip>
             </q-icon>
             <div class="text-weight-medium">{{ formatDate(tableProps.row.date) }}</div>
           </div>
-          <q-tooltip
-            v-if="rowTooltipText(tableProps.row)"
-            anchor="top middle"
-            self="bottom middle"
-            class="bg-grey-9 text-body2"
-            style="max-width: 320px; white-space: pre-line"
-          >
+          <TimesheetTooltip v-if="rowTooltipText(tableProps.row)">
             {{ rowTooltipText(tableProps.row) }}
-          </q-tooltip>
+          </TimesheetTooltip>
         </q-td>
       </template>
 
@@ -127,11 +121,35 @@
         </q-td>
       </template>
 
+      <template #body-cell-clockInPunctuality="tableProps">
+        <q-td :props="tableProps" :class="timesheetRowClass(tableProps.row)">
+          <TimesheetPunctualityCell
+            :row="tableProps.row"
+            side="clockIn"
+            :locked="isRowLocked(tableProps.row)"
+            :saving="isSaving(tableProps.row.id)"
+            @save="savePunctuality(tableProps.row, 'clockIn', $event)"
+          />
+        </q-td>
+      </template>
+
       <template #body-cell-clockOutTime="tableProps">
         <q-td :props="tableProps" :class="timesheetRowClass(tableProps.row)">
           <div :class="{ 'timesheet-clock-time-outside': shouldHighlightClockTimes(tableProps.row) }">
             {{ formatTimesheetClockTime(tableProps.row.clockOutTime) }}
           </div>
+        </q-td>
+      </template>
+
+      <template #body-cell-clockOutPunctuality="tableProps">
+        <q-td :props="tableProps" :class="timesheetRowClass(tableProps.row)">
+          <TimesheetPunctualityCell
+            :row="tableProps.row"
+            side="clockOut"
+            :locked="isRowLocked(tableProps.row)"
+            :saving="isSaving(tableProps.row.id)"
+            @save="savePunctuality(tableProps.row, 'clockOut', $event)"
+          />
         </q-td>
       </template>
 
@@ -154,7 +172,11 @@
             :disable="isRowLocked(tableProps.row) || isSaving(tableProps.row.id)"
             @update:model-value="setDraft(tableProps.row.id, 'in', String($event ?? ''))"
             @blur="saveRoundOff(tableProps.row)"
-          />
+          >
+            <TimesheetTooltip v-if="roundOffChangeTooltip(tableProps.row)">
+              {{ roundOffChangeTooltip(tableProps.row) }}
+            </TimesheetTooltip>
+          </q-input>
         </q-td>
       </template>
 
@@ -169,7 +191,11 @@
             :disable="isRowLocked(tableProps.row) || isSaving(tableProps.row.id)"
             @update:model-value="setDraft(tableProps.row.id, 'out', String($event ?? ''))"
             @blur="saveRoundOff(tableProps.row)"
-          />
+          >
+            <TimesheetTooltip v-if="roundOffChangeTooltip(tableProps.row)">
+              {{ roundOffChangeTooltip(tableProps.row) }}
+            </TimesheetTooltip>
+          </q-input>
         </q-td>
       </template>
 
@@ -225,13 +251,13 @@
             :icon="tableProps.row.hasBeenPaid ? 'payments' : 'money_off'"
             :label="tableProps.row.hasBeenPaid ? 'Paid' : 'Not paid'"
           >
-            <q-tooltip>
+            <TimesheetTooltip>
               {{
                 tableProps.row.hasBeenPaid
                   ? `Included in a posted payroll run${tableProps.row.payrollPayment?.payDate ? ` (pay date ${tableProps.row.payrollPayment.payDate})` : ''}. Hours are marked paid.`
                   : 'Not included in a posted payroll run yet.'
               }}
-            </q-tooltip>
+            </TimesheetTooltip>
           </q-chip>
         </q-td>
       </template>
@@ -280,47 +306,24 @@
               icon="lock"
               label="Locked"
             >
-              <q-tooltip>{{ lockTooltip(tableProps.row) }}</q-tooltip>
+              <TimesheetTooltip>{{ lockTooltip(tableProps.row) }}</TimesheetTooltip>
             </q-chip>
           </div>
-          <q-tooltip
-            v-if="rowTooltipText(tableProps.row)"
-            anchor="top middle"
-            self="bottom middle"
-            class="bg-grey-9 text-body2"
-            style="max-width: 320px; white-space: pre-line"
-          >
+          <TimesheetTooltip v-if="rowTooltipText(tableProps.row)">
             {{ rowTooltipText(tableProps.row) }}
-          </q-tooltip>
+          </TimesheetTooltip>
+        </q-td>
+      </template>
+
+      <template #body-cell-exceptions="tableProps">
+        <q-td :props="tableProps" :class="timesheetRowClass(tableProps.row)">
+          <TimesheetExceptionsCell :row="tableProps.row" />
         </q-td>
       </template>
 
       <template #body-cell-comment="tableProps">
         <q-td :props="tableProps" :class="timesheetRowClass(tableProps.row)">
-          <q-input
-            :model-value="commentDraftValue(tableProps.row)"
-            type="text"
-            dense
-            outlined
-            hide-bottom-space
-            placeholder="Add comment"
-            :disable="isRowLocked(tableProps.row) || isSaving(tableProps.row.id)"
-            @update:model-value="setCommentDraft(tableProps.row.id, $event)"
-            @blur="saveComment(tableProps.row)"
-          >
-            <template v-if="commentDraftValue(tableProps.row)" #prepend>
-              <q-icon name="chat_bubble_outline" size="18px" color="grey-7" />
-            </template>
-          </q-input>
-          <q-tooltip
-            v-if="rowTooltipText(tableProps.row)"
-            anchor="top middle"
-            self="bottom middle"
-            class="bg-grey-9 text-body2"
-            style="max-width: 320px; white-space: pre-line"
-          >
-            {{ rowTooltipText(tableProps.row) }}
-          </q-tooltip>
+          <TimesheetCommentCell :row="tableProps.row" />
         </q-td>
       </template>
 
@@ -353,12 +356,18 @@
               icon="check"
               label="Approve"
               :loading="isUpdatingApproval(tableProps.row.id)"
-              :disable="isApprovalBusy(tableProps.row.id) || isDateLocked(tableProps.row)"
+              :disable="isApprovalBusy(tableProps.row.id) || isDateLocked(tableProps.row) || !canApproveRow(tableProps.row)"
               @click="updateApproval(tableProps.row, 'APPROVED')"
             >
-              <q-tooltip v-if="isDateLocked(tableProps.row)">
+              <TimesheetTooltip v-if="isDateLocked(tableProps.row)">
                 {{ lockTooltip(tableProps.row) }}
-              </q-tooltip>
+              </TimesheetTooltip>
+              <TimesheetTooltip v-else-if="tableProps.row.hasLeaveConflict">
+                Resolve the leave conflict before approving.
+              </TimesheetTooltip>
+              <TimesheetTooltip v-else-if="timesheetHasBlockingExceptions(tableProps.row)">
+                Resolve attendance exceptions before approving.
+              </TimesheetTooltip>
             </q-btn>
             <q-btn
               v-else
@@ -371,12 +380,28 @@
               :disable="isApprovalBusy(tableProps.row.id) || isDateLocked(tableProps.row)"
               @click="updateApproval(tableProps.row, 'PENDING')"
             >
-              <q-tooltip v-if="isDateLocked(tableProps.row)">
+              <TimesheetTooltip v-if="isDateLocked(tableProps.row)">
                 {{ lockTooltip(tableProps.row) }}
-              </q-tooltip>
+              </TimesheetTooltip>
             </q-btn>
           </div>
         </q-td>
+      </template>
+
+      <template #bottom-row>
+        <q-tr class="employee-group-table__totals-row">
+          <q-td :colspan="visibleTableColumns.length" class="employee-group-table__totals-cell">
+            <div class="row items-center q-gutter-x-lg q-gutter-y-xs">
+              <span class="text-weight-bold">Period total</span>
+              <div class="row items-center q-gutter-x-md">
+                <div v-for="metric in periodTotalMetrics" :key="metric.label" class="period-total-metric">
+                  <span class="text-caption text-grey-7">{{ metric.label }}</span>
+                  <span class="text-weight-bold q-ml-xs" :class="metric.className">{{ formatHours(metric.value) }}</span>
+                </div>
+              </div>
+            </div>
+          </q-td>
+        </q-tr>
       </template>
     </q-table>
 
@@ -404,6 +429,10 @@ import { useTimesheetStore } from '@hr/stores/timesheet-store';
 import type { TimesheetEmployeeGroup } from '@hr/stores/timesheet-store';
 import AddTimesheetDialog from './AddTimesheetDialog.vue';
 import EditTimesheetDialog from './EditTimesheetDialog.vue';
+import TimesheetPunctualityCell from './TimesheetPunctualityCell.vue';
+import TimesheetExceptionsCell from './TimesheetExceptionsCell.vue';
+import TimesheetCommentCell from './TimesheetCommentCell.vue';
+import TimesheetTooltip from './TimesheetTooltip.vue';
 import { TIMESHEET_TABLE_COLUMNS } from '@hr/utils/timesheet-table-columns';
 import {
   formatDate,
@@ -411,14 +440,25 @@ import {
   formatOvertimeForPayType,
   formatPayType,
   humanizeStatus,
+  timesheetLastUpdatedTooltip,
   workingStatusColor,
 } from '@payroll/components/attendance/utils';
+import {
+  timesheetPrimaryWithCommentTooltip,
+  timesheetRowMetadataTooltip,
+} from '@hr/utils/timesheet-tooltip-utils';
 import { getUserAvatarColor, getUserInitials } from '@core/components/users/user-avatar';
 import {
   buildRoundOffDateTimes,
   formatTimesheetClockTime,
+  sumTimesheetPeriodTotals,
   toTimeInputValue,
 } from '@hr/utils/timesheet-time-utils';
+import {
+  timesheetHasBlockingExceptions,
+} from '@hr/utils/timesheet-exception-utils';
+import type { TimesheetPunctualitySelection } from '@hr/utils/timesheet-punctuality-utils';
+import { punctualitySelectValue } from '@hr/utils/timesheet-punctuality-utils';
 
 const props = defineProps<{
   group: TimesheetEmployeeGroup;
@@ -427,6 +467,15 @@ const props = defineProps<{
 const groupOvertimeHours = computed(() =>
   props.group.rows.reduce((sum, row) => sum + Number(row.overtimeHours || 0), 0),
 );
+
+const groupPeriodTotals = computed(() => sumTimesheetPeriodTotals(props.group.rows));
+
+const periodTotalMetrics = computed(() => [
+  { label: 'Scheduled', value: groupPeriodTotals.value.scheduledHours, className: 'text-indigo' },
+  { label: 'Clocked', value: groupPeriodTotals.value.rawClockedHours, className: 'text-blue-grey-8' },
+  { label: 'Rounded', value: groupPeriodTotals.value.roundedHours, className: 'text-cyan-8' },
+  { label: 'Payable', value: groupPeriodTotals.value.payableHours, className: 'text-primary' },
+]);
 
 const $q = useQuasar();
 const { can } = usePermissions();
@@ -443,7 +492,6 @@ const editingTimesheet = ref<TimesheetRow | null>(null);
 
 const drafts = reactive<Record<string, { in: string; out: string }>>({});
 const lunchDrafts = reactive<Record<string, number>>({});
-const commentDrafts = reactive<Record<string, string>>({});
 const savingIds = ref<Record<string, boolean>>({});
 const updatingApprovalIds = ref<Record<string, boolean>>({});
 
@@ -465,60 +513,12 @@ function formatMoney(value?: number | null) {
 }
 
 function rowTooltipText(row: TimesheetRow): string {
-  const lines: string[] = [];
-  const comment = (row.comment || '').trim();
-  if (comment) {
-    lines.push(`Comment: ${comment}`);
-  }
-
-  if (row.updatedByName || row.updatedAt) {
-    const who = row.updatedByName || 'Unknown user';
-    const when = row.updatedAt ? formatDateTime(row.updatedAt) : 'unknown time';
-    lines.push(`Last updated by ${who} on ${when}`);
-  }
-
-  return lines.join('\n');
+  return timesheetRowMetadataTooltip(row);
 }
 
-function commentDraftValue(row: TimesheetRow): string {
-  if (commentDrafts[row.id] !== undefined) {
-    return commentDrafts[row.id] ?? '';
-  }
-  return row.comment || '';
-}
-
-function setCommentDraft(id: string, value: string | number | null) {
-  commentDrafts[id] = String(value ?? '');
-}
-
-async function saveComment(row: TimesheetRow) {
-  if (isRowLocked(row)) {
-    return;
-  }
-
-  const nextComment = commentDraftValue(row).trim();
-  const currentComment = (row.comment || '').trim();
-  if (nextComment === currentComment) {
-    return;
-  }
-
-  savingIds.value[row.id] = true;
-  const updated = await attendanceStore.updateTimesheetComment(row.id, {
-    comment: nextComment || null,
-  });
-  savingIds.value[row.id] = false;
-
-  if (!updated) {
-    $q.notify({
-      type: 'negative',
-      message: attendanceStore.error || 'Failed to update comment.',
-    });
-    commentDrafts[row.id] = currentComment;
-    return;
-  }
-
-  commentDrafts[row.id] = updated.comment || '';
-  Object.assign(row, updated);
+function roundOffChangeTooltip(row: TimesheetRow): string | null {
+  const tooltip = timesheetPrimaryWithCommentTooltip(row, timesheetLastUpdatedTooltip(row));
+  return tooltip || null;
 }
 
 function approvalColor(value?: string | null) {
@@ -530,7 +530,15 @@ function approvalColor(value?: string | null) {
 }
 
 function timesheetRowClass(row: TimesheetRow) {
+  if (row.hasIssues || timesheetHasBlockingExceptions(row)) {
+    return 'timesheet-row-has-issues';
+  }
+
   return row.isOutsideSchedule ? 'timesheet-row-outside-schedule' : '';
+}
+
+function canApproveRow(row: TimesheetRow) {
+  return !row.hasLeaveConflict && !timesheetHasBlockingExceptions(row);
 }
 
 function shouldHighlightRoundedTimes(row: TimesheetRow) {
@@ -552,7 +560,7 @@ function isDateLocked(row: TimesheetRow) {
 function lockTooltip(row: TimesheetRow) {
   return row.lockReason
     || (row.lockBeforeDate
-      ? `Locked because work date is before ${row.lockBeforeDate}. Change the lock date under Payroll.`
+      ? `Locked because work date is before ${row.lockBeforeDate}. Open a temporary unlock under Payroll Overview if needed.`
       : 'This timesheet is locked and cannot be edited.');
 }
 
@@ -696,6 +704,44 @@ async function saveRoundOff(row: TimesheetRow) {
   Object.assign(row, updated);
 }
 
+async function savePunctuality(
+  row: TimesheetRow,
+  side: 'clockIn' | 'clockOut',
+  selection: TimesheetPunctualitySelection,
+) {
+  if (isRowLocked(row)) {
+    return;
+  }
+
+  const currentSelection = punctualitySelectValue(
+    side === 'clockIn' ? row.clockInPunctuality : row.clockOutPunctuality,
+    side === 'clockIn' ? row.clockInPunctualityAuto : row.clockOutPunctualityAuto,
+  );
+
+  if (selection === currentSelection) {
+    return;
+  }
+
+  savingIds.value[row.id] = true;
+
+  const payload = side === 'clockIn'
+    ? { clockInPunctuality: selection }
+    : { clockOutPunctuality: selection };
+
+  const updated = await attendanceStore.updateTimesheetPunctuality(row.id, payload);
+  savingIds.value[row.id] = false;
+
+  if (!updated) {
+    $q.notify({
+      type: 'negative',
+      message: attendanceStore.error || 'Failed to update punctuality.',
+    });
+    return;
+  }
+
+  Object.assign(row, updated);
+}
+
 async function updateApproval(row: TimesheetRow, approvalStatus: 'APPROVED' | 'PENDING') {
   updatingApprovalIds.value[row.id] = true;
 
@@ -745,6 +791,11 @@ onMounted(() => {
   background-color: #ffebee !important;
 }
 
+.employee-group-table :deep(tr.timesheet-row-has-issues > td),
+.employee-group-table :deep(td.timesheet-row-has-issues) {
+  background-color: #fff4ea !important;
+}
+
 .employee-group-table :deep(td.timesheet-row-outside-schedule .q-field--outlined .q-field__control) {
   background: #fff5f5;
 }
@@ -762,5 +813,17 @@ onMounted(() => {
 .employee-group-table :deep(.timesheet-round-off-outside .q-field__native) {
   color: #c62828;
   font-weight: 600;
+}
+
+.employee-group-table :deep(.employee-group-table__totals-row) {
+  background: #eef3fb;
+}
+
+.employee-group-table :deep(.employee-group-table__totals-cell) {
+  border-top: 2px solid #cbd5e1;
+}
+
+.period-total-metric {
+  white-space: nowrap;
 }
 </style>

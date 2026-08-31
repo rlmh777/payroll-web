@@ -7,7 +7,7 @@
   >
     <q-card class="edit-employee-default-allowance-card">
       <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">Edit Employee Default Allowance</div>
+        <div class="text-h6">Edit Employee Default Other Payment</div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
       </q-card-section>
@@ -16,7 +16,7 @@
         <q-form @submit="onSubmit" class="q-gutter-md">
           <AllowanceSelect
             v-model="form.allowanceId"
-            :rules="[(val: string | null | undefined) => !!val || 'Allowance is required']"
+            :rules="[(val: string | null | undefined) => !!val || 'Other Payment is required']"
             :disable="employeeDefaultAllowanceStore.isLoading"
             :showAddNew="true"
             :showEdit="true"
@@ -174,7 +174,7 @@ const onSubmit = async () => {
         color: 'positive',
         position: 'top',
         icon: 'check_circle',
-        message: 'Employee default allowance updated successfully!',
+        message: 'Employee default other payment updated successfully!',
       });
       emit('updated', updated.id);
       onClose();
@@ -191,7 +191,7 @@ const onSubmit = async () => {
       color: 'negative',
       position: 'top',
       icon: 'error',
-      message: error instanceof Error ? error.message : 'Failed to update employee default allowance',
+      message: error instanceof Error ? error.message : 'Failed to update employee default other payment',
     });
   }
 };

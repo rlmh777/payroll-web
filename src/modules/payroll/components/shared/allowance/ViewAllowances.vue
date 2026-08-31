@@ -59,7 +59,7 @@
               class="action-btn"
               @click="openEditDialog(props.row)"
             >
-              <q-tooltip>Edit Allowance</q-tooltip>
+              <q-tooltip>Edit Other Payment</q-tooltip>
             </q-btn>
             <q-btn
               flat
@@ -71,7 +71,7 @@
               class="action-btn"
               @click="confirmDelete(props.row)"
             >
-              <q-tooltip>Delete Allowance</q-tooltip>
+              <q-tooltip>Delete Other Payment</q-tooltip>
             </q-btn>
           </div>
         </q-td>
@@ -90,7 +90,7 @@
         </q-card-section>
 
         <q-card-section>
-          <span>Are you sure you want to delete this allowance? This action cannot be undone.</span>
+          <span>Are you sure you want to delete this other payment? This action cannot be undone.</span>
         </q-card-section>
 
         <q-card-actions align="right">
@@ -239,7 +239,7 @@ const handleDelete = async () => {
   if (success) {
     $q.notify({
       type: 'positive',
-      message: 'Allowance deleted successfully',
+      message: 'Other Payment deleted successfully',
       position: 'top',
     });
     showDeleteDialog.value = false;
@@ -252,7 +252,7 @@ const handleDelete = async () => {
   } else {
     $q.notify({
       type: 'negative',
-      message: allowanceStore.error || 'Failed to delete allowance',
+      message: allowanceStore.error || 'Failed to delete other payment',
       position: 'top',
     });
   }

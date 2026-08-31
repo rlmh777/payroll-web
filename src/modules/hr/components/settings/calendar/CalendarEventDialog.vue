@@ -1,18 +1,16 @@
 <template>
   <q-dialog v-model="isOpen" @hide="emit('close')">
-    <q-card class="calendar-event-dialog">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard modal>
+      <AppDialogHeader>
         <div class="text-h6">{{ dialogTitle }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
-      </q-card-section>
+      </AppDialogHeader>
 
-      <q-card-section v-if="loading" class="q-py-xl flex flex-center">
+      <AppDialogBody v-if="loading" class="q-py-xl flex flex-center">
         <q-spinner color="primary" size="32px" />
-      </q-card-section>
+      </AppDialogBody>
 
       <template v-else-if="event">
-        <q-card-section class="q-pt-sm">
+        <AppDialogBody>
           <q-banner v-if="!editable" dense rounded class="bg-grey-2 text-grey-8 q-mb-md">
             Past events can be viewed but not edited.
           </q-banner>
@@ -26,69 +24,74 @@
             </q-item>
           </q-list>
 
-          <div v-if="editable && event.source === 'scheduled_work'" class="q-gutter-md">
-            <CalendarEventFormFields
-              v-model:kind="eventForm.kind"
-              v-model:event-subtype="eventForm.eventSubtype"
-              v-model:description="eventForm.description"
-              v-model:start-date="eventForm.startDate"
-              v-model:end-date="eventForm.endDate"
-              v-model:start-time="eventForm.startTime"
-              v-model:end-time="eventForm.endTime"
-              v-model:department-id="eventForm.departmentId"
-              v-model:employee-id="eventForm.employeeId"
-              v-model:employment-detail-id="eventForm.employmentDetailId"
-              v-model:worksite-id="eventForm.worksiteId"
-              v-model:include-lunch-hour="eventForm.includeLunchHour"
-              v-model:lunch-hour-hours="eventForm.lunchHourHours"
-              :employees="employees ?? []"
-              :show-employee-picker="showEmployeePicker ?? false"
-              :show-kind-picker="false"
-              :is-series="isSeries"
-            />
-          </div>
+          <AppDialogForm v-if="editable && event.source === 'scheduled_work'">
+            <div class="col-12">
+              <CalendarEventFormFields
+                v-model:kind="eventForm.kind"
+                v-model:event-subtype="eventForm.eventSubtype"
+                v-model:description="eventForm.description"
+                v-model:start-date="eventForm.startDate"
+                v-model:end-date="eventForm.endDate"
+                v-model:start-time="eventForm.startTime"
+                v-model:end-time="eventForm.endTime"
+                v-model:department-id="eventForm.departmentId"
+                v-model:employee-id="eventForm.employeeId"
+                v-model:employment-detail-id="eventForm.employmentDetailId"
+                v-model:worksite-id="eventForm.worksiteId"
+                v-model:include-lunch-hour="eventForm.includeLunchHour"
+                v-model:lunch-hour-hours="eventForm.lunchHourHours"
+                :employees="employees ?? []"
+                :show-employee-picker="showEmployeePicker ?? false"
+                :show-kind-picker="false"
+                :is-series="isSeries"
+              />
+            </div>
+          </AppDialogForm>
 
-          <div v-else-if="editable && event.source === 'leave'" class="q-gutter-md">
-            <div v-if="isSeries" class="text-caption text-grey-7">
+          <AppDialogForm v-else-if="editable && event.source === 'leave'">
+            <div v-if="isSeries" class="col-12 text-caption text-grey-7">
               Editing the full leave period. This day is part of a multi-day leave.
             </div>
+            <div class="col-12">
+              <LeaveTypeSelect
+                v-model="leaveForm.leaveTypeId"
+                :disable="employeeLeaveStore.isLoading"
+              />
+            </div>
+            <div class="col-12">
+              <CalendarEventFormFields
+                v-model:kind="eventForm.kind"
+                v-model:event-subtype="eventForm.eventSubtype"
+                v-model:description="eventForm.description"
+                v-model:start-date="eventForm.startDate"
+                v-model:end-date="eventForm.endDate"
+                v-model:start-time="eventForm.startTime"
+                v-model:end-time="eventForm.endTime"
+                v-model:department-id="eventForm.departmentId"
+                v-model:employee-id="eventForm.employeeId"
+                v-model:worksite-id="eventForm.worksiteId"
+                v-model:include-lunch-hour="eventForm.includeLunchHour"
+                v-model:lunch-hour-hours="eventForm.lunchHourHours"
+                :employees="employees ?? []"
+                :show-employee-picker="showEmployeePicker ?? false"
+                :show-kind-picker="false"
+                :is-series="isSeries"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="leaveForm.notes"
+                label="Notes"
+                type="textarea"
+                outlined
+                dense
+                autogrow
+              />
+            </div>
+          </AppDialogForm>
+        </AppDialogBody>
 
-            <LeaveTypeSelect
-              v-model="leaveForm.leaveTypeId"
-              :disable="employeeLeaveStore.isLoading"
-            />
-
-            <CalendarEventFormFields
-              v-model:kind="eventForm.kind"
-              v-model:event-subtype="eventForm.eventSubtype"
-              v-model:description="eventForm.description"
-              v-model:start-date="eventForm.startDate"
-              v-model:end-date="eventForm.endDate"
-              v-model:start-time="eventForm.startTime"
-              v-model:end-time="eventForm.endTime"
-              v-model:department-id="eventForm.departmentId"
-              v-model:employee-id="eventForm.employeeId"
-              v-model:worksite-id="eventForm.worksiteId"
-              v-model:include-lunch-hour="eventForm.includeLunchHour"
-              v-model:lunch-hour-hours="eventForm.lunchHourHours"
-              :employees="employees ?? []"
-              :show-employee-picker="showEmployeePicker ?? false"
-              :show-kind-picker="false"
-              :is-series="isSeries"
-            />
-
-            <q-input
-              v-model="leaveForm.notes"
-              label="Notes"
-              type="textarea"
-              outlined
-              dense
-              autogrow
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="between" class="q-px-md q-pb-md">
+        <q-card-actions align="between" class="app-dialog-actions">
           <q-btn
             v-if="editable && event.source === 'scheduled_work'"
             flat
@@ -111,13 +114,17 @@
           </div>
         </q-card-actions>
       </template>
-    </q-card>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import LeaveTypeSelect from '@hr/components/employee/common/LeaveTypeSelect.vue';
 import CalendarEventFormFields from './CalendarEventFormFields.vue';
 import {
@@ -372,8 +379,8 @@ async function saveScheduledWork() {
     return;
   }
 
-  if (!eventForm.value.description.trim() || !eventForm.value.startDate || !eventForm.value.endDate) {
-    $q.notify({ type: 'negative', message: 'Description, start date, and end date are required.' });
+  if (!eventForm.value.startDate || !eventForm.value.endDate) {
+    $q.notify({ type: 'negative', message: 'Start date and end date are required.' });
     return;
   }
 
@@ -482,9 +489,3 @@ async function confirmDeleteScheduledWorkEntry() {
   }
 }
 </script>
-
-<style scoped>
-.calendar-event-dialog {
-  width: min(640px, 92vw);
-}
-</style>

@@ -1,107 +1,137 @@
 <template>
   <q-dialog v-model="isOpen" position="right">
-    <q-card class="q-drawer-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ isEdit ? 'Edit calculator line' : 'Add calculator line' }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense :disable="saving" @click="close" />
-      </q-card-section>
+      </AppDialogHeader>
 
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="save">
-          <q-select
-            v-model="form.line_kind"
-            :options="lineKindOptions"
-            emit-value
-            map-options
-            label="Type *"
-            hint="QB account for GROSS/detail lines, NET total for roll-up rows, Section for headings."
-            dense
-            outlined
-            :disable="saving"
-          />
-          <q-banner v-if="form.line_kind === 'net_total'" dense rounded class="bg-blue-1 text-blue-10">
-            Spreadsheet NET total — not a QuickBooks GL account. Tax types apply to this roll-up line only.
-          </q-banner>
-          <q-banner v-else-if="form.line_kind === 'section'" dense rounded class="bg-grey-2 text-grey-9">
-            Section heading — used for grouping only. Assign taxes on detail and NET total lines.
-          </q-banner>
-
-          <q-input
-            v-model="form.qb_code"
-            :label="codeLabel"
-            :hint="codeHint"
-            dense
-            outlined
-            :disable="saving"
-          />
-          <q-input
-            v-model="form.qb_name"
-            :label="nameLabel"
-            :hint="nameHint"
-            dense
-            outlined
-            :disable="saving"
-          />
-          <q-select
-            v-model="form.parent_id"
-            :options="parentOptions"
-            emit-value
-            map-options
-            clearable
-            label="Parent line"
-            hint="Optional. Groups this line under a section or total in the tree."
-            dense
-            outlined
-            :disable="saving"
-          />
-
-          <template v-if="form.line_kind !== 'section'">
-            <q-select
-              v-model="form.business_tax_codes"
-              :options="businessOptions"
-              emit-value
-              map-options
-              multiple
-              use-chips
-              clearable
-              label="Business tax"
-              dense
-              outlined
-              :disable="saving"
-            />
-            <q-select
-              v-model="form.gst_codes"
-              :options="gstOptions"
-              emit-value
-              map-options
-              multiple
-              use-chips
-              clearable
-              label="GST"
-              dense
-              outlined
-              :disable="saving"
-            />
-            <q-toggle v-model="form.include_btb" label="Include in BTB hotel tax" :disable="saving" />
-          </template>
-
-          <q-input v-model.number="form.sort_order" type="number" label="Sort order" dense outlined :disable="saving" />
-          <q-toggle v-model="form.is_active" label="Active" :disable="saving" />
-
-          <q-card-actions align="right">
-            <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
-            <q-btn type="submit" color="primary" :loading="saving" :label="isEdit ? 'Save' : 'Create'" />
-          </q-card-actions>
+      <AppDialogBody>
+        <q-form id="tax-calculator-account-form" @submit.prevent="save">
+          <AppDialogForm>
+            <div class="col-12">
+              <q-select
+                v-model="form.line_kind"
+                :options="lineKindOptions"
+                emit-value
+                map-options
+                label="Type *"
+                hint="QB account for GROSS/detail lines, NET total for roll-up rows, Section for headings."
+                dense
+                outlined
+                :disable="saving"
+              />
+            </div>
+            <div v-if="form.line_kind === 'net_total'" class="col-12">
+              <q-banner dense rounded class="bg-blue-1 text-blue-10">
+                Spreadsheet NET total — not a QuickBooks GL account. Tax types apply to this roll-up line only.
+              </q-banner>
+            </div>
+            <div v-else-if="form.line_kind === 'section'" class="col-12">
+              <q-banner dense rounded class="bg-grey-2 text-grey-9">
+                Section heading — used for grouping only. Assign taxes on detail and NET total lines.
+              </q-banner>
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model="form.qb_code"
+                :label="codeLabel"
+                :hint="codeHint"
+                dense
+                outlined
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model="form.qb_name"
+                :label="nameLabel"
+                :hint="nameHint"
+                dense
+                outlined
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                v-model="form.parent_id"
+                :options="parentOptions"
+                emit-value
+                map-options
+                clearable
+                label="Parent line"
+                hint="Optional. Groups this line under a section or total in the tree."
+                dense
+                outlined
+                :disable="saving"
+              />
+            </div>
+            <template v-if="form.line_kind !== 'section'">
+              <div class="col-12">
+                <q-select
+                  v-model="form.business_tax_codes"
+                  :options="businessOptions"
+                  emit-value
+                  map-options
+                  multiple
+                  use-chips
+                  clearable
+                  label="Business tax"
+                  dense
+                  outlined
+                  :disable="saving"
+                />
+              </div>
+              <div class="col-12">
+                <q-select
+                  v-model="form.gst_codes"
+                  :options="gstOptions"
+                  emit-value
+                  map-options
+                  multiple
+                  use-chips
+                  clearable
+                  label="GST"
+                  dense
+                  outlined
+                  :disable="saving"
+                />
+              </div>
+              <div class="col-12">
+                <q-toggle v-model="form.include_btb" label="Include in BTB hotel tax" :disable="saving" />
+              </div>
+            </template>
+            <div class="col-12 col-sm-6">
+              <q-input v-model.number="form.sort_order" type="number" label="Sort order" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-toggle v-model="form.is_active" label="Active" :disable="saving" />
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
+        <q-btn
+          type="submit"
+          form="tax-calculator-account-form"
+          color="primary"
+          :loading="saving"
+          :label="isEdit ? 'Save' : 'Create'"
+        />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import {
   useTaxCalculatorStore,
   type TaxCalculatorAccount,
@@ -276,11 +306,3 @@ async function save() {
   }
 }
 </script>
-
-<style scoped>
-.q-drawer-card {
-  width: 32vw;
-  max-width: 460px;
-  height: 100vh;
-}
-</style>

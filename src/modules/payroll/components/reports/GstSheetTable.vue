@@ -36,20 +36,25 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { TaxCalculatorGstSheetRow } from '@payroll/stores/tax-calculator-store';
 
 const props = defineProps<{
   rows: TaxCalculatorGstSheetRow[];
 }>();
 
-const columns = [
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-] as const;
+const COLUMN_RE = /^[A-Z]+$/;
+const MONEY_HEADERS = new Set(['debit', 'credit', 'balance', 'amount']);
+const FALLBACK_DATE_COLUMNS = new Set(['E']);
+const FALLBACK_MONEY_COLUMNS = new Set(['M', 'O', 'Q', 'T']);
 
-const numericColumns = new Set(['M', 'O', 'Q', 'T']);
-const dateColumns = new Set(['E']);
-const labelColumns = new Set(['A', 'B', 'C', 'D']);
-const spacerColumns = new Set(['F', 'H', 'J', 'L', 'N', 'P', 'R', 'S']);
+function columnIndex(column: string): number {
+  let index = 0;
+  for (let i = 0; i < column.length; i += 1) {
+    index = index * 26 + (column.charCodeAt(i) - 64);
+  }
+  return index;
+}
 
 function cellValue(row: TaxCalculatorGstSheetRow, column: string) {
   const value = row[column];
@@ -57,9 +62,40 @@ function cellValue(row: TaxCalculatorGstSheetRow, column: string) {
   return value;
 }
 
+const headerRow = computed(() => props.rows.find((row) => row.row === 1) ?? null);
+
+const columns = computed(() => {
+  const used = new Set<string>();
+  for (const row of props.rows) {
+    for (const key of Object.keys(row)) {
+      if (!COLUMN_RE.test(key)) continue;
+      if (cellValue(row, key) === '') continue;
+      used.add(key);
+    }
+  }
+  return [...used].sort((a, b) => columnIndex(a) - columnIndex(b));
+});
+
+function headerName(column: string): string {
+  const header = headerRow.value;
+  if (!header) return '';
+  return String(cellValue(header, column)).trim().toLowerCase();
+}
+
+const dateColumns = computed(() => {
+  const fromHeader = columns.value.filter((column) => headerName(column) === 'date');
+  if (fromHeader.length > 0) return new Set(fromHeader);
+  return new Set(columns.value.filter((column) => FALLBACK_DATE_COLUMNS.has(column)));
+});
+
+const moneyColumns = computed(() => {
+  const fromHeader = columns.value.filter((column) => MONEY_HEADERS.has(headerName(column)));
+  if (fromHeader.length > 0) return new Set(fromHeader);
+  return new Set(columns.value.filter((column) => FALLBACK_MONEY_COLUMNS.has(column)));
+});
+
 function headerLabel(column: string) {
-  if (props.rows.length === 0) return column;
-  const header = props.rows.find((row) => row.row === 1);
+  const header = headerRow.value;
   const label = header ? cellValue(header, column) : '';
   return label ? String(label) : column;
 }
@@ -70,18 +106,27 @@ function isHeaderRow(row: TaxCalculatorGstSheetRow) {
 
 function isTotalRow(row: TaxCalculatorGstSheetRow) {
   if (isHeaderRow(row)) return false;
-  for (const column of ['A', 'B', 'C', 'D']) {
+  return columns.value.some((column) => {
     const value = String(cellValue(row, column)).trim();
-    if (value && /^total\b/i.test(value)) return true;
-  }
-  return false;
+    return value !== '' && /^total\b/i.test(value);
+  });
 }
 
 function isSectionRow(row: TaxCalculatorGstSheetRow) {
   if (isHeaderRow(row) || isTotalRow(row)) return false;
-  const hasLabel = ['A', 'B', 'C', 'D'].some((column) => cellValue(row, column));
-  const hasDetail = ['E', 'G', 'I', 'K', 'M', 'O'].some((column) => cellValue(row, column));
-  return hasLabel && !hasDetail;
+  const hasTransaction = columns.value.some((column) => {
+    const name = headerName(column);
+    if (!['type', 'date', 'num', 'name', 'memo'].includes(name)) return false;
+    return cellValue(row, column) !== '';
+  });
+  const hasLabel = columns.value.some((column) => {
+    const name = headerName(column);
+    if (['type', 'date', 'num', 'name', 'memo', 'debit', 'credit', 'balance', 'amount'].includes(name)) {
+      return false;
+    }
+    return cellValue(row, column) !== '';
+  });
+  return hasLabel && !hasTransaction;
 }
 
 function rowClass(row: TaxCalculatorGstSheetRow) {
@@ -94,11 +139,15 @@ function rowClass(row: TaxCalculatorGstSheetRow) {
 
 function columnClass(column: string, isHeader: boolean, row?: TaxCalculatorGstSheetRow) {
   const classes = ['gst-sheet-cell'];
-  if (spacerColumns.has(column)) classes.push('gst-sheet-cell--spacer');
-  if (labelColumns.has(column)) classes.push('text-left');
-  if (numericColumns.has(column) || dateColumns.has(column)) classes.push('text-right');
+  const name = headerName(column);
+  if (name === 'date' || dateColumns.value.has(column)) classes.push('gst-sheet-cell--date', 'text-right');
+  else if (MONEY_HEADERS.has(name) || moneyColumns.value.has(column)) classes.push('gst-sheet-cell--money', 'text-right');
+  else if (name === 'name') classes.push('gst-sheet-cell--name', 'text-left');
+  else if (name === 'memo') classes.push('gst-sheet-cell--memo', 'text-left');
+  else if (name === 'type' || name === 'num') classes.push('gst-sheet-cell--type', 'text-left');
+  else classes.push('gst-sheet-cell--label', 'text-left');
   if (isHeader) classes.push('text-weight-bold');
-  if (!isHeader && row && labelColumns.has(column) && cellValue(row, column)) {
+  if (!isHeader && row && ['A', 'B', 'C'].includes(column) && cellValue(row, column)) {
     if (column === 'B') classes.push('text-weight-bold');
     if (column === 'C') classes.push('text-weight-medium');
   }
@@ -112,6 +161,7 @@ function formatExcelDate(serial: number) {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
+    timeZone: 'UTC',
   }).format(date);
 }
 
@@ -128,16 +178,16 @@ function formatCell(column: string, row: TaxCalculatorGstSheetRow) {
   const value = cellValue(row, column);
   if (value === '') return '';
   if (isHeaderRow(row)) return String(value);
-  if (dateColumns.has(column)) {
+  if (dateColumns.value.has(column)) {
     const numeric = Number(value);
     if (Number.isFinite(numeric) && numeric > 1000) return formatExcelDate(numeric);
   }
-  if (numericColumns.has(column)) return formatNumber(value);
+  if (moneyColumns.value.has(column)) return formatNumber(value);
   return String(value);
 }
 
 function isNegative(column: string, row: TaxCalculatorGstSheetRow) {
-  if (isHeaderRow(row) || !numericColumns.has(column)) return false;
+  if (isHeaderRow(row) || !moneyColumns.value.has(column)) return false;
   const value = cellValue(row, column);
   if (value === '') return false;
   const numeric = Number(value);
@@ -207,37 +257,12 @@ function isNegative(column: string, row: TaxCalculatorGstSheetRow) {
   background: #f5f5f5;
 }
 
-.gst-sheet-wrap :deep(td:nth-child(3)),
-.gst-sheet-wrap :deep(th:nth-child(3)) { min-width: 72px; }
-.gst-sheet-wrap :deep(td:nth-child(4)),
-.gst-sheet-wrap :deep(th:nth-child(4)) { min-width: 180px; }
-.gst-sheet-wrap :deep(td:nth-child(5)),
-.gst-sheet-wrap :deep(th:nth-child(5)) { min-width: 220px; }
-.gst-sheet-wrap :deep(td:nth-child(6)),
-.gst-sheet-wrap :deep(th:nth-child(6)) { min-width: 88px; }
-.gst-sheet-wrap :deep(td:nth-child(8)),
-.gst-sheet-wrap :deep(th:nth-child(8)) { min-width: 120px; }
-.gst-sheet-wrap :deep(td:nth-child(10)),
-.gst-sheet-wrap :deep(th:nth-child(10)) { min-width: 160px; }
-.gst-sheet-wrap :deep(td:nth-child(12)),
-.gst-sheet-wrap :deep(th:nth-child(12)) { min-width: 180px; }
-.gst-sheet-wrap :deep(td:nth-child(14)),
-.gst-sheet-wrap :deep(th:nth-child(14)),
-.gst-sheet-wrap :deep(td:nth-child(16)),
-.gst-sheet-wrap :deep(th:nth-child(16)),
-.gst-sheet-wrap :deep(td:nth-child(18)),
-.gst-sheet-wrap :deep(th:nth-child(18)),
-.gst-sheet-wrap :deep(td:nth-child(21)),
-.gst-sheet-wrap :deep(th:nth-child(21)) {
-  min-width: 96px;
-}
-
-.gst-sheet-wrap :deep(.gst-sheet-cell--spacer) {
-  min-width: 8px;
-  max-width: 8px;
-  padding-left: 0;
-  padding-right: 0;
-}
+.gst-sheet-wrap :deep(.gst-sheet-cell--label) { min-width: 140px; }
+.gst-sheet-wrap :deep(.gst-sheet-cell--type) { min-width: 88px; }
+.gst-sheet-wrap :deep(.gst-sheet-cell--date) { min-width: 88px; }
+.gst-sheet-wrap :deep(.gst-sheet-cell--name) { min-width: 180px; }
+.gst-sheet-wrap :deep(.gst-sheet-cell--memo) { min-width: 160px; }
+.gst-sheet-wrap :deep(.gst-sheet-cell--money) { min-width: 96px; }
 
 .gst-sheet-wrap :deep(.gst-sheet-row--header) {
   background: #f5f5f5;

@@ -6,8 +6,17 @@
       </q-avatar>
       <div class="col">
         <div class="text-caption text-grey-7">{{ props.label }}</div>
-        <div class="text-h6 text-weight-bold metric-value">{{ props.value }}</div>
-        <div v-if="props.caption" class="text-caption text-grey-6">{{ props.caption }}</div>
+        <div class="row items-end q-gutter-sm metric-values">
+          <div>
+            <div class="text-caption text-grey-6">Current</div>
+            <div class="text-h6 text-weight-bold metric-value">{{ props.value }}</div>
+          </div>
+          <div class="metric-previous">
+            <div class="text-caption text-grey-6">Previous</div>
+            <div class="text-subtitle2 text-weight-medium">{{ props.previousValue ?? '—' }}</div>
+          </div>
+        </div>
+        <div v-if="props.caption" class="text-caption text-grey-6 q-mt-xs">{{ props.caption }}</div>
       </div>
     </q-card-section>
   </q-card>
@@ -23,11 +32,11 @@ const props = withDefaults(
     label: string;
     value: string | number;
     icon: string;
-    caption?: string;
-    tone?: MetricTone;
+    caption?: string | undefined;
+    previousValue?: string | number | undefined;
+    tone?: MetricTone | undefined;
   }>(),
   {
-    caption: '',
     tone: 'primary',
   },
 );
@@ -54,5 +63,13 @@ const toneStyles = computed(() => {
 
 .metric-value {
   line-height: 1.2;
+}
+
+.metric-values {
+  flex-wrap: wrap;
+}
+
+.metric-previous {
+  color: #52606d;
 }
 </style>

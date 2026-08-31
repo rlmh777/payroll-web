@@ -194,7 +194,7 @@ const columns: QTableProps['columns'] = [
   { name: 'overtimeAmount', label: 'Amount', field: 'overtimeAmount', align: 'right', sortable: true },
   { name: 'doubleTimeHours', label: 'Double Time', field: 'doubleTimeHours', align: 'right', sortable: true },
   { name: 'doubleTimeAmount', label: 'Amount', field: 'doubleTimeAmount', align: 'right', sortable: true },
-  { name: 'allowances', label: 'Allowances', field: 'allowances', align: 'right', sortable: true },
+  { name: 'allowances', label: 'Other Payments', field: 'allowances', align: 'right', sortable: true },
   { name: 'grossPay', label: 'Gross Pay', field: 'grossPay', align: 'right', sortable: true },
 ];
 

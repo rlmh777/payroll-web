@@ -1,105 +1,117 @@
 <template>
   <q-dialog v-model="isOpen" position="right" @hide="onClose">
-    <q-card class="day-work-dialog">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ isEdit ? 'Edit day / trip work' : 'Record day / trip work' }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense v-close-popup :disable="saving" />
-      </q-card-section>
+      </AppDialogHeader>
 
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="onSubmit">
-          <q-select
-            v-model="form.employeeId"
-            :options="employeeOptions"
-            option-value="id"
-            option-label="displayName"
-            emit-value
-            map-options
-            use-input
-            fill-input
-            hide-selected
-            input-debounce="0"
-            outlined
-            dense
-            label="Employee *"
-            :disable="saving || isEdit"
-            :rules="[(val) => !!val || 'Employee is required']"
-            @filter="filterEmployees"
-            @update:model-value="onEmployeeChanged"
-          />
-
-          <SsBenefitDateField
-            v-model="form.date"
-            label="Work date *"
-            required
-            :disable="saving === true"
-          />
-
-          <q-input
-            v-model.number="form.units"
-            type="number"
-            step="0.01"
-            min="0.01"
-            outlined
-            dense
-            label="Units / trips *"
-            hint="Example: 1 day, 2 trips, or 2.5 at supervisor discretion"
-            :disable="saving"
-            :rules="[(val) => (val !== null && val !== undefined && Number(val) > 0) || 'Units are required']"
-          />
-
-          <q-input
-            v-model.number="form.dailyRate"
-            type="number"
-            step="0.01"
-            min="0"
-            outlined
-            dense
-            label="Daily rate *"
-            hint="Defaults from employee compensation; admin/accountant can override"
-            :disable="saving"
-            :rules="[(val) => (val !== null && val !== undefined && Number(val) >= 0) || 'Daily rate is required']"
-          />
-
-          <q-input
-            :model-value="computedAmount"
-            type="number"
-            outlined
-            dense
-            readonly
-            label="Amount (total)"
-            hint="Calculated as units × daily rate"
-          />
-
-          <q-input
-            v-model="form.note"
-            type="textarea"
-            outlined
-            dense
-            label="Note"
-            :disable="saving"
-            rows="3"
-          />
-
-          <div class="row justify-end q-gutter-sm">
-            <q-btn flat label="Cancel" color="grey" :disable="saving" @click="onClose" />
-            <q-btn
-              unelevated
-              color="primary"
-              type="submit"
-              :label="isEdit ? 'Update' : 'Save'"
-              :loading="saving"
-            />
-          </div>
+      <AppDialogBody>
+        <q-form @submit.prevent="onSubmit">
+          <AppDialogForm>
+            <div class="col-12">
+              <q-select
+                v-model="form.employeeId"
+                :options="employeeOptions"
+                option-value="id"
+                option-label="displayName"
+                emit-value
+                map-options
+                use-input
+                fill-input
+                hide-selected
+                input-debounce="0"
+                outlined
+                dense
+                label="Employee *"
+                :disable="saving || isEdit"
+                :rules="[(val) => !!val || 'Employee is required']"
+                @filter="filterEmployees"
+                @update:model-value="onEmployeeChanged"
+              />
+            </div>
+            <div class="col-12">
+              <SsBenefitDateField
+                v-model="form.date"
+                label="Work date *"
+                required
+                :disable="saving === true"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model.number="form.units"
+                type="number"
+                step="0.01"
+                min="0.01"
+                outlined
+                dense
+                label="Units / trips *"
+                hint="Example: 1 day, 2 trips, or 2.5 at supervisor discretion"
+                :disable="saving"
+                :rules="[(val) => (val !== null && val !== undefined && Number(val) > 0) || 'Units are required']"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model.number="form.dailyRate"
+                type="number"
+                step="0.01"
+                min="0"
+                outlined
+                dense
+                label="Daily rate *"
+                hint="Defaults from employee compensation; admin/accountant can override"
+                :disable="saving"
+                :rules="[(val) => (val !== null && val !== undefined && Number(val) >= 0) || 'Daily rate is required']"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                :model-value="computedAmount"
+                type="number"
+                outlined
+                dense
+                readonly
+                label="Amount (total)"
+                hint="Calculated as units × daily rate"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.note"
+                type="textarea"
+                outlined
+                dense
+                label="Note"
+                :disable="saving"
+                rows="3"
+              />
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="saving" @click="onClose" />
+        <q-btn
+          unelevated
+          color="primary"
+          :label="isEdit ? 'Update' : 'Save'"
+          :loading="saving"
+          @click="onSubmit"
+        />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import type {
   DayWorkEmployeeOption,
   EmployeeDayWork,
@@ -268,10 +280,3 @@ watch(
   },
 );
 </script>
-
-<style scoped>
-.day-work-dialog {
-  width: min(420px, 100vw);
-  max-height: 100vh;
-}
-</style>

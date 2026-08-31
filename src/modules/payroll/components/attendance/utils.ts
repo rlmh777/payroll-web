@@ -15,6 +15,24 @@ export function formatDateTime(value?: string | null) {
       });
 }
 
+export function timesheetLastUpdatedTooltip(row: {
+  updatedByName?: string | null;
+  updatedAt?: string | null;
+}): string | null {
+  if (!row.updatedByName && !row.updatedAt) {
+    return null;
+  }
+
+  const when = row.updatedAt ? formatDateTime(row.updatedAt) : 'unknown time';
+  const who = (row.updatedByName || '').trim();
+
+  if (who) {
+    return `Last updated by ${who} on ${when}`;
+  }
+
+  return `Last updated by the system on ${when}`;
+}
+
 export function formatDate(value?: string | null) {
   if (!value) return '-';
 
@@ -95,6 +113,7 @@ export function workingStatusColor(status: string) {
   if (normalized === 'OVERTIME') return 'deep-orange';
   if (normalized === 'UNPAID') return 'negative';
   if (normalized === 'HOLIDAY') return 'teal';
+  if (normalized === 'LEAVE') return 'primary';
 
   return 'positive';
 }

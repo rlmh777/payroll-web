@@ -1,41 +1,47 @@
 <template>
   <q-dialog v-model="dialogModel">
-    <q-card style="min-width: 420px">
-      <q-card-section>
-        <div class="text-h6">Copy schedule</div>
-        <div class="text-caption text-grey-7 q-mt-xs">
-          Copy {{ scopeModel === 'series' ? 'the entire series' : 'this event' }} to other employees.
+    <AppDialogCard modal>
+      <AppDialogHeader>
+        <div>
+          <div class="text-h6">Copy schedule</div>
+          <div class="text-caption text-grey-7 q-mt-xs">
+            Copy {{ scopeModel === 'series' ? 'the entire series' : 'this event' }} to other employees.
+          </div>
         </div>
-      </q-card-section>
+      </AppDialogHeader>
 
-      <q-card-section class="q-pt-none">
-        <q-option-group
-          v-model="scopeModel"
-          :options="scopeOptions"
-          color="primary"
-          dense
-          class="q-mb-md"
-        />
+      <AppDialogBody>
+        <AppDialogForm>
+          <div class="col-12">
+            <q-option-group
+              v-model="scopeModel"
+              :options="scopeOptions"
+              color="primary"
+              dense
+            />
+          </div>
+          <div class="col-12">
+            <q-select
+              v-model="selectedEmployeeIds"
+              :options="filteredEmployeeOptions"
+              option-value="id"
+              :option-label="employeeOptionLabel"
+              emit-value
+              map-options
+              multiple
+              use-chips
+              use-input
+              input-debounce="0"
+              outlined
+              dense
+              label="Employees"
+              @filter="filterEmployees"
+            />
+          </div>
+        </AppDialogForm>
+      </AppDialogBody>
 
-        <q-select
-          v-model="selectedEmployeeIds"
-          :options="filteredEmployeeOptions"
-          option-value="id"
-          :option-label="employeeOptionLabel"
-          emit-value
-          map-options
-          multiple
-          use-chips
-          use-input
-          input-debounce="0"
-          outlined
-          dense
-          label="Employees"
-          @filter="filterEmployees"
-        />
-      </q-card-section>
-
-      <q-card-actions align="right">
+      <AppDialogActions>
         <q-btn flat label="Cancel" color="grey" v-close-popup />
         <q-btn
           color="primary"
@@ -43,14 +49,19 @@
           :disable="!selectedEmployeeIds.length"
           @click="emit('copy', { employeeIds: selectedEmployeeIds, scope: scopeModel })"
         />
-      </q-card-actions>
-    </q-card>
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { rankFuzzyMatches } from '@core/utils/fuzzy-search';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 
 type EmployeeOption = {
   id: string;

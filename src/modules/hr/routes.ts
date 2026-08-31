@@ -142,6 +142,11 @@ export const hrRoutes: RouteRecordRaw[] = [
         component: () => import('@hr/components/settings/worksite/ManageWorksite.vue'),
         props: { title: 'Setting Work Site' },
       },
+      {
+        path: '/settings/employee-groups',
+        component: () => import('@hr/components/settings/employee-group/ManageEmployeeGroups.vue'),
+        props: { title: 'Employee Groups' },
+      },
       { path: '/settings/general/worksite', redirect: '/settings/worksite' },
       { path: '/settings/general/calendar', redirect: '/settings/timesheet-templates' },
       {

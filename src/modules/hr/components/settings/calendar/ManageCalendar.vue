@@ -76,6 +76,7 @@ import { date, useQuasar } from 'quasar';
 import { storeToRefs } from 'pinia';
 import { useCalendarStore } from '@hr/stores/calendar-store';
 import { useDepartmentStore } from '@hr/stores/department-store';
+import { useEmployeeGroupStore } from '@hr/stores/employee-group-store';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
 import { useAttendanceStore } from '@payroll/stores/attendance-store';
 import SchedulerTopbar from './SchedulerTopbar.vue';
@@ -93,6 +94,7 @@ import {
 } from '@hr/utils/scheduler-access';
 import {
   buildDepartmentGroupedGridRows,
+  buildEmployeeGroupGridRows,
   buildEmployeeGridRows,
   filterEmployeesByName,
   formatSchedulerPeriodLabel,
@@ -107,6 +109,7 @@ const $q = useQuasar();
 const schedulerStore = useSchedulerStore();
 const calendarStore = useCalendarStore();
 const departmentStore = useDepartmentStore();
+const employeeGroupStore = useEmployeeGroupStore();
 const attendanceStore = useAttendanceStore();
 const {
   calendars,
@@ -157,6 +160,7 @@ const viewMode = ref<SchedulerViewMode>('week');
 
 const viewBy = computed(() => schedulerStore.viewBy);
 const filterDepartmentId = computed(() => schedulerStore.filterDepartmentId);
+const filterEmployeeGroupId = computed(() => schedulerStore.filterEmployeeGroupId);
 const filterEmployeeId = computed(() => schedulerStore.filterEmployeeId);
 const hideUnscheduledUsers = computed(() => schedulerStore.hideUnscheduledUsers);
 
@@ -249,6 +253,13 @@ const visibleEmployees = computed(() => {
     });
   }
 
+  if (filterEmployeeGroupId.value) {
+    const memberIds = employeeGroupStore.employeeIdsByGroupId.get(filterEmployeeGroupId.value);
+    if (memberIds) {
+      employees = employees.filter((employee) => memberIds.has(employee.id));
+    }
+  }
+
   if (hideUnscheduledUsers.value) {
     const scheduled = scheduledEmployeeIds(workEvents.value, visibleDays.value);
     employees = employees.filter((employee) => scheduled.has(employee.id));
@@ -267,6 +278,10 @@ const gridRows = computed<SchedulerGridRow[]>(() => {
       departmentNameById.value,
       employeeDepartmentId,
     );
+  }
+
+  if (viewBy.value === 'group') {
+    return buildEmployeeGroupGridRows(employees, sortBy.value, employeeGroupStore.groups);
   }
 
   return buildEmployeeGridRows(employees, sortBy.value);
@@ -300,7 +315,7 @@ const gridEmptyMessage = computed(() => {
     return 'No scheduled employees in this period. Turn off "Hide unscheduled users" or adjust filters.';
   }
 
-  if (filterEmployeeId.value || filterDepartmentId.value != null) {
+  if (filterEmployeeId.value || filterDepartmentId.value != null || filterEmployeeGroupId.value) {
     return 'No employees match the current filters.';
   }
 
@@ -324,6 +339,10 @@ async function fetchShifts() {
 
   if (filterDepartmentId.value != null) {
     params.departmentId = filterDepartmentId.value;
+  }
+
+  if (filterEmployeeGroupId.value) {
+    params.employeeGroupId = filterEmployeeGroupId.value;
   }
 
   if (filterEmployeeId.value) {
@@ -423,7 +442,7 @@ async function handleLoadMoreEmployees() {
   );
 }
 
-watch([selectedDate, viewMode, filterEmployeeId, filterDepartmentId], () => {
+watch([selectedDate, viewMode, filterEmployeeId, filterDepartmentId, filterEmployeeGroupId], () => {
   void fetchShifts();
 });
 
@@ -452,7 +471,14 @@ async function initializeSchedulerView() {
       ? Promise.resolve()
       : calendarStore.fetchCalendarGroups();
 
-    await Promise.all([groupsPromise, departmentPromise, prepareSchedulerEmployees()]);
+    await Promise.all([
+      groupsPromise,
+      departmentPromise,
+      employeeGroupStore.groups.length
+        ? Promise.resolve()
+        : employeeGroupStore.fetchGroups({ withMembers: true, activeOnly: false }),
+      prepareSchedulerEmployees(),
+    ]);
 
     if (employeesError.value) {
       $q.notify({ type: 'negative', message: employeesError.value });

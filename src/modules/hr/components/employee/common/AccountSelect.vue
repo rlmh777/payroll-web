@@ -114,11 +114,23 @@ const showEditDialog = ref<boolean>(false);
 const selectedAccount = ref<Account | null>(null);
 const options = ref<(Account | { id: string; name: string })[]>([]);
 
-function buildOptions(items: Account[], search = '') {
+function accountMatches(account: Account, search: string) {
   const needle = search.trim().toLowerCase();
-  const filtered = needle
-    ? items.filter((account) => (account.name || '').toLowerCase().includes(needle))
-    : [...items];
+  if (!needle) return true;
+  return [account.name, account.code1, account.code2]
+    .some((value) => (value || '').toLowerCase().includes(needle));
+}
+
+function labeledAccount(account: Account): Account {
+  const code = account.code1?.trim();
+  return {
+    ...account,
+    name: code ? `${code} — ${account.name}` : account.name,
+  };
+}
+
+function buildOptions(items: Account[], search = '') {
+  const filtered = items.filter((account) => accountMatches(account, search)).map(labeledAccount);
   const list: (Account | { id: string; name: string })[] = filtered;
   if (props.showAddNew && !props.readonly && !props.disable) {
     list.unshift({ id: 'add-new', name: 'Add New Account' });
@@ -131,9 +143,12 @@ function syncOptions(search = '') {
 }
 
 const filterAccounts = (val: string, update: (callback: () => void) => void) => {
-  update(() => {
-    syncOptions(val || '');
-  });
+  void (async () => {
+    await employeeStore.fetchAccounts(val || undefined);
+    update(() => {
+      syncOptions(val || '');
+    });
+  })();
 };
 
 const selectedAccountId = computed({
@@ -173,9 +188,7 @@ const onAccountUpdated = async () => {
 };
 
 onMounted(async () => {
-  if (employeeStore.accounts.length === 0) {
-    await employeeStore.fetchAccounts();
-  }
+  await employeeStore.fetchAccounts();
   syncOptions();
 });
 </script>

@@ -6,8 +6,10 @@ export const TIMESHEET_TABLE_COLUMNS: QTableColumn[] = [
   { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
   { name: 'workingStatus', label: 'Status', field: 'workingStatus', align: 'left' },
   { name: 'clockInTime', label: 'Clock in', field: 'clockInTime', align: 'left' },
+  { name: 'clockInPunctuality', label: 'In status', field: 'clockInPunctuality', align: 'left' },
   { name: 'clockInDeviceId', label: 'Clock-in device', field: 'clockInDeviceId', align: 'left' },
   { name: 'clockOutTime', label: 'Clock out', field: 'clockOutTime', align: 'left' },
+  { name: 'clockOutPunctuality', label: 'Out status', field: 'clockOutPunctuality', align: 'left' },
   { name: 'clockOutDeviceId', label: 'Clock-out device', field: 'clockOutDeviceId', align: 'left' },
   { name: 'roundOffClockInTime', label: 'Rounded in', field: 'roundOffClockInTime', align: 'left' },
   { name: 'roundOffClockOutTime', label: 'Rounded out', field: 'roundOffClockOutTime', align: 'left' },
@@ -27,6 +29,7 @@ export const TIMESHEET_TABLE_COLUMNS: QTableColumn[] = [
   { name: 'payType', label: 'Pay type', field: 'payType', align: 'left' },
   { name: 'hourlyRate', label: 'Hourly rate', field: 'hourlyRate', align: 'right' },
   { name: 'approvalStatus', label: 'Review', field: 'approvalStatus', align: 'left' },
+  { name: 'exceptions', label: 'Exceptions', field: 'exceptions', align: 'left' },
   { name: 'comment', label: 'Comment', field: 'comment', align: 'left' },
   { name: 'approvedByName', label: 'Approved by', field: 'approvedByName', align: 'left' },
   { name: 'approvedAt', label: 'Approved at', field: 'approvedAt', align: 'left' },
@@ -44,6 +47,7 @@ export const DEFAULT_TIMESHEET_VISIBLE_COLUMNS = [
   'paidHours',
   'hasBeenPaid',
   'approvalStatus',
+  'exceptions',
   'comment',
   TIMESHEET_ACTIONS_COLUMN,
 ];
@@ -57,7 +61,7 @@ const LEGACY_COLUMN_ALIASES: Record<string, string> = {
   isPaid: 'hasBeenPaid',
 };
 
-const STORAGE_KEY = 'timesheet_visible_columns_v9';
+const STORAGE_KEY = 'timesheet_visible_columns_v12';
 
 export function normalizeVisibleColumnNames(names: string[]): string[] {
   const allowed = new Set(

@@ -143,6 +143,8 @@ export interface TaxCalculatorPurchaseLedgerSheet {
   class_column?: string | null;
   debit_column: string;
   date_column?: string | null;
+  tin_column?: string | null;
+  invoice_column?: string | null;
 }
 
 export interface TaxCalculatorPurchaseLedgerExcludedName {

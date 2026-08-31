@@ -1,39 +1,51 @@
 <template>
   <q-dialog :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)">
-    <q-card style="min-width: 380px">
-      <q-card-section>
-        <div class="text-h6">Add work shift</div>
-        <div class="text-caption text-grey-7">
-          Schedule a one-off work assignment for this employee.
+    <AppDialogCard modal>
+      <AppDialogHeader>
+        <div>
+          <div class="text-h6">Add work shift</div>
+          <div class="text-caption text-grey-7">
+            Schedule a one-off work assignment for this employee.
+          </div>
         </div>
-      </q-card-section>
+      </AppDialogHeader>
 
-      <q-card-section class="q-gutter-md q-pt-none">
-        <DateField v-model="form.date" label="Date" required />
-        <q-input
-          v-model="form.startTime"
-          label="Start time"
-          type="time"
-          outlined
-          dense
-        />
-        <q-input
-          v-model="form.endTime"
-          label="End time"
-          type="time"
-          outlined
-          dense
-        />
-        <q-input
-          v-model="form.description"
-          label="Description"
-          outlined
-          dense
-          hint="Optional note for this shift"
-        />
-      </q-card-section>
+      <AppDialogBody>
+        <AppDialogForm>
+          <div class="col-12">
+            <DateField v-model="form.date" label="Date" required />
+          </div>
+          <div class="col-12 col-sm-6">
+            <q-input
+              v-model="form.startTime"
+              label="Start time"
+              type="time"
+              outlined
+              dense
+            />
+          </div>
+          <div class="col-12 col-sm-6">
+            <q-input
+              v-model="form.endTime"
+              label="End time"
+              type="time"
+              outlined
+              dense
+            />
+          </div>
+          <div class="col-12">
+            <q-input
+              v-model="form.description"
+              label="Description"
+              outlined
+              dense
+              hint="Optional note for this shift"
+            />
+          </div>
+        </AppDialogForm>
+      </AppDialogBody>
 
-      <q-card-actions align="right">
+      <AppDialogActions>
         <q-btn flat label="Cancel" v-close-popup />
         <q-btn
           color="primary"
@@ -41,8 +53,8 @@
           :loading="calendarStore.isLoading"
           @click="onSave"
         />
-      </q-card-actions>
-    </q-card>
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
@@ -50,6 +62,11 @@
 import { reactive, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import DateField from '@core/components/common/DateField.vue';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import { useCalendarStore } from '@hr/stores/calendar-store';
 
 const props = defineProps<{

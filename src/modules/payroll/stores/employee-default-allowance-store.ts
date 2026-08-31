@@ -111,7 +111,7 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch employee default allowances: ${response.statusText}`);
+          throw new Error(`Failed to fetch employee default other payments: ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -127,7 +127,7 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
           this.employeeDefaultAllowances = [];
         }
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Error fetching employee default allowances';
+        this.error = error instanceof Error ? error.message : 'Error fetching employee default other payments';
       } finally {
         this.isLoadingEmployeeDefaultAllowances = false;
       }
@@ -174,7 +174,7 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
         if (!response.ok) {
           const errorData: ApiErrorData = await response.json().catch(() => ({}));
           const error = new Error(
-            extractErrorMessage(errorData, `Failed to create employee default allowance: ${response.statusText}`),
+            extractErrorMessage(errorData, `Failed to create employee default other payment: ${response.statusText}`),
           ) as ErrorWithData;
           error.errorData = errorData;
           throw error;
@@ -185,7 +185,7 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
         this.employeeDefaultAllowances = [...this.employeeDefaultAllowances, newEmployeeDefaultAllowance];
         return newEmployeeDefaultAllowance;
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Error creating employee default allowance';
+        this.error = error instanceof Error ? error.message : 'Error creating employee default other payment';
         return null;
       } finally {
         this.isLoading = false;
@@ -223,7 +223,7 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
         if (!response.ok) {
           const errorData: ApiErrorData = await response.json().catch(() => ({}));
           const error = new Error(
-            extractErrorMessage(errorData, `Failed to update employee default allowance: ${response.statusText}`),
+            extractErrorMessage(errorData, `Failed to update employee default other payment: ${response.statusText}`),
           ) as ErrorWithData;
           error.errorData = errorData;
           throw error;
@@ -238,7 +238,7 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
 
         return updatedEmployeeDefaultAllowance;
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Error updating employee default allowance';
+        this.error = error instanceof Error ? error.message : 'Error updating employee default other payment';
         return null;
       } finally {
         this.isLoading = false;
@@ -266,13 +266,13 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to delete employee default allowance: ${response.statusText}`);
+          throw new Error(errorData.error || `Failed to delete employee default other payment: ${response.statusText}`);
         }
 
         this.employeeDefaultAllowances = this.employeeDefaultAllowances.filter((eda) => eda.id !== id);
         return true;
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Error deleting employee default allowance';
+        this.error = error instanceof Error ? error.message : 'Error deleting employee default other payment';
         return false;
       } finally {
         this.isLoading = false;

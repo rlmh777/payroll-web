@@ -2,7 +2,7 @@
   <div class="salary-review-report">
     <div class="text-h5 text-weight-bold q-mb-xs">Salary Review</div>
     <div class="text-body2 text-grey-7 q-mb-lg">
-      Review employee pay by department for a date range, grouped by wage and allowance accounts.
+      Review employee pay by department for a date range, grouped by wage and other payment accounts.
     </div>
 
     <q-banner v-if="reportsStore.error" rounded class="bg-red-1 text-red-9 q-mb-md">

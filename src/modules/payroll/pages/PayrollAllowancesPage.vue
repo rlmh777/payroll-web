@@ -2,20 +2,31 @@
   <q-page class="q-pa-md">
     <div class="row items-center justify-between q-mb-md">
       <div>
-        <div class="text-h6">Payroll allowances</div>
+        <div class="text-h6">Payroll other payments</div>
         <div class="text-caption text-grey-7">
-          Add or update employee allowances for the upcoming draft payroll run.
+          Add or update employee other payments for the upcoming payroll run only.
         </div>
       </div>
-      <q-btn
-        color="primary"
-        icon="add"
-        label="Add allowance"
-        unelevated
-        no-caps
-        :disable="!store.selectedPayrollRunId || store.draftRuns.length === 0"
-        @click="openCreate"
-      />
+      <div class="row q-gutter-sm">
+        <q-btn
+          outline
+          color="primary"
+          icon="upload_file"
+          label="Import"
+          no-caps
+          :disable="!store.selectedPayrollRunId || store.draftRuns.length === 0"
+          @click="showImport = true"
+        />
+        <q-btn
+          color="primary"
+          icon="add"
+          label="Add other payment"
+          unelevated
+          no-caps
+          :disable="!store.selectedPayrollRunId || store.draftRuns.length === 0"
+          @click="openCreate"
+        />
+      </div>
     </div>
 
     <div class="row q-col-gutter-md q-mb-md items-end">
@@ -59,7 +70,7 @@
           outlined
           dense
           clearable
-          label="Search note / allowance"
+          label="Search note / other payment"
           @keyup.enter="refreshList"
           @clear="refreshList"
         >
@@ -79,7 +90,7 @@
       class="bg-grey-2 text-grey-8 q-mb-md"
       rounded
     >
-      No draft payroll run is available. Create a payroll run first, then return here to enter allowances.
+      No upcoming payroll run is available. Processed payrolls cannot receive new other payments.
     </q-banner>
 
     <q-table
@@ -94,6 +105,11 @@
       :rows-per-page-options="[10, 25, 50]"
       @request="onRequest"
     >
+      <template #body-cell-date="props">
+        <q-td :props="props">
+          {{ formatDate(props.row.allowanceDate ?? props.row.allowance_date) }}
+        </q-td>
+      </template>
       <template #body-cell-employee="props">
         <q-td :props="props">
           {{ employeeLabel(props.row) }}
@@ -136,10 +152,22 @@
       </template>
     </q-table>
 
+    <PayrollAllowanceImportDialog
+      v-model="showImport"
+      :payroll-run-id="store.selectedPayrollRunId"
+      :employees="store.employees"
+      :preview-import="previewImport"
+      :confirm-import-rows="confirmImport"
+      :is-working="store.isImporting"
+      @imported="onImported"
+    />
+
     <PayrollAllowanceFormDialog
       v-model="showForm"
       :record="editingRecord"
       :payroll-run-id="store.selectedPayrollRunId"
+      :pay-period-start="selectedPayPeriodStart"
+      :pay-period-end="selectedPayPeriodEnd"
       :employees="store.employees"
       :allowances="store.allowanceOptions"
       :accounts="store.accountOptions"
@@ -156,13 +184,17 @@ import {
   usePayrollAllowanceStore,
   type HistoricalEmployeeAllowance,
   type PayrollAllowanceEmployeeOption,
+  type PayrollAllowanceImportPreview,
 } from '@payroll/stores/payroll-allowance-store';
+import type { PayrollAllowanceImportRow } from '@payroll/utils/payroll-allowance-import';
 import PayrollAllowanceFormDialog from '@payroll/components/payroll/PayrollAllowanceFormDialog.vue';
+import PayrollAllowanceImportDialog from '@payroll/components/payroll/PayrollAllowanceImportDialog.vue';
 
 const $q = useQuasar();
 const store = usePayrollAllowanceStore();
 
 const showForm = ref(false);
+const showImport = ref(false);
 const editingRecord = ref<HistoricalEmployeeAllowance | null>(null);
 const employeeFilterOptions = ref<PayrollAllowanceEmployeeOption[]>([]);
 
@@ -173,8 +205,9 @@ const pagination = ref({
 });
 
 const columns = [
+  { name: 'date', label: 'Date', field: 'allowanceDate', align: 'left' as const },
   { name: 'employee', label: 'Employee', field: 'employee', align: 'left' as const },
-  { name: 'allowance', label: 'Allowance', field: 'allowance', align: 'left' as const },
+  { name: 'allowance', label: 'Other Payment', field: 'allowance', align: 'left' as const },
   { name: 'account', label: 'Account', field: 'account', align: 'left' as const },
   { name: 'quantity', label: 'Qty', field: 'quantity', align: 'right' as const },
   { name: 'unitAmount', label: 'Unit amount', field: 'unitAmount', align: 'right' as const },
@@ -187,13 +220,26 @@ const payrollRunOptions = computed(() =>
   store.draftRuns.map((run) => {
     const schedule = run.payPeriodSchedule;
     const groupName = schedule?.payPeriodGroup?.name ?? 'Payroll';
-    const range = [schedule?.startDate, schedule?.endDate].filter(Boolean).join(' → ');
+    const range = [
+      schedule?.startDate ?? schedule?.start_date,
+      schedule?.endDate ?? schedule?.end_date,
+    ].filter(Boolean).join(' → ');
     return {
       value: run.id,
       label: range ? `${groupName}: ${range}` : `${groupName} (${run.id.slice(0, 8)})`,
     };
   }),
 );
+
+const selectedPayPeriodStart = computed(() => {
+  const schedule = store.selectedPayrollRun?.payPeriodSchedule;
+  return schedule?.startDate ?? schedule?.start_date ?? null;
+});
+
+const selectedPayPeriodEnd = computed(() => {
+  const schedule = store.selectedPayrollRun?.payPeriodSchedule;
+  return schedule?.endDate ?? schedule?.end_date ?? null;
+});
 
 const matchEmployeesByName = (
   employees: PayrollAllowanceEmployeeOption[],
@@ -251,6 +297,14 @@ const formatCurrency = (value: number | string | null | undefined) => {
   }).format(amount);
 };
 
+const formatDate = (value: string | null | undefined) => {
+  if (!value) return '—';
+  const date = value.slice(0, 10);
+  const [year, month, day] = date.split('-');
+  if (!year || !month || !day) return date;
+  return `${month}/${day}/${year}`;
+};
+
 const employeeLabel = (row: HistoricalEmployeeAllowance) => {
   const employee = row.employee;
   if (!employee) return '—';
@@ -284,6 +338,19 @@ const openEdit = (row: HistoricalEmployeeAllowance) => {
   showForm.value = true;
 };
 
+const previewImport = (rows: PayrollAllowanceImportRow[]): Promise<PayrollAllowanceImportPreview | null> => {
+  return store.previewImport(rows);
+};
+
+const confirmImport = (rows: PayrollAllowanceImportRow[]): Promise<boolean> => {
+  return store.confirmImport(rows);
+};
+
+const onImported = () => {
+  showImport.value = false;
+  $q.notify({ type: 'positive', message: 'Payroll other payments imported' });
+};
+
 const handleSave = async (payload: {
   employeeId: string;
   allowanceId: string;
@@ -291,15 +358,16 @@ const handleSave = async (payload: {
   payrollRunId: string;
   quantity: number;
   unitAmount: number;
+  allowanceDate: string;
   note?: string;
 }) => {
   try {
     if (editingRecord.value?.id) {
       await store.updateAllowance(editingRecord.value.id, payload);
-      $q.notify({ type: 'positive', message: 'Allowance updated' });
+      $q.notify({ type: 'positive', message: 'Other Payment updated' });
     } else {
       await store.createAllowance(payload);
-      $q.notify({ type: 'positive', message: 'Allowance added' });
+      $q.notify({ type: 'positive', message: 'Other Payment added' });
     }
     showForm.value = false;
     editingRecord.value = null;
@@ -310,15 +378,15 @@ const handleSave = async (payload: {
 
 const confirmDelete = (row: HistoricalEmployeeAllowance) => {
   $q.dialog({
-    title: 'Delete allowance',
-    message: 'Remove this allowance from the upcoming payroll run?',
+    title: 'Delete other payment',
+    message: 'Remove this other payment from the upcoming payroll run?',
     cancel: true,
     persistent: true,
   }).onOk(() => {
     void (async () => {
       try {
         await store.deleteAllowance(row.id);
-        $q.notify({ type: 'positive', message: 'Allowance deleted' });
+        $q.notify({ type: 'positive', message: 'Other Payment deleted' });
       } catch {
         $q.notify({ type: 'negative', message: store.error || 'Delete failed' });
       }

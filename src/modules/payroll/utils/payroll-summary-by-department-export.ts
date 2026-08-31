@@ -36,7 +36,7 @@ export function exportPayrollSummaryByDepartmentExcel(report: PayrollSummaryByDe
       'Overtime Amount',
       'Double Time',
       'Double Time Amount',
-      'Allowances',
+      'Other Payments',
       'Gross Pay',
     ],
   ];

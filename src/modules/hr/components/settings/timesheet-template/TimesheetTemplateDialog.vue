@@ -1,17 +1,20 @@
 <template>
   <q-dialog v-model="dialogModel" position="right" :maximized="false">
-    <q-card class="timesheet-template-dialog-card">
-      <q-card-section class="timesheet-template-dialog-header row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ title }}</div>
-        <q-space />
-        <q-btn flat round dense icon="close" @click="closeDialog" />
-      </q-card-section>
+        <template #close>
+          <q-btn flat round dense icon="close" @click="closeDialog" />
+        </template>
+      </AppDialogHeader>
 
-      <q-card-section class="timesheet-template-dialog-body">
-        <q-form id="timesheet-template-form" class="q-gutter-md" @submit.prevent="submitForm">
-          <q-input v-model="form.name" label="Template name" outlined dense />
-
-          <div>
+      <AppDialogBody>
+        <q-form id="timesheet-template-form" @submit.prevent="submitForm">
+          <AppDialogForm>
+            <div class="col-12">
+              <q-input v-model="form.name" label="Template name" outlined dense />
+            </div>
+            <div class="col-12">
             <div class="text-subtitle2 q-mb-xs">Daily schedule</div>
             <div class="text-caption text-grey-7 q-mb-sm">
               Add one or more time slots per day. Each slot must be assigned to a department so
@@ -138,20 +141,26 @@
                 </q-markup-table>
               </div>
             </div>
-          </div>
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
+      </AppDialogBody>
 
-      <q-card-section class="timesheet-template-dialog-actions row justify-end q-mb-lg">
+      <AppDialogActions>
         <q-btn flat label="Cancel" color="grey" @click="closeDialog" />
         <q-btn form="timesheet-template-form" type="submit" color="primary" label="Save" />
-      </q-card-section>
-    </q-card>
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import { useDepartmentStore } from '@hr/stores/department-store';
 import {
   createDefaultDayGroups,
@@ -280,32 +289,6 @@ watch(
 </script>
 
 <style scoped>
-.timesheet-template-dialog-card {
-  width: min(960px, 95vw);
-  max-width: 95vw;
-  height: 100vh;
-  max-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.timesheet-template-dialog-header {
-  flex-shrink: 0;
-}
-
-.timesheet-template-dialog-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.timesheet-template-dialog-actions {
-  flex-shrink: 0;
-}
-
 .day-group {
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;

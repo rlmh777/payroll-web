@@ -84,7 +84,7 @@
       <div class="col-auto">
         <q-btn
           color="primary"
-          label="Add Allowance"
+          label="Add Other Payment"
           icon="add"
           @click="showAddDialog = true"
         />
@@ -149,7 +149,7 @@ const clearFilters = async () => {
 const showAddDialog = ref<boolean>(false);
 
 const onAllowanceSaved = async () => {
-  // Refresh the list after a new allowance is added
+  // Refresh the list after a new other payment is added
   await allowanceStore.fetchAllowances();
 };
 </script>

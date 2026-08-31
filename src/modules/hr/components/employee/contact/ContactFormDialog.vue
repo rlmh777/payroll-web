@@ -1,38 +1,72 @@
 <template>
   <q-dialog :model-value="open" position="right" @update:model-value="onDialogUpdate">
-    <q-card class="drawer-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">{{ isEdit ? 'Edit contact' : 'Add contact' }}</div>
-        <q-space />
-        <q-btn icon="close" flat round dense :disable="saving" @click="close" />
-      </q-card-section>
-      <q-card-section>
-        <q-form class="q-gutter-md" @submit.prevent="save">
-          <q-input v-model="form.firstName" label="First name *" dense outlined :disable="saving" />
-          <q-input v-model="form.middleName" label="Middle name" dense outlined :disable="saving" />
-          <q-input v-model="form.lastName" label="Last name *" dense outlined :disable="saving" />
-          <RelationshipSelect v-model="form.relationshipId" :disable="saving" />
-          <q-input v-model="form.phoneNumber1" label="Phone *" dense outlined :disable="saving" />
-          <q-input v-model="form.phoneNumber2" label="Alternate phone" dense outlined :disable="saving" />
-          <q-input v-model="form.email" label="Email *" type="email" dense outlined :disable="saving" />
-          <q-input v-model="form.address1" label="Address 1 *" dense outlined :disable="saving" />
-          <q-input v-model="form.address2" label="Address 2" dense outlined :disable="saving" />
-          <LocalitySelect v-model="form.localityId" :readonly="saving" />
-          <q-toggle v-model="form.isDependent" label="Dependent" :disable="saving" />
-          <q-toggle v-model="form.isProfessionalReference" label="Professional reference" :disable="saving" />
-          <div class="row justify-end q-gutter-sm">
-            <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
-            <q-btn type="submit" color="primary" :loading="saving" label="Save" />
-          </div>
+        <template #close>
+          <q-btn icon="close" flat round dense :disable="saving" @click="close" />
+        </template>
+      </AppDialogHeader>
+
+      <AppDialogBody>
+        <q-form @submit.prevent="save">
+          <AppDialogForm>
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.firstName" label="First name *" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.middleName" label="Middle name" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12">
+              <q-input v-model="form.lastName" label="Last name *" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12">
+              <RelationshipSelect v-model="form.relationshipId" :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.phoneNumber1" label="Phone *" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.phoneNumber2" label="Alternate phone" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12">
+              <q-input v-model="form.email" label="Email *" type="email" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12">
+              <q-input v-model="form.address1" label="Address 1 *" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12">
+              <q-input v-model="form.address2" label="Address 2" dense outlined :disable="saving" />
+            </div>
+            <div class="col-12">
+              <LocalitySelect v-model="form.localityId" :readonly="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-toggle v-model="form.isDependent" label="Dependent" :disable="saving" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-toggle v-model="form.isProfessionalReference" label="Professional reference" :disable="saving" />
+            </div>
+          </AppDialogForm>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </AppDialogBody>
+
+      <AppDialogActions>
+        <q-btn flat label="Cancel" color="grey" :disable="saving" @click="close" />
+        <q-btn color="primary" :loading="saving" label="Save" @click="save" />
+      </AppDialogActions>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import AppDialogActions from '@core/components/dialog/AppDialogActions.vue';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import LocalitySelect from '../common/LocalitySelect.vue';
 import RelationshipSelect from '../common/RelationshipSelect.vue';
 import {
@@ -148,11 +182,3 @@ async function save() {
   }
 }
 </script>
-
-<style scoped>
-.drawer-card {
-  width: 34vw;
-  max-width: 460px;
-  height: 100vh;
-}
-</style>

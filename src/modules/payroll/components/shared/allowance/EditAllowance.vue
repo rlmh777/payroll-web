@@ -7,7 +7,7 @@
   >
     <q-card class="edit-allowance-card">
       <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">Edit Allowance</div>
+        <div class="text-h6">Edit Other Payment</div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
       </q-card-section>
@@ -138,7 +138,7 @@ const onSubmit = async () => {
         color: 'positive',
         position: 'top',
         icon: 'check_circle',
-        message: 'Allowance updated successfully!',
+        message: 'Other Payment updated successfully!',
       });
       emit('updated', updatedAllowance.id);
       onClose();
@@ -151,7 +151,7 @@ const onSubmit = async () => {
       });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to update allowance';
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update other payment';
     $q.notify({
       color: 'negative',
       position: 'top',
