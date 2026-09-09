@@ -1,4 +1,4 @@
-export type TimesheetPunctualityStatus = 'EARLY' | 'LATE' | 'ON_TIME';
+export type TimesheetPunctualityStatus = 'EARLY' | 'LATE' | 'ON_TIME' | 'OUT_OF_SHIFT';
 export type TimesheetPunctualitySelection = TimesheetPunctualityStatus | 'AUTO';
 
 export const TIMESHEET_PUNCTUALITY_OPTIONS: Array<{ label: string; value: TimesheetPunctualitySelection }> = [
@@ -6,6 +6,7 @@ export const TIMESHEET_PUNCTUALITY_OPTIONS: Array<{ label: string; value: Timesh
   { label: 'On time', value: 'ON_TIME' },
   { label: 'Early', value: 'EARLY' },
   { label: 'Late', value: 'LATE' },
+  { label: 'Out of shift', value: 'OUT_OF_SHIFT' },
 ];
 
 export function punctualitySelectValue(
@@ -34,6 +35,10 @@ export function punctualityColor(status?: string | null): string {
     return 'positive';
   }
 
+  if (normalized === 'OUT_OF_SHIFT') {
+    return 'warning';
+  }
+
   return 'grey-6';
 }
 
@@ -56,6 +61,8 @@ export function punctualityLabel(
     label = side === 'clockIn' ? 'In late' : 'Out late';
   } else if (normalized === 'ON_TIME') {
     label = side === 'clockIn' ? 'In on time' : 'Out on time';
+  } else if (normalized === 'OUT_OF_SHIFT') {
+    label = 'Out of shift';
   }
 
   if (auto !== false) {
@@ -88,6 +95,8 @@ export function punctualityTooltip(
 
   if (scheduled) {
     lines.push(`Scheduled ${side === 'clockIn' ? 'start' : 'end'}: ${scheduled}`);
+  } else if ((status || '').toUpperCase() === 'OUT_OF_SHIFT') {
+    lines.push('No matching schedule slot for this day');
   }
 
   if (status) {

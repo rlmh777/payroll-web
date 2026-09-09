@@ -44,7 +44,7 @@
             label="Upload accounts/GST"
             class="gst-calculator__upload"
             :loading="store.isImporting"
-            :disable="store.isLoadingWorkspace || store.isImporting || store.isImportingPurchaseLedger"
+            :disable="store.isLoadingWorkspace || store.isImporting || store.isImportingPurchaseLedger || store.isImportingSalesLedger"
             @update:model-value="onWorkbookSelected"
           >
             <template #prepend>
@@ -59,8 +59,23 @@
             label="Upload purchase ledger"
             class="gst-calculator__upload"
             :loading="store.isImportingPurchaseLedger"
-            :disable="store.isLoadingWorkspace || store.isImportingPurchaseLedger || store.isImporting"
+            :disable="store.isLoadingWorkspace || store.isImportingPurchaseLedger || store.isImporting || store.isImportingSalesLedger"
             @update:model-value="onPurchaseLedgerSelected"
+          >
+            <template #prepend>
+              <q-icon name="upload_file" />
+            </template>
+          </q-file>
+          <q-file
+            :model-value="null"
+            outlined
+            dense
+            accept=".xlsx"
+            label="Upload sales ledger"
+            class="gst-calculator__upload"
+            :loading="store.isImportingSalesLedger"
+            :disable="store.isLoadingWorkspace || store.isImportingSalesLedger || store.isImporting || store.isImportingPurchaseLedger"
+            @update:model-value="onSalesLedgerSelected"
           >
             <template #prepend>
               <q-icon name="upload_file" />
@@ -91,13 +106,24 @@
           </div>
         </div>
         <div
-          v-if="workspace?.import_filename || workspace?.import_purchase_ledger_filename"
+          v-if="workspace?.import_filename || workspace?.import_purchase_ledger_filename || workspace?.import_sales_ledger_filename"
           class="text-caption text-grey-7 q-mt-sm"
         >
           <span v-if="workspace?.import_filename">Accounts/GST: {{ workspace.import_filename }}</span>
           <span v-if="workspace?.import_filename && workspace?.import_purchase_ledger_filename"> · </span>
           <span v-if="workspace?.import_purchase_ledger_filename">
             Purchase ledger: {{ workspace.import_purchase_ledger_filename }}
+          </span>
+          <span
+            v-if="
+              workspace?.import_sales_ledger_filename
+              && (workspace?.import_filename || workspace?.import_purchase_ledger_filename)
+            "
+          >
+            ·
+          </span>
+          <span v-if="workspace?.import_sales_ledger_filename">
+            Sales ledger: {{ workspace.import_sales_ledger_filename }}
           </span>
         </div>
       </q-card-section>
@@ -111,6 +137,7 @@
         <q-tab name="accounts" label="Accounts" />
         <q-tab name="gst" label="GST" />
         <q-tab name="purchase-ledger" label="Purchase Ledger" />
+        <q-tab name="sales-ledger" label="Sales Ledger" />
         <q-tab name="results" label="Results" />
       </q-tabs>
       <q-separator />
@@ -264,6 +291,15 @@
           />
         </q-tab-panel>
 
+        <q-tab-panel name="sales-ledger" class="sales-ledger-tab q-pa-none q-pt-md">
+          <sales-ledger-panel
+            :sheet="salesLedgerSheet"
+            :gst-rate="rateFor('GST_INCOME') || 0.125"
+            :year="year"
+            :month="month"
+          />
+        </q-tab-panel>
+
         <q-tab-panel name="results" class="gst-results-panel">
           <q-card flat bordered class="q-mb-lg">
             <q-card-section>
@@ -315,7 +351,12 @@
                 <tr>
                   <td>Complement ratio (1 − taxable ratio)</td>
                   <td class="text-right">{{ percentWhole(partialExemption.complement_ratio) }}</td>
-                  <td>Taxes:Partial: taxed share goes to standard rated; untaxed share plus non-payable GST goes to exempt. Only the taxable share of Taxes:GST is GST paid. Columns sum to Total Purchases (GST inclusive).</td>
+                  <td>
+                    Taxes:Taxable and Taxes:Partial are GST-exclusive. Taxes:GST is the GST paid on those bases
+                    (e.g. Taxable 100 ⇒ GST includes 12.50). Partial and its GST are split by this ratio:
+                    taxed share → standard rated / domestic GST; untaxed share + non-payable GST → exempt.
+                    Columns sum to Total Purchases (GST inclusive).
+                  </td>
                 </tr>
                 <tr>
                   <td>Total Partial Exemptions (see 2251 tab)</td>
@@ -516,6 +557,7 @@ import {
 } from '@payroll/stores/tax-calculator-store';
 import GstSheetTable from './GstSheetTable.vue';
 import PurchaseLedgerPanel from './PurchaseLedgerPanel.vue';
+import SalesLedgerPanel from './SalesLedgerPanel.vue';
 
 const $q = useQuasar();
 const store = useTaxCalculatorStore();
@@ -567,6 +609,7 @@ const canClearData = computed(() => {
     || workspace.value.import_filename
     || (workspace.value.import_gst_sheet?.length ?? 0) > 0
     || (workspace.value.import_purchase_ledger?.rows?.length ?? 0) > 0
+    || (workspace.value.import_sales_ledger?.rows?.length ?? 0) > 0
     || Number(workspace.value.total_debits || 0) !== 0
     || Number(workspace.value.partial_exemptions_total || 0) !== 0
     || Number(workspace.value.line_220 || 0) !== 0
@@ -589,6 +632,19 @@ const purchaseLedgerSheet = computed((): TaxCalculatorPurchaseLedgerSheet => (
 ));
 const purchaseLedgerExcludedNames = computed((): TaxCalculatorPurchaseLedgerExcludedName[] => (
   workspace.value?.purchase_ledger_excluded_names ?? []
+));
+const salesLedgerSheet = computed((): TaxCalculatorPurchaseLedgerSheet => (
+  workspace.value?.import_sales_ledger ?? {
+    format: 'sales_transaction',
+    columns: [],
+    rows: [],
+    name_column: 'G',
+    class_column: 'B',
+    debit_column: 'I',
+    credit_column: 'K',
+    date_column: 'C',
+    invoice_column: 'E',
+  }
 ));
 const results = computed(() => store.workspace?.results ?? null);
 const periodOptions = computed(() => {
@@ -934,11 +990,23 @@ async function onPurchaseLedgerSelected(file: File | File[] | null) {
   try {
     await store.importPurchaseLedger(year.value, month.value, selected);
     if (store.workspace) {
-      await recalculate();
+      await recalculate({ notifyOnError: false });
     }
     $q.notify({ type: 'positive', message: 'Purchase ledger imported' });
   } catch (error) {
     showImportError(error, 'Purchase ledger import failed.');
+  }
+}
+
+async function onSalesLedgerSelected(file: File | File[] | null) {
+  const selected = Array.isArray(file) ? file[0] : file;
+  if (!selected) return;
+  try {
+    await store.importSalesLedger(year.value, month.value, selected);
+    tab.value = 'sales-ledger';
+    $q.notify({ type: 'positive', message: 'Sales ledger imported' });
+  } catch (error) {
+    showImportError(error, 'Sales ledger import failed.');
   }
 }
 
@@ -962,22 +1030,26 @@ function showImportError(error: unknown, fallback: string) {
 
 async function load() {
   await store.fetchWorkspace(year.value, month.value);
-  if (store.workspace) {
-    await recalculate();
+  // Only preview when there are account lines; empty periods would fail validation
+  // ("The lines field is required") and should not toast on open.
+  if (store.workspace?.lines?.length) {
+    await recalculate({ notifyOnError: false });
   }
 }
 
-async function recalculate() {
+async function recalculate(options: { notifyOnError?: boolean } = {}) {
+  const { notifyOnError = true } = options;
   if (!store.workspace) return;
   try {
     await store.preview({
-      lines: store.workspace.lines,
+      lines: store.workspace.lines ?? [],
       total_debits: Number(store.workspace.total_debits ?? store.workspace.gst_value_entered ?? 0),
       partial_exemptions_total: Number(store.workspace.partial_exemptions_total || 0),
       line_220: Number(store.workspace.line_220 ?? 0),
       net_of_2251: Number(store.workspace.net_of_2251 || 0),
     });
   } catch (error) {
+    if (!notifyOnError) return;
     $q.notify({
       color: 'negative',
       message: error instanceof Error ? error.message : 'Could not recalculate.',
@@ -1144,13 +1216,15 @@ watch(newPeriodYear, () => {
 .gst-accounts-panel,
 .gst-results-panel,
 .gst-sheet-panel,
-.purchase-ledger-tab {
+.purchase-ledger-tab,
+.sales-ledger-tab {
   min-height: 0;
 }
 
 .gst-accounts-panel,
 .gst-sheet-panel,
-.purchase-ledger-tab {
+.purchase-ledger-tab,
+.sales-ledger-tab {
   display: flex;
   flex-direction: column;
   overflow: hidden;

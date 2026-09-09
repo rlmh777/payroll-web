@@ -112,7 +112,18 @@ export const useEmployeeGroupStore = defineStore('employeeGroup', {
         throw new Error(await this.parseError(response));
       }
 
-      return await response.json() as EmployeeGroup;
+      const group = await response.json() as EmployeeGroup;
+      const withMembers: EmployeeGroup = {
+        ...group,
+        members: group.members ?? [],
+      };
+
+      const exists = this.groups.some((row) => row.id === id);
+      this.groups = exists
+        ? this.groups.map((row) => (row.id === id ? { ...row, ...withMembers } : row))
+        : [...this.groups, withMembers].sort((left, right) => left.name.localeCompare(right.name));
+
+      return withMembers;
     },
 
     async createGroup(payload: Partial<EmployeeGroup>) {
@@ -127,7 +138,8 @@ export const useEmployeeGroupStore = defineStore('employeeGroup', {
       }
 
       const created = await response.json() as EmployeeGroup;
-      this.groups = [...this.groups, created].sort((left, right) => left.name.localeCompare(right.name));
+      this.groups = [...this.groups, { ...created, members: created.members ?? [] }]
+        .sort((left, right) => left.name.localeCompare(right.name));
       return created;
     },
 
@@ -143,7 +155,11 @@ export const useEmployeeGroupStore = defineStore('employeeGroup', {
       }
 
       const updated = await response.json() as EmployeeGroup;
-      this.groups = this.groups.map((group) => (group.id === id ? { ...group, ...updated } : group));
+      this.groups = this.groups.map((group) => (
+        group.id === id
+          ? { ...group, ...updated, members: updated.members ?? group.members ?? [] }
+          : group
+      ));
       return updated;
     },
 
@@ -160,6 +176,61 @@ export const useEmployeeGroupStore = defineStore('employeeGroup', {
       this.groups = this.groups.filter((group) => group.id !== id);
     },
 
+    async addMember(groupId: string, employeeId: string) {
+      const response = await fetch(`${API_URL}/employee-groups/${groupId}/members`, {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        body: JSON.stringify({ employeeId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await this.parseError(response));
+      }
+
+      const member = await response.json() as EmployeeGroupMember;
+      this.groups = this.groups.map((group) => {
+        if (group.id !== groupId) {
+          return group;
+        }
+
+        const existing = (group.members ?? []).filter(
+          (row) => String(row.employeeId) !== String(member.employeeId),
+        );
+
+        return {
+          ...group,
+          members: [...existing, member],
+          activeMemberCount: existing.length + 1,
+        };
+      });
+
+      return member;
+    },
+
+    async removeMember(groupId: string, memberId: string) {
+      const response = await fetch(`${API_URL}/employee-groups/${groupId}/members/${memberId}`, {
+        method: 'DELETE',
+        headers: this.buildHeaders(),
+      });
+
+      if (!response.ok && response.status !== 204) {
+        throw new Error(await this.parseError(response));
+      }
+
+      this.groups = this.groups.map((group) => {
+        if (group.id !== groupId) {
+          return group;
+        }
+
+        const members = (group.members ?? []).filter((row) => String(row.id) !== String(memberId));
+        return {
+          ...group,
+          members,
+          activeMemberCount: members.length,
+        };
+      });
+    },
+
     async syncMembers(groupId: string, employeeIds: string[]) {
       const response = await fetch(`${API_URL}/employee-groups/${groupId}/members`, {
         method: 'PUT',
@@ -172,7 +243,11 @@ export const useEmployeeGroupStore = defineStore('employeeGroup', {
       }
 
       const updated = await response.json() as EmployeeGroup;
-      this.groups = this.groups.map((group) => (group.id === groupId ? updated : group));
+      this.groups = this.groups.map((group) => (
+        group.id === groupId
+          ? { ...updated, members: updated.members ?? [] }
+          : group
+      ));
       return updated;
     },
 

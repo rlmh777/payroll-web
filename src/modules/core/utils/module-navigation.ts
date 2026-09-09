@@ -1,4 +1,5 @@
 import type { MenuItem } from '../types/menu-item';
+import { findTopMenuForPath } from './menu-navigation';
 
 export interface AppModule {
   code: string;
@@ -33,7 +34,7 @@ export function resolveModuleForPath(
   path: string,
   menuTree: MenuItem[],
 ): string | null {
-  const topMatch = menuTree.find((top) => menuContainsPath(top, path));
+  const topMatch = findTopMenuForPath(path, menuTree);
   if (topMatch?.module_code) {
     return topMatch.module_code;
   }
@@ -43,26 +44,6 @@ export function resolveModuleForPath(
   }
 
   return 'payroll';
-}
-
-function menuContainsPath(item: MenuItem, path: string): boolean {
-  if (routeMatches(item.route, path)) {
-    return true;
-  }
-
-  return item.children?.some((child) => menuContainsPath(child, path)) ?? false;
-}
-
-function routeMatches(menuRoute: string | null, path: string): boolean {
-  if (!menuRoute) {
-    return false;
-  }
-
-  if (menuRoute === '/') {
-    return path === '/';
-  }
-
-  return path === menuRoute || path.startsWith(`${menuRoute}/`);
 }
 
 export function pickDefaultActiveModule(

@@ -50,6 +50,14 @@ export const useSchedulerStore = defineStore('scheduler', {
   actions: {
     setViewBy(value: SchedulerViewBy) {
       this.viewBy = value;
+
+      if (value !== 'department') {
+        this.filterDepartmentId = null;
+      }
+
+      if (value !== 'group') {
+        this.filterEmployeeGroupId = null;
+      }
     },
 
     setSortBy(value: SchedulerSortBy) {

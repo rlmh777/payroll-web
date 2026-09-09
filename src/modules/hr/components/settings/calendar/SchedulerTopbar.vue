@@ -41,6 +41,7 @@ const emit = defineEmits<{
 const viewOptions = [
   { label: 'Day', value: 'day' as const },
   { label: 'Week', value: 'week' as const },
+  { label: 'Mon–Mon', value: 'monday_to_monday' as const },
 ];
 </script>
 
@@ -63,7 +64,7 @@ const viewOptions = [
 .scheduler-title {
   font-size: 16px;
   font-weight: 600;
-  min-width: 180px;
+  min-width: 200px;
   text-align: center;
 }
 </style>

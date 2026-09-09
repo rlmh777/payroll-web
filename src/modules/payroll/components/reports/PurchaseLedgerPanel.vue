@@ -252,6 +252,7 @@ import {
 } from '@payroll/stores/tax-calculator-store';
 import { useOrganizationStore } from '@core/stores/organization-store';
 import { exportBts210aPurchaseLedger } from '@payroll/utils/bts210a-purchase-ledger-export';
+import { summarizeBts210aInvoice } from '@payroll/utils/bts210a-invoice-summary';
 
 type ViewMode = 'summary' | 'non_taxable' | 'detail';
 type InvoiceGroup = {
@@ -351,7 +352,7 @@ const viewOptions = [
 const secondaryViewOptions = viewOptions.filter((option) => option.value !== 'summary');
 
 const taxableRatio = computed(() => Number(props.taxableRatio ?? 0));
-const partialFactor = computed(() => {
+const complementRatio = computed(() => {
   if (props.complementRatio != null && Number.isFinite(Number(props.complementRatio))) {
     return Math.max(0, Number(props.complementRatio));
   }
@@ -479,29 +480,17 @@ function isNonTaxableOnlyInvoice(row: InvoiceGroup) {
 }
 
 function toSummaryRow(row: InvoiceGroup): SummaryRow {
-  const factor = partialFactor.value;
-  const untaxedPartial = row.partial_raw * factor;
-  const taxedPartial = row.partial_raw - untaxedPartial;
-  const gstBase = row.taxable + row.partial_raw;
-  const taxedGstBase = row.taxable + taxedPartial;
-  const payableGst = gstBase > 0 ? row.gst * (taxedGstBase / gstBase) : row.gst;
-  const nonPayableGst = row.gst - payableGst;
+  const amounts = summarizeBts210aInvoice(row, {
+    taxableRatio: taxableRatio.value,
+    complementRatio: complementRatio.value,
+  });
   return {
     date: row.date,
     date_sort: row.date_sort,
     invoice_no: row.invoice_no,
     name: row.name,
     tin: row.tin,
-    total_purchases: row.all_classes,
-    imports: row.imported,
-    standard_rated: row.taxable + taxedPartial,
-    zero_rated: row.zero_rated,
-    exempt: row.exempt + untaxedPartial + nonPayableGst + row.non_taxable + row.other,
-    imported_gst: row.imported_gst,
-    domestic_gst: payableGst,
-    debit_credit_notes: row.debit_credit_notes,
-    total_input_tax: payableGst + row.imported_gst - row.debit_credit_notes,
-    partial_adjusted: row.partial_raw !== 0 && factor !== 1,
+    ...amounts,
   };
 }
 

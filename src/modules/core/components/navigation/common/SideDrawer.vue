@@ -4,6 +4,7 @@
       <EmployeeLeftPane v-if="isEmployeeRoute" />
       <SchedulerLeftPane v-else-if="isSchedulerRoute" />
       <TimesheetLeftPane v-else-if="isTimesheetRoute" />
+      <ReportsLeftPane v-else-if="isReportsRoute" />
       <MenuList v-else-if="selectedChildren.length" :items="selectedChildren" />
     </q-scroll-area>
   </q-drawer>
@@ -18,6 +19,7 @@ import MenuList from '../../Menu/MenuList.vue';
 import EmployeeLeftPane from '@hr/components/employee/search/EmployeeLeftPane.vue';
 import SchedulerLeftPane from '@hr/components/settings/calendar/SchedulerLeftPane.vue';
 import TimesheetLeftPane from '@hr/components/timesheet/TimesheetLeftPane.vue';
+import ReportsLeftPane from '@payroll/components/reports/ReportsLeftPane.vue';
 import { useEmployeeLeaveStore } from '@hr/stores/employee-leave-store';
 import { MODULE_ROUTES, pathInModule } from '../../../config/module-routes';
 
@@ -32,7 +34,8 @@ function isDrawerPaneRoute(path: string) {
     pathInModule(path, 'employees') ||
     pathInModule(path, 'scheduler') ||
     pathInModule(path, 'timesheet') ||
-    pathInModule(path, 'leaves')
+    pathInModule(path, 'leaves') ||
+    pathInModule(path, 'reports')
   );
 }
 
@@ -103,6 +106,7 @@ watch(
 const isEmployeeRoute = computed(() => pathInModule(route.path, 'employees'));
 const isSchedulerRoute = computed(() => pathInModule(route.path, 'scheduler'));
 const isTimesheetRoute = computed(() => pathInModule(route.path, 'timesheet'));
+const isReportsRoute = computed(() => pathInModule(route.path, 'reports'));
 const selectedChildren = computed(() => {
   const children = selectedMenu.value?.children || [];
   const isLeavesMenu =
@@ -123,6 +127,7 @@ const hasSideMenu = computed(
     isEmployeeRoute.value ||
     isSchedulerRoute.value ||
     isTimesheetRoute.value ||
+    isReportsRoute.value ||
     selectedChildren.value.length > 0,
 );
 

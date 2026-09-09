@@ -42,8 +42,7 @@ export const payrollRoutes: RouteRecordRaw[] = [
       { path: '/payroll/timesheets', redirect: '/payroll/payroll-run' },
       {
         path: '/payroll/taxes-filing',
-        component: () => import('@payroll/pages/PayrollPage.vue'),
-        props: { title: 'Payroll Taxes Filing' },
+        component: () => import('@payroll/pages/TaxesFilingPage.vue'),
       },
     ],
   },

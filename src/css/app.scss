@@ -55,6 +55,10 @@ body {
   flex-direction: column;
 }
 
+.main-page-container--full-height > .reports-page.q-page {
+  min-height: 0;
+}
+
 .main-page-container--full-height > .breadcrumb-wrap {
   flex-shrink: 0;
 }

@@ -64,6 +64,7 @@ import TimesheetTopbar from './TimesheetTopbar.vue';
 import TimesheetEmployeeGroup from './TimesheetEmployeeGroup.vue';
 import { useAttendanceStore } from '@payroll/stores/attendance-store';
 import { useAttendanceSettingStore } from 'src/stores/attendance-setting-store';
+import { useEmployeeGroupStore } from '@hr/stores/employee-group-store';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
 import { useTimesheetStore } from '@hr/stores/timesheet-store';
 import { prepareSchedulerEmployees } from '@hr/utils/scheduler-bootstrap';
@@ -76,6 +77,7 @@ const attendanceStore = useAttendanceStore();
 const attendanceSettingStore = useAttendanceSettingStore();
 const schedulerStore = useSchedulerStore();
 const timesheetStore = useTimesheetStore();
+const employeeGroupStore = useEmployeeGroupStore();
 
 const { isLoadingTimesheets } = storeToRefs(attendanceStore);
 const { isLoadingEmployees } = storeToRefs(schedulerStore);
@@ -174,6 +176,9 @@ onMounted(async () => {
   try {
     await Promise.all([
       attendanceSettingStore.fetchSettings(),
+      employeeGroupStore.groups.length
+        ? Promise.resolve()
+        : employeeGroupStore.fetchGroups({ withMembers: true, activeOnly: true }),
       prepareSchedulerEmployees(),
     ]);
     await refreshTimesheets(true);

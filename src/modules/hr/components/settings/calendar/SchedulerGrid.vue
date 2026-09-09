@@ -1,6 +1,10 @@
 <template>
   <div class="scheduler-grid">
-    <div ref="headerScrollRef" class="scheduler-grid-header-scroll">
+    <div
+      ref="headerScrollRef"
+      class="scheduler-grid-header-scroll"
+      :style="headerScrollStyle"
+    >
       <div class="scheduler-grid-header" :style="gridStyle">
         <div class="scheduler-grid-sticky scheduler-grid-employee-header">
           <span>{{ viewBy === 'users' ? 'Employee' : 'Department' }}</span>
@@ -135,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { CalendarEntry, CalendarEmployee } from '@hr/stores/calendar-store';
 import {
   employeeInitials,
@@ -187,10 +191,32 @@ const today = todayDateString();
 const headerScrollRef = ref<HTMLElement | null>(null);
 const bodyScrollRef = ref<HTMLElement | null>(null);
 const isLoadingMore = ref(false);
+const bodyScrollbarWidth = ref(0);
+
+let bodyResizeObserver: ResizeObserver | null = null;
+
+const EMPLOYEE_COLUMN_WIDTH_PX = 220;
+const DAY_COLUMN_MIN_WIDTH_PX = 120;
 
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `220px repeat(${props.visibleDays.length}, minmax(120px, 1fr))`,
+  // Fixed day tracks (not 1fr) so header/body columns stay the same width
+  // even when the body shows a vertical scrollbar.
+  gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH_PX}px repeat(${props.visibleDays.length}, minmax(${DAY_COLUMN_MIN_WIDTH_PX}px, ${DAY_COLUMN_MIN_WIDTH_PX}px))`,
 }));
+
+const headerScrollStyle = computed(() => ({
+  paddingRight: `${bodyScrollbarWidth.value}px`,
+}));
+
+function updateBodyScrollbarWidth() {
+  const element = bodyScrollRef.value;
+  if (!element) {
+    bodyScrollbarWidth.value = 0;
+    return;
+  }
+
+  bodyScrollbarWidth.value = Math.max(0, element.offsetWidth - element.clientWidth);
+}
 
 const rowStatsByKey = computed(() => {
   const stats = new Map<string, {
@@ -305,8 +331,32 @@ watch(
   () => [props.rows.length, props.hasMore, props.loading, props.loadingMore] as const,
   () => {
     void fillViewportIfNeeded();
+    void nextTick(() => updateBodyScrollbarWidth());
   },
 );
+
+watch(
+  () => props.visibleDays.length,
+  () => {
+    void nextTick(() => updateBodyScrollbarWidth());
+  },
+);
+
+onMounted(() => {
+  updateBodyScrollbarWidth();
+
+  if (typeof ResizeObserver !== 'undefined' && bodyScrollRef.value) {
+    bodyResizeObserver = new ResizeObserver(() => {
+      updateBodyScrollbarWidth();
+    });
+    bodyResizeObserver.observe(bodyScrollRef.value);
+  }
+});
+
+onBeforeUnmount(() => {
+  bodyResizeObserver?.disconnect();
+  bodyResizeObserver = null;
+});
 
 function cellShifts(row: SchedulerGridRow, day: string) {
   return eventsForCell(props.events, row, day);
@@ -361,11 +411,13 @@ function shiftTooltip(shift: CalendarEntry) {
   overflow: hidden;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   background: #f5f5f5;
+  box-sizing: border-box;
 }
 
 .scheduler-grid-header {
   display: grid;
   min-width: max-content;
+  box-sizing: border-box;
 }
 
 .scheduler-grid-scroll {
@@ -377,6 +429,7 @@ function shiftTooltip(shift: CalendarEntry) {
 .scheduler-grid-table {
   display: grid;
   min-width: max-content;
+  box-sizing: border-box;
 }
 
 .scheduler-grid-sticky {
@@ -386,6 +439,7 @@ function shiftTooltip(shift: CalendarEntry) {
   background: #fff;
   border-right: 1px solid rgba(0, 0, 0, 0.08);
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
 }
 
 .scheduler-grid-employee-header,
@@ -394,11 +448,13 @@ function shiftTooltip(shift: CalendarEntry) {
   font-weight: 600;
   background: #f5f5f5;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
 }
 
 .scheduler-grid-employee-header {
   display: flex;
   align-items: center;
+  border-left: 3px solid transparent;
 }
 
 .scheduler-grid-day-header {
@@ -439,6 +495,7 @@ function shiftTooltip(shift: CalendarEntry) {
   display: flex;
   align-items: center;
   border-left: 3px solid transparent;
+  box-sizing: border-box;
 }
 
 .scheduler-employee {
@@ -490,6 +547,7 @@ function shiftTooltip(shift: CalendarEntry) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   background: #fff;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .scheduler-grid-cell:hover {

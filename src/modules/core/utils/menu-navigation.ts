@@ -45,7 +45,22 @@ export function isPathAllowedByMenus(path: string, menuRoutes: string[]): boolea
 }
 
 export function findTopMenuForPath(path: string, tree: MenuItem[]): MenuItem | null {
-  return tree.find((top) => menuContainsPath(top, path)) ?? null;
+  let bestMatch: MenuItem | null = null;
+  let bestRouteLength = -1;
+
+  for (const top of tree) {
+    if (!menuContainsPath(top, path)) {
+      continue;
+    }
+
+    const routeLength = top.route?.length ?? 0;
+    if (routeLength > bestRouteLength) {
+      bestMatch = top;
+      bestRouteLength = routeLength;
+    }
+  }
+
+  return bestMatch;
 }
 
 export function findSettingsMenu(tree: MenuItem[]): MenuItem | null {

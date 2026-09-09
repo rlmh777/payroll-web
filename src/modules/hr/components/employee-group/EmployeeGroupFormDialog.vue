@@ -64,7 +64,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  saved: [];
+  saved: [group: EmployeeGroup];
 }>();
 
 const $q = useQuasar();
@@ -114,13 +114,11 @@ async function save() {
       isActive: form.isActive,
     };
 
-    if (props.group?.id) {
-      await groupStore.updateGroup(props.group.id, payload);
-    } else {
-      await groupStore.createGroup(payload);
-    }
+    const saved = props.group?.id
+      ? await groupStore.updateGroup(props.group.id, payload)
+      : await groupStore.createGroup(payload);
 
-    emit('saved');
+    emit('saved', saved);
     emit('update:modelValue', false);
     $q.notify({ type: 'positive', message: 'Employee group saved.' });
   } catch (error) {

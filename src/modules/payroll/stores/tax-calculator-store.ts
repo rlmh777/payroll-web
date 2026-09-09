@@ -136,12 +136,13 @@ export type TaxCalculatorGstSheetRow = {
 } & Record<string, string | number>;
 
 export interface TaxCalculatorPurchaseLedgerSheet {
-  format: 'transaction' | 'hierarchical';
+  format: 'transaction' | 'hierarchical' | 'sales_transaction';
   columns: string[];
   rows: TaxCalculatorGstSheetRow[];
   name_column: string;
   class_column?: string | null;
   debit_column: string;
+  credit_column?: string | null;
   date_column?: string | null;
   tin_column?: string | null;
   invoice_column?: string | null;
@@ -168,6 +169,9 @@ export interface TaxCalculatorWorkspace {
   import_purchase_ledger?: TaxCalculatorPurchaseLedgerSheet;
   import_purchase_ledger_filename?: string | null;
   import_purchase_ledger_at?: string | null;
+  import_sales_ledger?: TaxCalculatorPurchaseLedgerSheet;
+  import_sales_ledger_filename?: string | null;
+  import_sales_ledger_at?: string | null;
   purchase_ledger_excluded_names?: TaxCalculatorPurchaseLedgerExcludedName[];
   results: TaxCalculatorResults | null;
   rates: TaxCalculatorRate[];
@@ -194,6 +198,7 @@ export const useTaxCalculatorStore = defineStore('taxCalculator', {
     isSaving: false,
     isImporting: false,
     isImportingPurchaseLedger: false,
+    isImportingSalesLedger: false,
     isSavingPurchaseLedgerExclusion: false,
     error: null as string | null,
     rateToEdit: null as TaxCalculatorRate | null,
@@ -447,6 +452,38 @@ export const useTaxCalculatorStore = defineStore('taxCalculator', {
         throw error;
       } finally {
         this.isImportingPurchaseLedger = false;
+      }
+    },
+
+    async importSalesLedger(year: number, month: number, file: File) {
+      this.isImportingSalesLedger = true;
+      this.error = null;
+      try {
+        const authStore = useAuthStore();
+        const formData = new FormData();
+        formData.append('year', String(year));
+        formData.append('month', String(month));
+        formData.append('file', file);
+        const headers: HeadersInit = {};
+        if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
+        const response = await fetch(`${API_URL}/tax-calculator-runs/sales-ledger/import`, {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(parseError(body, 'Sales ledger import failed'));
+        this.workspace = body.data;
+        if (this.workspace) {
+          this.workspace.total_debits = Number(this.workspace.total_debits ?? this.workspace.gst_value_entered ?? 0);
+          this.workspace.net_of_2251 = Number(this.workspace.net_of_2251 ?? 0);
+        }
+        return this.workspace;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Sales ledger import failed';
+        throw error;
+      } finally {
+        this.isImportingSalesLedger = false;
       }
     },
 

@@ -4,7 +4,7 @@
       <SchedulerMiniSearch />
     </div>
     <div class="left-pane-filters">
-      <TimesheetFilterOptions />
+      <TimesheetFilterOptions @members-changed="onGroupMembersChanged" />
     </div>
   </div>
 </template>
@@ -24,8 +24,19 @@ const timesheetStore = useTimesheetStore();
 
 const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null);
 
+async function onGroupMembersChanged() {
+  if (
+    canViewAllSchedulerEmployees()
+    && schedulerStore.employeesMode === 'paginated'
+  ) {
+    await schedulerStore.fetchEmployees(true);
+  }
+  await timesheetStore.fetchTimesheetRows(true);
+}
+
 watch(
   () => [
+    schedulerStore.viewBy,
     schedulerStore.filterDepartmentId,
     schedulerStore.filterEmployeeGroupId,
     schedulerStore.filterEmployeeId,

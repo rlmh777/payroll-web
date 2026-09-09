@@ -11,7 +11,7 @@ import {
 
 export { todayDateString } from './calendar-event-utils';
 
-export type SchedulerViewMode = 'day' | 'week';
+export type SchedulerViewMode = 'day' | 'week' | 'monday_to_monday';
 
 export type SchedulerViewBy = 'users' | 'department' | 'group';
 
@@ -83,18 +83,39 @@ export function schedulerEmployeeColor(employeeId: string | null | undefined): S
 }
 
 export function getWeekDays(anchorDate: string): string[] {
-  const parsed = date.extractDate(anchorDate, 'YYYY-MM-DD');
-  const dayOfWeek = parsed.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = date.addToDate(parsed, { days: mondayOffset });
+  const monday = startOfWeekMonday(anchorDate);
 
   return Array.from({ length: 7 }, (_, index) =>
     date.formatDate(date.addToDate(monday, { days: index }), 'YYYY-MM-DD'),
   );
 }
 
+/** Monday through the following Monday (8 days inclusive). */
+export function getMondayToMondayDays(anchorDate: string): string[] {
+  const monday = startOfWeekMonday(anchorDate);
+
+  return Array.from({ length: 8 }, (_, index) =>
+    date.formatDate(date.addToDate(monday, { days: index }), 'YYYY-MM-DD'),
+  );
+}
+
+function startOfWeekMonday(anchorDate: string): Date {
+  const parsed = date.extractDate(anchorDate, 'YYYY-MM-DD');
+  const dayOfWeek = parsed.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  return date.addToDate(parsed, { days: mondayOffset });
+}
+
 export function getVisibleDays(viewMode: SchedulerViewMode, anchorDate: string): string[] {
-  return viewMode === 'day' ? [anchorDate] : getWeekDays(anchorDate);
+  if (viewMode === 'day') {
+    return [anchorDate];
+  }
+
+  if (viewMode === 'monday_to_monday') {
+    return getMondayToMondayDays(anchorDate);
+  }
+
+  return getWeekDays(anchorDate);
 }
 
 export function getDateRangeForView(viewMode: SchedulerViewMode, anchorDate: string): {
