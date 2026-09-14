@@ -3,8 +3,10 @@ import { ref, computed } from 'vue';
 import { useAuthStore } from './auth';
 import {
   getStoredActiveModule,
+  pickDefaultActiveModule,
   resolveModuleForPath,
   storeActiveModule,
+  clearStoredActiveModule,
   type AppModule,
   type NavigationPayload,
 } from '../utils/module-navigation';
@@ -85,7 +87,16 @@ export const useMenuStore = defineStore('menus', () => {
       data.launcher?.length
         ? data.launcher
         : (data.modules ?? []).filter((module) => module.enabled);
-    activeModule.value = activeModule.value ?? 'payroll';
+
+    const preferredModule = authStore.user?.preferences?.defaultModule ?? 'payroll';
+    const nextActive = pickDefaultActiveModule(
+      modules.value,
+      typeof window !== 'undefined' ? window.location.pathname : '/',
+      menuTree.value,
+      preferredModule,
+    );
+    activeModule.value = nextActive;
+    storeActiveModule(nextActive);
   }
 
   function setActiveModule(code: string) {
@@ -138,11 +149,24 @@ export const useMenuStore = defineStore('menus', () => {
     modules.value = [];
     launcher.value = [];
     activeModule.value = null;
+    clearStoredActiveModule();
   }
 
   const menus = computed<MenuItem[]>(() => flattenMenuTree(menuTree.value));
 
-  const activeModuleMenus = computed<MenuItem[]>(() => menuTree.value);
+  const activeModuleMenus = computed<MenuItem[]>(() => {
+    const code = activeModule.value;
+    if (code && moduleMenus.value[code]?.length) {
+      return moduleMenus.value[code];
+    }
+
+    // Legacy / single-module fallback: show the full tree.
+    if (!Object.keys(moduleMenus.value).length) {
+      return menuTree.value;
+    }
+
+    return code ? (moduleMenus.value[code] ?? []) : menuTree.value;
+  });
 
   const enabledModules = computed(() => modules.value.filter((module) => module.enabled));
 

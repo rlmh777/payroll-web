@@ -16,7 +16,7 @@
           </template>
         </q-input>
       </div>
-      <div class="col-12 col-sm-4">
+      <div v-if="canManageUsers" class="col-12 col-sm-4">
         <q-select
           v-model="roleId"
           :options="roleOptions"
@@ -30,7 +30,7 @@
           @update:model-value="onRoleFilter"
         />
       </div>
-      <div class="col-auto">
+      <div v-if="canManageUsers" class="col-auto">
         <q-btn
           color="primary"
           label="Add User"
@@ -42,6 +42,7 @@
     </div>
 
     <AddUser
+      v-if="canManageUsers"
       v-model="showAddDialog"
       @saved="onUserSaved"
     />
@@ -50,6 +51,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { usePermissions } from '@core/composables/usePermissions';
 import { useUserStore, type User } from '../../stores/user-store';
 import { useRoleStore } from '../../stores/role-store';
 import AddUser from './AddUser.vue';
@@ -60,6 +62,9 @@ const emit = defineEmits<{
 
 const userStore = useUserStore();
 const roleStore = useRoleStore();
+const { can } = usePermissions();
+
+const canManageUsers = computed(() => can('manager-users'));
 
 const search = ref(userStore.searchName ?? '');
 const roleId = ref<string | null>(userStore.roleId);
@@ -73,7 +78,7 @@ const roleOptions = computed(() =>
 );
 
 onMounted(async () => {
-  if (roleStore.roles.length === 0) {
+  if (canManageUsers.value && roleStore.roles.length === 0) {
     await roleStore.fetchRoles(1, 100);
   }
 });

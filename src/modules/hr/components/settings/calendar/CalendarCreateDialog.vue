@@ -6,6 +6,15 @@
       </AppDialogHeader>
 
       <AppDialogBody>
+        <q-banner
+          v-if="leaveConflictMessage"
+          dense
+          rounded
+          class="bg-orange-1 text-orange-10 q-mb-md"
+        >
+          {{ leaveConflictMessage }} You can still schedule; clocked work will be recorded for payment.
+        </q-banner>
+
         <CalendarEventFormFields
           v-model:kind="form.kind"
           v-model:event-subtype="form.eventSubtype"
@@ -58,12 +67,16 @@ import {
   type CalendarEventSubtype,
   type CalendarKind,
 } from './calendarTypes';
-import { useCalendarStore, type CalendarEmployee } from '@hr/stores/calendar-store';
+import { useCalendarStore, type CalendarEmployee, type CalendarEntry } from '@hr/stores/calendar-store';
 import {
   getActiveEmploymentDetail,
   getEmploymentContractOptions,
 } from '@hr/utils/calendar-employment-utils';
 import { formatCalendarDisplayDate, normalizeDateRange } from '@hr/utils/calendar-event-utils';
+import {
+  findSchedulerLeaveConflicts,
+  formatSchedulerLeaveConflictMessage,
+} from '@hr/utils/scheduler-leave-conflicts';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -76,6 +89,7 @@ const props = defineProps<{
   employees?: CalendarEmployee[];
   showEmployeePicker?: boolean;
   workOnly?: boolean;
+  leaveEvents?: CalendarEntry[];
 }>();
 
 const emit = defineEmits<{
@@ -127,6 +141,23 @@ const dialogTitle = computed(() =>
 );
 
 const saveLabel = computed(() => dialogTitle.value);
+
+const leaveConflictMessage = computed(() => {
+  if (form.value.kind !== 'work') {
+    return '';
+  }
+
+  const conflicts = findSchedulerLeaveConflicts(
+    props.leaveEvents ?? [],
+    form.value.employeeId,
+    form.value.startDate,
+    form.value.endDate,
+    form.value.startTime,
+    form.value.endTime,
+  );
+
+  return formatSchedulerLeaveConflictMessage(conflicts);
+});
 
 function applyEmploymentDefaults(employeeId: string | null) {
   if (!employeeId) {
@@ -203,6 +234,15 @@ async function save() {
   if (form.value.endDate < form.value.startDate) {
     $q.notify({ type: 'negative', message: 'End date must be on or after start date.' });
     return;
+  }
+
+  if (leaveConflictMessage.value) {
+    $q.notify({
+      type: 'warning',
+      message: leaveConflictMessage.value,
+      caption: 'Shift will still be saved. Clocked work remains payable.',
+      timeout: 4500,
+    });
   }
 
   const result = await calendarStore.createCalendar({

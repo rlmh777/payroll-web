@@ -65,12 +65,15 @@ interface Props {
   disabled?: boolean;
   submitLabel?: string;
   cancelLabel?: string;
+  /** When true, leave goes to accounts payment confirmation (skip supervisor/HR). */
+  assigned?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: false,
   embedded: false,
   disabled: false,
+  assigned: false,
 });
 
 const emit = defineEmits<{
@@ -266,6 +269,7 @@ const onSubmit = async () => {
       {
         applyHoursBank: form.value.applyHoursBank,
         leaveHours: form.value.leaveHours,
+        assigned: props.assigned,
       },
     );
 

@@ -271,6 +271,7 @@ import TimesheetEmployeeGroup from '@hr/components/timesheet/TimesheetEmployeeGr
 import AddEmployeeLeave from '@hr/components/employee/leave/AddEmployeeLeave.vue';
 import EmployeeAttendanceWorkDialog from './EmployeeAttendanceWorkDialog.vue';
 import { useAttendanceStore } from '@payroll/stores/attendance-store';
+import { useEmployeePoolStore } from '@payroll/stores/employee-pool-store';
 import { useCalendarStore } from '@hr/stores/calendar-store';
 import { useEmployeeCompensationStore } from 'src/stores/employee-compensation-store';
 import { useEmployeeStore } from '@hr/stores/employee-store';
@@ -300,6 +301,7 @@ const attendanceStore = useAttendanceStore();
 const calendarStore = useCalendarStore();
 const compensationStore = useEmployeeCompensationStore();
 const employeeStore = useEmployeeStore();
+const employeePoolStore = useEmployeePoolStore();
 
 const { employeeTimesheetDetails, isRecalculatingCompensation } = storeToRefs(attendanceStore);
 
@@ -385,6 +387,7 @@ async function refresh() {
   try {
     await Promise.all([
       compensationStore.fetchByEmployee(props.employeeId),
+      employeePoolStore.fetchAccruedHours([props.employeeId]),
       attendanceStore.fetchEmployeeTimesheetDetails(props.employeeId, {
         startDate: range.start,
         endDate: range.end,

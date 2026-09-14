@@ -1,6 +1,6 @@
 import { computed } from 'vue';
 import { useAuthStore } from '@core/stores/auth';
-import { routeViewPermission } from '@core/utils/permissions';
+import { hasRoutePermission, routeViewPermission } from '@core/utils/permissions';
 import { isPathAllowedByMenus, collectMenuRoutes } from '@core/utils/menu-navigation';
 import type { MenuItem } from '@core/stores/menus';
 
@@ -44,7 +44,7 @@ export function usePermissions() {
     }
 
     const required = routeViewPermission(path);
-    return can(required);
+    return hasRoutePermission(permissions.value, required);
   }
 
   return {

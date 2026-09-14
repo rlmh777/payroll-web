@@ -18,6 +18,8 @@ export * from './leave-balance-store';
 export * from './leave-type-store';
 export * from './public-holiday-store';
 export * from './scheduler-store';
+export * from './scheduler-metric-store';
+export * from './scheduler-notice-store';
 export * from './timesheet-store';
 export * from './timesheet-template-store';
 export * from './worksite-store';

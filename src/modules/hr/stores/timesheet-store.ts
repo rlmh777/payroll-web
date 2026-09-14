@@ -192,7 +192,14 @@ export const useTimesheetStore = defineStore('timesheetBrowse', {
           employeeId: employee.id,
           employmentDetailId,
           employmentContractLabel: activeEmployment?.label ?? null,
-          employeeName: `${employee.firstName ?? ''} ${employee.lastName ?? ''}`.trim() || null,
+          employeeName: (() => {
+            const first = (employee.firstName ?? '').trim();
+            const last = (employee.lastName ?? '').trim();
+            if (last && first) {
+              return `${last}, ${first}`;
+            }
+            return `${last} ${first}`.trim() || null;
+          })(),
           employeeCode: employee.code ?? null,
           departmentId: activeEmployment?.departmentId ?? null,
           departmentName: activeDetailRecord?.department?.name ?? null,

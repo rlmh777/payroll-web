@@ -1,7 +1,6 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row q-col-gutter-md full-height">
-      <!-- Left Column: Search and Role List -->
       <div class="col-3">
         <q-card flat class="full-height">
           <q-card-section class="search-section">
@@ -13,20 +12,26 @@
         </q-card>
       </div>
 
-      <!-- Middle Column: Role Permissions -->
-      <div class="col-4">
+      <div class="col-9">
         <q-card flat class="full-height">
-          <q-card-section>
-            <RolePermissions />
+          <q-card-section class="q-pb-none">
+            <q-tabs v-model="activePanel" dense align="left" class="text-primary">
+              <q-tab name="permissions" label="Permissions" icon="security" />
+              <q-tab name="employee-form" label="Employee form" icon="badge" />
+            </q-tabs>
+            <q-separator />
           </q-card-section>
-        </q-card>
-      </div>
 
-      <!-- Right Column: Available Permissions -->
-      <div class="col-5">
-        <q-card flat class="full-height">
-          <q-card-section>
-            <AllPermissions />
+          <q-card-section class="panel-section">
+            <div v-if="activePanel === 'permissions'" class="row q-col-gutter-md full-panel">
+              <div class="col-5">
+                <RolePermissions />
+              </div>
+              <div class="col-7">
+                <AllPermissions />
+              </div>
+            </div>
+            <RoleEmployeeFormAccess v-else />
           </q-card-section>
         </q-card>
       </div>
@@ -35,17 +40,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoleStore } from '../../stores/role-store';
 import SearchRoles from './SearchRoles.vue';
 import ViewRoles from './ViewRoles.vue';
 import RolePermissions from './RolePermissions.vue';
 import AllPermissions from './AllPermissions.vue';
+import RoleEmployeeFormAccess from './RoleEmployeeFormAccess.vue';
 
 const roleStore = useRoleStore();
+const activePanel = ref<'permissions' | 'employee-form'>('permissions');
 
 onMounted(async () => {
-  // Fetch roles and permissions on mount
   await Promise.all([
     roleStore.fetchRoles(),
     roleStore.fetchPermissions(),
@@ -64,10 +70,6 @@ onMounted(async () => {
   flex-direction: column;
 }
 
-.full-height :deep(.q-card__section) {
-  overflow-y: auto;
-}
-
 .full-height :deep(.search-section) {
   flex: 0 0 auto;
 }
@@ -78,5 +80,14 @@ onMounted(async () => {
   flex-direction: column;
   min-height: 0;
 }
-</style>
 
+.full-height :deep(.panel-section) {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.full-panel {
+  min-height: 100%;
+}
+</style>

@@ -1,5 +1,10 @@
 import { defineStore, acceptHMRUpdate } from 'pinia';
 import { useAuthStore } from './auth';
+import type {
+  EmployeeFormAccess,
+  EmployeeFormFieldCatalogItem,
+  EmployeeFormTabCatalogItem,
+} from '@core/types/employee-form-access';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 
@@ -7,12 +12,20 @@ export interface Role {
   id: string;
   name: string;
   permissions?: Permission[];
+  employee_form_access?: EmployeeFormAccess;
 }
 
 export interface Permission {
   id: string;
   name: string;
   guard_name?: string;
+}
+
+export interface EmployeeFormAccessCatalog {
+  tabs: EmployeeFormTabCatalogItem[];
+  fields: EmployeeFormFieldCatalogItem[];
+  tabModes: string[];
+  fieldModes: string[];
 }
 
 interface ApiErrorData {
@@ -36,9 +49,11 @@ export const useRoleStore = defineStore('role', {
     roles: [] as Role[],
     permissions: [] as Permission[],
     selectedRole: null as Role | null,
+    formAccessCatalog: null as EmployeeFormAccessCatalog | null,
     isLoading: false,
     isLoadingRoles: false,
     isLoadingPermissions: false,
+    isLoadingFormAccessCatalog: false,
     currentPage: 1,
     lastPage: 1,
     total: 0,
@@ -526,6 +541,87 @@ export const useRoleStore = defineStore('role', {
       } catch (error) {
         console.error('Error creating permission:', error);
         this.error = error instanceof Error ? error.message : 'Error creating permission';
+        return null;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async fetchFormAccessCatalog() {
+      if (this.isLoadingFormAccessCatalog || this.formAccessCatalog) {
+        return this.formAccessCatalog;
+      }
+
+      this.isLoadingFormAccessCatalog = true;
+      this.error = null;
+
+      try {
+        const authStore = useAuthStore();
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        if (authStore.token) {
+          headers['Authorization'] = `Bearer ${authStore.token}`;
+        }
+
+        const response = await fetch(`${API_URL}/roles/employee-form-access/catalog`, {
+          headers,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch form access catalog: ${response.statusText}`);
+        }
+
+        this.formAccessCatalog = await response.json();
+        return this.formAccessCatalog;
+      } catch (error) {
+        console.error('Error fetching form access catalog:', error);
+        this.error = error instanceof Error ? error.message : 'Error fetching form access catalog';
+        return null;
+      } finally {
+        this.isLoadingFormAccessCatalog = false;
+      }
+    },
+
+    async updateEmployeeFormAccess(roleId: string, profile: EmployeeFormAccess): Promise<Role | null> {
+      this.isLoading = true;
+      this.error = null;
+
+      try {
+        const authStore = useAuthStore();
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        if (authStore.token) {
+          headers['Authorization'] = `Bearer ${authStore.token}`;
+        }
+
+        const response = await fetch(`${API_URL}/roles/${roleId}/employee-form-access`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(profile),
+        });
+
+        if (!response.ok) {
+          const errorData: ApiErrorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to update form access: ${response.statusText}`);
+        }
+
+        const updatedRole = await response.json() as Role;
+        const index = this.roles.findIndex((r) => r.id === roleId);
+        if (index !== -1) {
+          this.roles[index] = updatedRole;
+        }
+        if (this.selectedRole?.id === roleId) {
+          this.selectedRole = updatedRole;
+        }
+
+        return updatedRole;
+      } catch (error) {
+        console.error('Error updating employee form access:', error);
+        this.error = error instanceof Error ? error.message : 'Error updating employee form access';
         return null;
       } finally {
         this.isLoading = false;

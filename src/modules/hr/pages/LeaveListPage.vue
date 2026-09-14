@@ -238,7 +238,8 @@ import {
 import { useEmployeeStore } from '@hr/stores/employee-store';
 import { useLeaveTypeStore } from '@hr/stores/leave-type-store';
 import { exportTeamLeavesToExcel } from '@hr/utils/leave-list-export';
-import { formatLeaveStatus, leaveStatusColor } from '@hr/utils/leave-status';
+import { formatLeaveStatus, leaveStatusColor, LEAVE_PAYMENT_TREATMENT_OPTIONS } from '@hr/utils/leave-status';
+import type { LeavePaymentTreatment } from '@hr/utils/leave-status';
 
 const $q = useQuasar();
 const store = useEmployeeLeaveStore();
@@ -271,6 +272,8 @@ const statusOptions = [
   { label: 'Cancelled', value: 'CANCELLED' },
   { label: 'Pending supervisor approval', value: 'PENDING_SUPERVISOR_APPROVAL' },
   { label: 'Pending approval', value: 'PENDING_APPROVAL' },
+  { label: 'Pending HR approval', value: 'PENDING_HR_APPROVAL' },
+  { label: 'Pending accounts confirmation', value: 'PENDING_ACCOUNTS_CONFIRMATION' },
   { label: 'Scheduled', value: 'SCHEDULED' },
   { label: 'Taken', value: 'TAKEN' },
   { label: 'Rejected', value: 'REJECTED' },
@@ -411,6 +414,39 @@ function promptAction(row: TeamLeaveRow, action: 'approve' | 'reject' | 'cancel'
     cancel: 'Cancel',
   } as const;
 
+  if (action === 'approve' && row.requiresPaymentConfirmation) {
+    const defaultTreatment: LeavePaymentTreatment =
+      row.leaveTypeIsPaid === false ? 'unpaid' : 'paid_with_payroll';
+
+    $q.dialog({
+      title: 'Confirm leave payment',
+      message: `How should leave pay be handled for ${row.employeeName} (${row.dateRange})?\n\n• Already paid in advance — salary for those days is excluded on the next payroll (avoids double pay)\n• Pay with this payroll — keep normal salary for those days\n• Unpaid — exclude those days from pay`,
+      options: {
+        type: 'radio',
+        model: defaultTreatment,
+        items: LEAVE_PAYMENT_TREATMENT_OPTIONS,
+      },
+      cancel: true,
+      ok: { label: 'Confirm', color: 'positive' },
+    }).onOk((paymentTreatment: LeavePaymentTreatment) => {
+      $q.dialog({
+        title: 'Add comment (optional)',
+        prompt: {
+          model: row.statusNote ?? '',
+          type: 'textarea',
+          label: 'Comment',
+          outlined: true,
+          autogrow: true,
+        },
+        cancel: true,
+        ok: { label: 'Save', color: 'positive' },
+      }).onOk((note: string) => {
+        void submitAction(row, action, note, paymentTreatment);
+      });
+    });
+    return;
+  }
+
   $q.dialog({
     title: `${labels[action]} leave`,
     message: `${labels[action]} leave for ${row.employeeName} (${row.dateRange}). You may leave a comment.`,
@@ -435,8 +471,14 @@ async function submitAction(
   row: TeamLeaveRow,
   action: 'approve' | 'reject' | 'cancel',
   note: string,
+  paymentTreatment?: LeavePaymentTreatment | null,
 ) {
-  const updated = await store.updateLeaveStatus(row.id, action, note?.trim() || null);
+  const updated = await store.updateLeaveStatus(
+    row.id,
+    action,
+    note?.trim() || null,
+    paymentTreatment ?? null,
+  );
   if (!updated) {
     $q.notify({
       type: 'negative',

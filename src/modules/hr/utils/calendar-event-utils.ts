@@ -313,8 +313,10 @@ export function scheduledWorkRecordToEvents(record: RawCalendarRecord): Calendar
     record.employeeCompensationId ?? record.employee_compensation_id,
   );
   const employee = record.employee;
+  const first = (employee?.firstName ?? '').trim();
+  const last = (employee?.lastName ?? '').trim();
   const employeeName = employee
-    ? `${employee.firstName ?? ''} ${employee.lastName ?? ''}`.trim() || null
+    ? (last && first ? `${last}, ${first}` : `${last} ${first}`.trim()) || null
     : null;
 
   const departmentId = record.departmentId ?? record.department_id ?? record.department?.id ?? null;

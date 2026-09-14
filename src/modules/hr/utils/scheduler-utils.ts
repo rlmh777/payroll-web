@@ -215,8 +215,16 @@ export function formatShiftTime(event: CalendarEntry): string {
   return start || end || '';
 }
 
-export function employeeDisplayName(employee: CalendarEmployee): string {
-  return `${employee.firstName} ${employee.lastName}`.trim();
+export function employeeDisplayName(employee: {
+  firstName?: string | null;
+  lastName?: string | null;
+}): string {
+  const first = (employee.firstName ?? '').trim();
+  const last = (employee.lastName ?? '').trim();
+  if (last && first) {
+    return `${last}, ${first}`;
+  }
+  return `${last} ${first}`.trim();
 }
 
 export function filterEmployeesByName(
@@ -432,6 +440,24 @@ export function eventsForCell(
 
   return events.filter((event) => {
     if (calendarEventDay(event) !== day || event.type !== 'work') {
+      return false;
+    }
+
+    return calendarEventEmployeeId(event) === row.id;
+  });
+}
+
+export function leavesForCell(
+  events: CalendarEntry[],
+  row: SchedulerGridRow,
+  day: string,
+): CalendarEntry[] {
+  if (row.rowKind === 'department-header' || row.rowKind === 'group-header') {
+    return [];
+  }
+
+  return events.filter((event) => {
+    if (calendarEventDay(event) !== day || event.source !== 'leave') {
       return false;
     }
 

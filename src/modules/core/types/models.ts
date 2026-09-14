@@ -185,6 +185,8 @@ export interface EmployeeLeave {
   totalDays: number;
   notes?: string | null;
   multiplier?: number;
+  paymentTreatment?: string | null;
+  paymentConfirmedAt?: string | null;
   leaveStatusId?: number;
   statusCode?: string | null;
   statusNote?: string | null;
@@ -294,6 +296,9 @@ export interface Employee {
   employeeStatus?: EmployeeStatus | null;
   timesheetTemplate?: { id: string; name: string } | null;
   supervisor?: Pick<Employee, 'id' | 'code' | 'firstName' | 'lastName'> | null;
+  userId?: string | null;
+  user_id?: string | null;
+  user?: { id: string; name?: string; email?: string } | null;
   employmentDetails?: EmploymentDetail[];
   employeeCompensations?: EmployeeCompensation[];
 }

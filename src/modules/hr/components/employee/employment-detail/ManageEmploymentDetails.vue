@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="row items-center q-mb-md q-gutter-sm">
+    <div v-if="!readonly" class="row items-center q-mb-md q-gutter-sm">
       <q-btn color="primary" icon="add" label="Add Contract" dense @click="store.openCreateDialog()" />
     </div>
 
@@ -25,26 +25,28 @@
       </template>
       <template #body-cell-actions="props">
         <q-td :props="props" class="text-right">
-          <q-btn
-            v-if="props.row.isActive"
-            flat
-            round
-            dense
-            icon="edit"
-            color="primary"
-            size="sm"
-            @click="store.setRecordToEdit(props.row)"
-          />
-          <q-btn
-            v-if="!props.row.isActive"
-            flat
-            round
-            dense
-            icon="delete"
-            color="negative"
-            size="sm"
-            @click="onDelete(props.row)"
-          />
+          <template v-if="!readonly">
+            <q-btn
+              v-if="props.row.isActive"
+              flat
+              round
+              dense
+              icon="edit"
+              color="primary"
+              size="sm"
+              @click="store.setRecordToEdit(props.row)"
+            />
+            <q-btn
+              v-if="!props.row.isActive"
+              flat
+              round
+              dense
+              icon="delete"
+              color="negative"
+              size="sm"
+              @click="onDelete(props.row)"
+            />
+          </template>
         </q-td>
       </template>
     </q-table>
@@ -64,7 +66,12 @@ import {
 import AddEmploymentDetail from './AddEmploymentDetail.vue';
 import EditEmploymentDetail from './EditEmploymentDetail.vue';
 
-const props = defineProps<{ employeeId: string }>();
+const props = withDefaults(defineProps<{
+  employeeId: string;
+  readonly?: boolean;
+}>(), {
+  readonly: false,
+});
 
 const store = useEmploymentDetailStore();
 const $q = useQuasar();

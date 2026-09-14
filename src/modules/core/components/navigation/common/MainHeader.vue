@@ -98,7 +98,7 @@ onMounted(async () => {
 });
 
 function syncSelectedTopFromRoute() {
-  const match = findTopMenuForPath(route.path, menuStore.menuTree);
+  const match = findTopMenuForPath(route.path, menuStore.activeModuleMenus);
   if (match) {
     selectedTopId.value = match.id;
   }
@@ -107,14 +107,14 @@ function syncSelectedTopFromRoute() {
 watch(() => route.path, syncSelectedTopFromRoute, { immediate: true });
 
 watch(
-  () => menuStore.menuTree,
+  () => [menuStore.activeModuleMenus, menuStore.activeModule] as const,
   () => {
     syncSelectedTopFromRoute();
   },
   { deep: true },
 );
 
-const topMenus = computed(() => menuStore.menuTree || []);
+const topMenus = computed(() => menuStore.activeModuleMenus || []);
 
 function openTopMenu(item: MenuItem) {
   selectedTopId.value = item.id ?? null;

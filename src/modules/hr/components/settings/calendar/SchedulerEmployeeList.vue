@@ -38,7 +38,7 @@
               </q-avatar>
               <div class="col">
                 <div class="text-h6 text-weight-medium q-mb-xs">
-                  {{ employee.firstName }} {{ employee.lastName }}
+                  {{ employee.lastName }}, {{ employee.firstName }}
                 </div>
                 <div v-if="employee.code" class="text-caption text-grey-7">
                   {{ employee.code }}

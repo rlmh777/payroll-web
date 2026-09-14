@@ -30,14 +30,17 @@ function isEmployeeRoute(path: string) {
 }
 
 function isEmployeesIndexRoute() {
-  return route.name === 'employees';
+  return route.name === 'employees' || route.name === 'payroll-employees';
 }
 
 function isCreateOrImportRoute() {
+  const base = employeePath(undefined, route.path);
   return route.name === 'employees-new'
     || route.name === 'employees-import'
-    || route.path === `${employeePath()}/new`
-    || route.path === `${employeePath()}/import`;
+    || route.name === 'payroll-employees-new'
+    || route.name === 'payroll-employees-import'
+    || route.path === `${base}/new`
+    || route.path === `${base}/import`;
 }
 
 function selectFirstEmployeeIfNeeded() {
@@ -50,7 +53,7 @@ function selectFirstEmployeeIfNeeded() {
     return;
   }
 
-  void router.replace(employeePath(firstEmployee.id));
+  void router.replace(employeePath(firstEmployee.id, route.path));
 }
 
 async function loadEmployeesForRoute(enteringFromAnotherMenu: boolean) {

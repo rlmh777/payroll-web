@@ -57,12 +57,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { date } from 'quasar';
 import { storeToRefs } from 'pinia';
 import TimesheetTopbar from './TimesheetTopbar.vue';
 import TimesheetEmployeeGroup from './TimesheetEmployeeGroup.vue';
 import { useAttendanceStore } from '@payroll/stores/attendance-store';
+import { useEmployeePoolStore } from '@payroll/stores/employee-pool-store';
 import { useAttendanceSettingStore } from 'src/stores/attendance-setting-store';
 import { useEmployeeGroupStore } from '@hr/stores/employee-group-store';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
@@ -78,6 +79,7 @@ const attendanceSettingStore = useAttendanceSettingStore();
 const schedulerStore = useSchedulerStore();
 const timesheetStore = useTimesheetStore();
 const employeeGroupStore = useEmployeeGroupStore();
+const employeePoolStore = useEmployeePoolStore();
 
 const { isLoadingTimesheets } = storeToRefs(attendanceStore);
 const { isLoadingEmployees } = storeToRefs(schedulerStore);
@@ -169,6 +171,21 @@ function onSurfaceScroll() {
     void handleLoadMoreEmployees();
   }
 }
+
+watch(
+  () => [
+    ...groupedTimesheets.value.map((group) => group.employeeId),
+    ...schedulerStore.employees.map((employee) => employee.id),
+  ].join(','),
+  (idsKey) => {
+    if (!idsKey) {
+      return;
+    }
+
+    void employeePoolStore.fetchAccruedHours(idsKey.split(','));
+  },
+  { immediate: true },
+);
 
 onMounted(async () => {
   syncWeekRange();

@@ -15,6 +15,23 @@
       no-data-label="No skills"
       :pagination="{ rowsPerPage: 20 }"
     >
+      <template #body-cell-file="props">
+        <q-td :props="props">
+          <q-btn
+            v-if="fileUrl(props.row)"
+            flat
+            dense
+            no-caps
+            color="primary"
+            icon="download"
+            :label="fileLabel(props.row)"
+            :href="fileUrl(props.row) ?? undefined"
+            target="_blank"
+            rel="noopener noreferrer"
+          />
+          <span v-else>—</span>
+        </q-td>
+      </template>
       <template #body-cell-actions="props">
         <q-td :props="props" class="text-right">
           <q-btn flat round dense icon="edit" color="primary" size="sm" @click="openEdit(props.row)" />
@@ -36,6 +53,10 @@
 import { ref, watch } from 'vue';
 import { useQuasar, type QTableProps } from 'quasar';
 import SkillFormDialog from './SkillFormDialog.vue';
+import {
+  educationAttachmentDisplayName,
+  resolveEducationAttachmentUrl,
+} from './education-attachment';
 import { useEmployeeSkillStore, type EmployeeSkill } from 'src/stores/employee-skill-store';
 
 const props = defineProps<{ employeeId: string }>();
@@ -50,8 +71,17 @@ const columns: QTableProps['columns'] = [
   { name: 'proficiencyLevel', label: 'Proficiency', field: (r) => r.proficiencyLevel ?? '—', align: 'left' },
   { name: 'yearsExperience', label: 'Years', field: (r) => r.yearsExperience ?? '—', align: 'right' },
   { name: 'notes', label: 'Notes', field: (r) => r.notes ?? '—', align: 'left' },
+  { name: 'file', label: 'File', field: 'fileName', align: 'left' },
   { name: 'actions', label: '', field: 'actions', align: 'right' },
 ];
+
+function fileLabel(row: EmployeeSkill) {
+  return educationAttachmentDisplayName(row.fileName, row.filePath) || 'Download';
+}
+
+function fileUrl(row: EmployeeSkill) {
+  return resolveEducationAttachmentUrl(row.fileUrl, row.filePath);
+}
 
 function openCreate() {
   selectedRecord.value = null;

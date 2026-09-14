@@ -51,6 +51,32 @@ export const hrRoutes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: MODULE_ROUTES.payrollEmployees,
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'payroll-employees',
+        component: () => import('@hr/pages/EmployeePage.vue'),
+      },
+      {
+        path: 'new',
+        name: 'payroll-employees-new',
+        component: () => import('@hr/pages/CreateEmployeePage.vue'),
+      },
+      {
+        path: 'import',
+        name: 'payroll-employees-import',
+        component: () => import('@hr/pages/EmployeeImportPage.vue'),
+      },
+      {
+        path: ':id',
+        component: () => import('@hr/pages/ViewEmployeePage.vue'),
+      },
+    ],
+  },
+  {
     path: MODULE_ROUTES.leaves,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
@@ -116,6 +142,15 @@ export const hrRoutes: RouteRecordRaw[] = [
         props: { title: 'Attendance Settings' },
       },
       { path: '/payroll/settings/general/attendance', redirect: '/payroll/settings/attendance' },
+      {
+        path: '/payroll/settings/scheduler-metrics',
+        component: () => import('@hr/components/settings/scheduler-metrics/ManageSchedulerMetrics.vue'),
+        props: { title: 'Scheduler Metrics' },
+      },
+      {
+        path: '/payroll/settings/general/scheduler-metrics',
+        redirect: '/payroll/settings/scheduler-metrics',
+      },
       {
         path: '/payroll/settings/leave-types',
         redirect: `${MODULE_ROUTES.leaves}/types`,

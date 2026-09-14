@@ -68,8 +68,8 @@ export function findSettingsMenu(tree: MenuItem[]): MenuItem | null {
     tree.find(
       (item) =>
         item.route === '/payroll/settings' ||
-        item.route === '/settings' ||
-        item.title === 'Settings',
+        item.system_key === 'payroll.settings' ||
+        (item.title === 'Settings' && item.module_code === 'payroll'),
     ) ?? null
   );
 }

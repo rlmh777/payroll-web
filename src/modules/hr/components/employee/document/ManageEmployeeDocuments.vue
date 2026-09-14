@@ -4,7 +4,7 @@
       Employee documents with tags, names, descriptions, and uploaded files.
     </div>
 
-    <div class="row items-center q-mb-md q-gutter-sm">
+    <div v-if="!readonly" class="row items-center q-mb-md q-gutter-sm">
       <q-btn color="primary" icon="add" label="Add document" dense @click="openCreate" />
     </div>
 
@@ -48,8 +48,10 @@
       </template>
       <template #body-cell-actions="props">
         <q-td :props="props" class="text-right">
-          <q-btn flat round dense icon="edit" color="primary" size="sm" @click="openEdit(props.row)" />
-          <q-btn flat round dense icon="delete" color="negative" size="sm" @click="onDelete(props.row)" />
+          <template v-if="!readonly">
+            <q-btn flat round dense icon="edit" color="primary" size="sm" @click="openEdit(props.row)" />
+            <q-btn flat round dense icon="delete" color="negative" size="sm" @click="onDelete(props.row)" />
+          </template>
         </q-td>
       </template>
     </q-table>
@@ -83,7 +85,12 @@ import {
   type EmployeeDocument,
 } from 'src/stores/employee-document-store';
 
-const props = defineProps<{ employeeId: string }>();
+const props = withDefaults(defineProps<{
+  employeeId: string;
+  readonly?: boolean;
+}>(), {
+  readonly: false,
+});
 
 const store = useEmployeeDocumentStore();
 const tagStore = useDocumentTagStore();

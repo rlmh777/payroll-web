@@ -2,7 +2,11 @@ import { defineStore, acceptHMRUpdate } from 'pinia';
 import { useAuthStore } from '@core/stores/auth';
 import { normalizeCalendarEmployee } from '@hr/utils/calendar-employment-utils';
 import { scheduledWorkRecordToEvents, normalizeCalendarTimeInput, scheduledWorkIdFromEvent } from '@hr/utils/calendar-event-utils';
-
+import type {
+  SchedulerShiftImportPreview,
+  SchedulerShiftImportRow,
+} from '@hr/utils/scheduler-shift-import';
+import { Notify } from 'quasar';
 export interface CalendarEntry {
   id: string;
   date: string;
@@ -38,6 +42,7 @@ export interface CalendarEntry {
   employment_contract_label?: string | null;
   employee_compensation_id?: string | null;
   compensation_label?: string | null;
+  is_import_preview?: boolean;
 }
 
 export interface CalendarEmployee {
@@ -525,6 +530,72 @@ export const useCalendarStore = defineStore('calendar', {
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Error updating approval';
         throw error;
+      }
+    },
+
+    async previewScheduledWorkImport(rows: SchedulerShiftImportRow[]): Promise<SchedulerShiftImportPreview | null> {
+      this.error = null;
+
+      try {
+        const authStore = useAuthStore();
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (authStore.token) {
+          headers.Authorization = `Bearer ${authStore.token}`;
+        }
+
+        const response = await fetch(`${API_URL}/scheduled-work/import/preview`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ rows }),
+        });
+
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(body.message || `Failed to preview import: ${response.status}`);
+        }
+
+        return body as SchedulerShiftImportPreview;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Error previewing shift import';
+        Notify.create({ type: 'negative', message: this.error });
+        return null;
+      }
+    },
+
+    async confirmScheduledWorkImport(rows: SchedulerShiftImportRow[]): Promise<boolean> {
+      this.error = null;
+
+      try {
+        const authStore = useAuthStore();
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (authStore.token) {
+          headers.Authorization = `Bearer ${authStore.token}`;
+        }
+
+        const response = await fetch(`${API_URL}/scheduled-work/import`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ rows }),
+        });
+
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(body.message || `Failed to import shifts: ${response.status}`);
+        }
+
+        Notify.create({
+          type: 'positive',
+          message: body.message || `Imported ${body.created ?? 0} shifts.`,
+        });
+        return true;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Error importing shifts';
+        Notify.create({ type: 'negative', message: this.error });
+        return false;
       }
     },
   },

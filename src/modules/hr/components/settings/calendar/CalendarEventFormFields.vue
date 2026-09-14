@@ -381,7 +381,9 @@ function handleEmploymentContractChange(contractId: string | null) {
 }
 
 const employeeOptionLabel = (employee: { firstName: string; lastName: string; code?: string }) => {
-  const name = `${employee.firstName} ${employee.lastName}`.trim();
+  const first = (employee.firstName ?? '').trim();
+  const last = (employee.lastName ?? '').trim();
+  const name = last && first ? `${last}, ${first}` : `${last} ${first}`.trim();
   return employee.code ? `${name} · ${employee.code}` : name;
 };
 </script>

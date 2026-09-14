@@ -72,6 +72,7 @@ function resolveEmployeeLabel(employeeId: string): string | null {
 function isEmployeeRouteSegment(parentPath: string, segment: string): boolean {
   if (!UUID_SEGMENT.test(segment)) return false;
   return (
+    parentPath === '/hr/employees' ||
     parentPath === '/payroll/employees' ||
     parentPath === '/employees' ||
     parentPath === '/employee'
@@ -96,7 +97,11 @@ const breadcrumbs = computed(() => {
     const menuMatch = menuItems.find((item) => item.route === currentPath);
 
     let label = menuMatch?.title ?? formatSegmentLabel(segment);
-    if (parentPath === '/payroll/reports' || parentPath === '/reports') {
+    if (
+      parentPath === '/core/reports' ||
+      parentPath === '/payroll/reports' ||
+      parentPath === '/reports'
+    ) {
       label = reportLabel(segment) ?? label;
     }
     if (isEmployeeRouteSegment(parentPath, segment)) {

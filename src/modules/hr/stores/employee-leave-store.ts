@@ -36,6 +36,7 @@ interface CreateEmployeeLeaveBody {
   multiplier?: number;
   applyHoursBank?: boolean;
   leaveHours?: number | null;
+  assigned?: boolean;
 }
 
 interface UpdateEmployeeLeaveBody {
@@ -62,6 +63,8 @@ export interface TeamLeaveRow {
   endDate?: string | null;
   leaveTypeId: number | string;
   leaveType?: string | null;
+  leaveTypeIsPaid?: boolean | null;
+  leaveTypeCode?: string | null;
   departmentId?: number | null;
   departmentName?: string | null;
   worksiteId?: number | null;
@@ -72,6 +75,8 @@ export interface TeamLeaveRow {
   statusName?: string | null;
   notes?: string | null;
   statusNote?: string | null;
+  paymentTreatment?: string | null;
+  multiplier?: number | null;
   attachments?: Array<{
     id: string;
     fileName: string;
@@ -80,6 +85,7 @@ export interface TeamLeaveRow {
   canApprove: boolean;
   canReject: boolean;
   canCancel: boolean;
+  requiresPaymentConfirmation?: boolean;
   duration?: string | null;
   approvalDate?: string | null;
 }
@@ -398,7 +404,7 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
       notes?: string | null,
       multiplier?: number,
       attachments: File[] = [],
-      options?: { applyHoursBank?: boolean; leaveHours?: number | null },
+      options?: { applyHoursBank?: boolean; leaveHours?: number | null; assigned?: boolean },
     ): Promise<EmployeeLeave | null> {
       this.isLoading = true;
       this.error = null;
@@ -435,6 +441,9 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
           if (options.leaveHours != null) {
             body.leaveHours = options.leaveHours;
           }
+        }
+        if (options?.assigned) {
+          body.assigned = true;
         }
 
         const hasAttachments = attachments.length > 0;
@@ -623,6 +632,7 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
       id: string,
       action: 'approve' | 'reject' | 'cancel' | 'submit_for_approval',
       note?: string | null,
+      paymentTreatment?: 'unpaid' | 'paid_with_payroll' | 'already_paid' | null,
     ): Promise<EmployeeLeave | null> {
       this.isLoading = true;
       this.error = null;
@@ -635,7 +645,11 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
         const response = await fetch(`${API_URL}/employee-leaves/${id}/status`, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ action, note: note ?? null }),
+          body: JSON.stringify({
+            action,
+            note: note ?? null,
+            paymentTreatment: paymentTreatment ?? null,
+          }),
         });
 
         if (!response.ok) {

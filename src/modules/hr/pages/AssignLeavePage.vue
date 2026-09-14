@@ -27,6 +27,7 @@
       <div class="text-subtitle2 q-mb-sm">Leave details</div>
       <AddEmployeeLeave
         embedded
+        assigned
         :disabled="!selectedEmployeeId"
         @saved="onLeaveSaved"
       />

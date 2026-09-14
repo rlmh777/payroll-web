@@ -11,12 +11,13 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { employeePath } from '@core/config/module-routes';
 import type { Employee } from '@core/types/models';
 import { useEmployeeStore } from '@hr/stores/employee-store';
 import ViewEmployee from '@hr/components/employee/view/ViewEmployee.vue';
 
+const route = useRoute();
 const router = useRouter();
 const employeeStore = useEmployeeStore();
 
@@ -54,7 +55,7 @@ function emptyEmployeeDraft(): Employee {
 }
 
 function goBack() {
-  void router.push(employeePath());
+  void router.push(employeePath(undefined, route.path));
 }
 
 onMounted(() => {

@@ -26,7 +26,7 @@
               label="Scope"
               outlined
               dense
-              :disable="reportsStore.isLoadingPayeEmploymentDetails"
+              :disable="isBusy || !yearOptions.length"
             />
           </div>
           <div class="col-12 col-md-3">
@@ -36,7 +36,9 @@
               label="Year"
               outlined
               dense
-              :disable="reportsStore.isLoadingPayeEmploymentDetails"
+              :loading="reportsStore.isLoadingPayeEmploymentDetailsPeriods"
+              :disable="isBusy || !yearOptions.length"
+              @update:model-value="onYearChanged"
             />
           </div>
           <div class="col-12 col-md-3">
@@ -48,7 +50,8 @@
               label="Month"
               outlined
               dense
-              :disable="scope !== 'monthly' || reportsStore.isLoadingPayeEmploymentDetails"
+              :loading="reportsStore.isLoadingPayeEmploymentDetailsPeriods"
+              :disable="scope !== 'monthly' || isBusy || !monthOptions.length"
             />
           </div>
           <div class="col-12 col-md-3">
@@ -63,6 +66,14 @@
             />
           </div>
         </div>
+
+        <q-banner
+          v-if="!reportsStore.isLoadingPayeEmploymentDetailsPeriods && !yearOptions.length"
+          rounded
+          class="bg-grey-2 text-grey-8 q-mt-md"
+        >
+          No processed payroll runs were found. Year options appear after payroll is processed.
+        </q-banner>
       </q-card-section>
     </q-card>
 
@@ -176,7 +187,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import type { QTableProps } from 'quasar';
 import { storeToRefs } from 'pinia';
@@ -188,12 +199,14 @@ import {
 
 const $q = useQuasar();
 const reportsStore = useReportsStore();
-const { payeEmploymentDetailsReport: report } = storeToRefs(reportsStore);
+const {
+  payeEmploymentDetailsReport: report,
+  payeEmploymentDetailsPeriods: periods,
+} = storeToRefs(reportsStore);
 
-const currentYear = new Date().getFullYear();
 const scope = ref<'yearly' | 'monthly'>('monthly');
-const year = ref(currentYear);
-const month = ref(new Date().getMonth() + 1);
+const year = ref<number | null>(null);
+const month = ref<number | null>(null);
 const isExporting = ref(false);
 
 const scopeOptions = [
@@ -201,25 +214,20 @@ const scopeOptions = [
   { label: 'Year and month', value: 'monthly' },
 ];
 
-const yearOptions = Array.from({ length: currentYear - 2016 }, (_, index) => 2017 + index).reverse();
+const yearOptions = computed(() => periods.value?.years ?? []);
+const monthOptions = computed(() => {
+  if (!year.value || !periods.value) return [];
+  return periods.value.monthsByYear[String(year.value)] ?? [];
+});
 
-const monthOptions = [
-  { label: 'January', value: 1 },
-  { label: 'February', value: 2 },
-  { label: 'March', value: 3 },
-  { label: 'April', value: 4 },
-  { label: 'May', value: 5 },
-  { label: 'June', value: 6 },
-  { label: 'July', value: 7 },
-  { label: 'August', value: 8 },
-  { label: 'September', value: 9 },
-  { label: 'October', value: 10 },
-  { label: 'November', value: 11 },
-  { label: 'December', value: 12 },
-];
+const isBusy = computed(
+  () =>
+    reportsStore.isLoadingPayeEmploymentDetails
+    || reportsStore.isLoadingPayeEmploymentDetailsPeriods,
+);
 
 const canGenerate = computed(() => {
-  if (!year.value) return false;
+  if (!year.value || isBusy.value || !yearOptions.value.length) return false;
   if (scope.value === 'monthly' && !month.value) return false;
   return true;
 });
@@ -272,7 +280,51 @@ const columns: QTableProps['columns'] = [
   },
 ];
 
+function selectDefaultPeriod() {
+  const availableYears = periods.value?.years ?? [];
+  if (!availableYears.length) {
+    year.value = null;
+    month.value = null;
+    return;
+  }
+
+  if (!year.value || !availableYears.includes(year.value)) {
+    year.value = availableYears[0] ?? null;
+  }
+
+  syncMonthToAvailableOptions();
+}
+
+function syncMonthToAvailableOptions() {
+  const options = monthOptions.value;
+  if (!options.length) {
+    month.value = null;
+    return;
+  }
+
+  if (!month.value || !options.some((option) => option.value === month.value)) {
+    month.value = options[0]?.value ?? null;
+  }
+}
+
+function onYearChanged() {
+  syncMonthToAvailableOptions();
+}
+
+watch(monthOptions, () => {
+  syncMonthToAvailableOptions();
+});
+
+watch(scope, (nextScope) => {
+  if (nextScope === 'monthly') {
+    syncMonthToAvailableOptions();
+  }
+});
+
 async function generateReport() {
+  if (!year.value) return;
+  if (scope.value === 'monthly' && !month.value) return;
+
   const ok = await reportsStore.fetchPayeEmploymentDetailsReport({
     year: year.value,
     month: scope.value === 'monthly' ? month.value : null,
@@ -309,6 +361,20 @@ async function handleExportExcel() {
     isExporting.value = false;
   }
 }
+
+onMounted(async () => {
+  const ok = await reportsStore.fetchPayeEmploymentDetailsPeriods();
+  if (!ok) {
+    $q.notify({
+      type: 'negative',
+      message: reportsStore.error || 'Failed to load available payroll periods.',
+      position: 'top',
+    });
+    return;
+  }
+
+  selectDefaultPeriod();
+});
 </script>
 
 <style scoped>

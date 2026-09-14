@@ -58,7 +58,7 @@
         <q-td :props="props" class="text-right">
           <div class="action-buttons">
             <q-btn
-              v-if="leaveAllowsSupervisorApproval(resolveLeaveStatusCode(props.row))"
+              v-if="leaveAllowsApprovalAction(resolveLeaveStatusCode(props.row))"
               flat
               round
               dense
@@ -71,7 +71,7 @@
               <q-tooltip>Approve</q-tooltip>
             </q-btn>
             <q-btn
-              v-if="leaveAllowsSupervisorApproval(resolveLeaveStatusCode(props.row))"
+              v-if="leaveAllowsApprovalAction(resolveLeaveStatusCode(props.row))"
               flat
               round
               dense
@@ -160,9 +160,12 @@ import EditEmployeeLeave from './EditEmployeeLeave.vue';
 import type { EmployeeLeave } from '@core/types/models';
 import {
   formatLeaveStatus,
+  leaveAllowsApprovalAction,
   leaveAllowsCancellation,
-  leaveAllowsSupervisorApproval,
+  leaveRequiresPaymentConfirmation,
   leaveStatusColor,
+  LEAVE_PAYMENT_TREATMENT_OPTIONS,
+  type LeavePaymentTreatment,
 } from '@hr/utils/leave-status';
 
 const $q = useQuasar();
@@ -304,14 +307,14 @@ function handleStatusAction(
     cancel: 'Cancel this leave?',
   };
 
-  $q.dialog({
-    title: 'Confirm',
-    message: labels[action],
-    cancel: true,
-    ok: { label: action.charAt(0).toUpperCase() + action.slice(1), color: action === 'approve' ? 'positive' : 'negative' },
-  }).onOk(() => {
+  const runUpdate = (paymentTreatment?: LeavePaymentTreatment | null) => {
     void (async () => {
-      const updated = await employeeLeaveStore.updateLeaveStatus(row.id, action);
+      const updated = await employeeLeaveStore.updateLeaveStatus(
+        row.id,
+        action,
+        null,
+        paymentTreatment ?? null,
+      );
       if (!updated) {
         $q.notify({ type: 'negative', message: employeeLeaveStore.error || 'Update failed.', position: 'top' });
         return;
@@ -319,6 +322,39 @@ function handleStatusAction(
       $q.notify({ type: 'positive', message: 'Leave status updated.', position: 'top' });
       await reloadLeaves(employeeLeaveStore.currentPage, pagination.value.rowsPerPage);
     })();
+  };
+
+  if (action === 'approve' && leaveRequiresPaymentConfirmation(
+    resolveLeaveStatusCode(row),
+    row.leave_type?.code,
+    row.leave_type?.name,
+  )) {
+    const defaultTreatment: LeavePaymentTreatment =
+      row.leave_type?.isPaid === false ? 'unpaid' : 'paid_with_payroll';
+
+    $q.dialog({
+      title: 'Confirm leave payment',
+      message: 'How should leave pay be handled?\n\n• Already paid in advance — salary for those days is excluded on payroll (avoids double pay)\n• Pay with this payroll — keep normal salary for those days\n• Unpaid — exclude those days from pay',
+      options: {
+        type: 'radio',
+        model: defaultTreatment,
+        items: LEAVE_PAYMENT_TREATMENT_OPTIONS,
+      },
+      cancel: true,
+      ok: { label: 'Confirm', color: 'positive' },
+    }).onOk((paymentTreatment: LeavePaymentTreatment) => {
+      runUpdate(paymentTreatment);
+    });
+    return;
+  }
+
+  $q.dialog({
+    title: 'Confirm',
+    message: labels[action],
+    cancel: true,
+    ok: { label: action.charAt(0).toUpperCase() + action.slice(1), color: action === 'approve' ? 'positive' : 'negative' },
+  }).onOk(() => {
+    runUpdate();
   });
 }
 

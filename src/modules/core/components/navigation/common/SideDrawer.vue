@@ -48,18 +48,18 @@ function shouldOpenDrawerForMenu(item: MenuItem) {
 }
 
 function syncSelectedMenuFromRoute() {
-  if (!menuStore.menuTree.length) {
+  if (!menuStore.activeModuleMenus.length) {
     return;
   }
 
-  const match = findTopMenuForPath(route.path, menuStore.menuTree);
+  const match = findTopMenuForPath(route.path, menuStore.activeModuleMenus);
   if (match) {
     selectedMenu.value = match;
     return;
   }
 
-  if (!selectedMenu.value) {
-    selectedMenu.value = menuStore.menuTree[0] ?? null;
+  if (!selectedMenu.value || !menuStore.activeModuleMenus.some((item) => item.id === selectedMenu.value?.id)) {
+    selectedMenu.value = menuStore.activeModuleMenus[0] ?? null;
   }
 }
 
@@ -82,7 +82,7 @@ onUnmounted(() => {
 
 function onOpenMenu(e: Event) {
   const id = (e as CustomEvent).detail;
-  const found = menuStore.menuTree.find((m) => m.id === id) ?? null;
+  const found = menuStore.activeModuleMenus.find((m) => m.id === id) ?? null;
   if (found) {
     selectedMenu.value = found;
     drawerOpen.value = shouldOpenDrawerForMenu(found);
@@ -96,7 +96,7 @@ function onToggleDrawer() {
 watch(() => route.path, syncSelectedMenuFromRoute, { immediate: true });
 
 watch(
-  () => menuStore.menuTree,
+  () => [menuStore.activeModuleMenus, menuStore.activeModule] as const,
   () => {
     syncSelectedMenuFromRoute();
   },

@@ -44,6 +44,10 @@ const showBreadcrumbs = computed(() => {
     return true;
   }
 
-  return route.path.startsWith('/payroll/reports') || route.path.startsWith('/reports');
+  return (
+    route.path.startsWith('/core/reports') ||
+    route.path.startsWith('/payroll/reports') ||
+    route.path.startsWith('/reports')
+  );
 });
 </script>

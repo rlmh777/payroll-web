@@ -228,6 +228,8 @@ export interface SocialSecurityPaymentsByMonthPeriods {
   monthsByYear: Record<string, Array<{ value: number; label: string }>>;
 }
 
+export type PayeEmploymentDetailsPeriods = SocialSecurityPaymentsByMonthPeriods;
+
 export interface BankUploadReportRow {
   transactionType: string;
   paymentType: string;
@@ -270,6 +272,7 @@ export const useReportsStore = defineStore('reports', {
     payrollJournalDepartmentsReport: null as PayrollJournalDepartmentsReport | null,
     scheduledVsWorkedHoursReport: null as ScheduledVsWorkedHoursReport | null,
     payeEmploymentDetailsReport: null as PayeEmploymentDetailsReport | null,
+    payeEmploymentDetailsPeriods: null as PayeEmploymentDetailsPeriods | null,
     socialSecurityPaymentsByMonthReport: null as SocialSecurityPaymentsByMonthReport | null,
     socialSecurityPaymentsByMonthPeriods: null as SocialSecurityPaymentsByMonthPeriods | null,
     bankUploadReport: null as BankUploadReport | null,
@@ -279,6 +282,7 @@ export const useReportsStore = defineStore('reports', {
     isLoadingPayrollJournalDepartments: false,
     isLoadingScheduledVsWorkedHours: false,
     isLoadingPayeEmploymentDetails: false,
+    isLoadingPayeEmploymentDetailsPeriods: false,
     isLoadingSocialSecurityPaymentsByMonth: false,
     isLoadingSocialSecurityPaymentsByMonthPeriods: false,
     isRecalculatingSocialSecurityPaymentsByMonth: false,
@@ -515,6 +519,33 @@ export const useReportsStore = defineStore('reports', {
     clearPayeEmploymentDetailsReport() {
       this.payeEmploymentDetailsReport = null;
       this.error = null;
+    },
+
+    async fetchPayeEmploymentDetailsPeriods(): Promise<boolean> {
+      this.isLoadingPayeEmploymentDetailsPeriods = true;
+      this.error = null;
+
+      try {
+        const response = await fetch(
+          `${API_URL}/reports/paye-employment-details/periods`,
+          { headers: this.buildHeaders() },
+        );
+        const body = await response.json().catch(() => ({} as Record<string, unknown>));
+        if (!response.ok) {
+          throw new Error(this.parseError(body, 'Failed to load available payroll periods.'));
+        }
+
+        this.payeEmploymentDetailsPeriods = body as PayeEmploymentDetailsPeriods;
+        return true;
+      } catch (error) {
+        this.payeEmploymentDetailsPeriods = null;
+        this.error = error instanceof Error
+          ? error.message
+          : 'Failed to load available payroll periods.';
+        return false;
+      } finally {
+        this.isLoadingPayeEmploymentDetailsPeriods = false;
+      }
     },
 
     async fetchSocialSecurityPaymentsByMonthPeriods(): Promise<boolean> {

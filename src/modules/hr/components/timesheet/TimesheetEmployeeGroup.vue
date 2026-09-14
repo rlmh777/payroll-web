@@ -40,6 +40,9 @@
             <div v-if="groupOvertimeHours > 0" class="text-caption text-deep-orange text-weight-medium q-mt-xs">
               {{ formatHours(groupOvertimeHours) }} OT
             </div>
+            <div class="text-caption text-blue-8 text-weight-medium q-mt-xs">
+              {{ formatHours(accruedHours) }} accrued
+            </div>
           </div>
         </div>
       </div>
@@ -424,6 +427,7 @@ import { storeToRefs } from 'pinia';
 import { useQuasar } from 'quasar';
 import { usePermissions } from '@core/composables/usePermissions';
 import { useAttendanceStore, type TimesheetRow } from '@payroll/stores/attendance-store';
+import { useEmployeePoolStore } from '@payroll/stores/employee-pool-store';
 import { useAttendanceSettingStore } from 'src/stores/attendance-setting-store';
 import { useTimesheetStore } from '@hr/stores/timesheet-store';
 import type { TimesheetEmployeeGroup } from '@hr/stores/timesheet-store';
@@ -464,8 +468,14 @@ const props = defineProps<{
   group: TimesheetEmployeeGroup;
 }>();
 
+const employeePoolStore = useEmployeePoolStore();
+
 const groupOvertimeHours = computed(() =>
   props.group.rows.reduce((sum, row) => sum + Number(row.overtimeHours || 0), 0),
+);
+
+const accruedHours = computed(() =>
+  employeePoolStore.accruedHoursFor(props.group.employeeId),
 );
 
 const groupPeriodTotals = computed(() => sumTimesheetPeriodTotals(props.group.rows));

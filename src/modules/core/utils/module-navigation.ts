@@ -30,6 +30,10 @@ export function storeActiveModule(code: string): void {
   sessionStorage.setItem(ACTIVE_MODULE_KEY, code);
 }
 
+export function clearStoredActiveModule(): void {
+  sessionStorage.removeItem(ACTIVE_MODULE_KEY);
+}
+
 export function resolveModuleForPath(
   path: string,
   menuTree: MenuItem[],
@@ -39,26 +43,51 @@ export function resolveModuleForPath(
     return topMatch.module_code;
   }
 
-  if (path.startsWith('/payroll')) {
+  if (path === '/' || path.startsWith('/payroll')) {
     return 'payroll';
   }
 
-  return 'payroll';
+  if (path.startsWith('/hr/')) {
+    return 'hr';
+  }
+
+  if (path.startsWith('/admin/')) {
+    return 'admin';
+  }
+
+  if (path.startsWith('/core/')) {
+    return 'core';
+  }
+
+  return null;
 }
 
 export function pickDefaultActiveModule(
   modules: AppModule[],
   path: string,
   menuTree: MenuItem[],
+  preferredModule?: string | null,
 ): string {
-  const stored = getStoredActiveModule();
-  if (stored && modules.some((module) => module.code === stored && module.enabled)) {
-    return stored;
+  const isEnabled = (code: string | null | undefined) =>
+    !!code && modules.some((module) => module.code === code && module.enabled);
+
+  // Deep links win so shared URLs open the correct application.
+  const fromPath = resolveModuleForPath(path, menuTree);
+  if (path !== '/' && isEnabled(fromPath)) {
+    return fromPath!;
   }
 
-  const fromPath = resolveModuleForPath(path, menuTree);
-  if (fromPath && modules.some((module) => module.code === fromPath && module.enabled)) {
-    return fromPath;
+  if (isEnabled(preferredModule)) {
+    return preferredModule!;
+  }
+
+  const stored = getStoredActiveModule();
+  if (isEnabled(stored)) {
+    return stored!;
+  }
+
+  if (isEnabled(fromPath)) {
+    return fromPath!;
   }
 
   return modules.find((module) => module.enabled)?.code ?? 'payroll';

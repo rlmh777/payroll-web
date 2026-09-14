@@ -52,6 +52,22 @@
 
           <q-separator />
 
+          <div class="text-subtitle1 text-weight-bold">Vacation pay posting</div>
+          <div class="text-body2 text-grey-7">
+            When enabled, vacation leave pay posts to the Vacation Pay expense account on journal entries
+            instead of the employee’s department wage account. Choose the account under
+            <router-link to="/payroll/settings/account-mapping" class="text-primary text-weight-medium">Account Mapping</router-link>
+            (<code>VACATION_PAY</code>).
+          </div>
+
+          <q-toggle
+            v-model="form.postVacationPayToVacationAccount"
+            label="Post vacation pay to vacation expense account"
+            :disable="store.isLoading || store.isSaving"
+          />
+
+          <q-separator />
+
           <div class="text-subtitle1 text-weight-bold">Timesheet auto-lock</div>
           <div class="text-body2 text-grey-7">
             Posted payroll runs automatically lock their period timesheets after the configured delay.
@@ -131,6 +147,7 @@ const { settings } = storeToRefs(store);
 const form = reactive({
   incomeTaxRatePercent: 25,
   secondReliefAmount: 100,
+  postVacationPayToVacationAccount: true,
   timesheetAutoLockEnabled: true,
   timesheetAutoLockTime: '17:00',
   timesheetAutoLockDaysAfterPayDate: 1,
@@ -143,6 +160,7 @@ function syncFormFromStore() {
 
   form.incomeTaxRatePercent = settings.value.incomeTaxRatePercent;
   form.secondReliefAmount = settings.value.secondReliefAmount;
+  form.postVacationPayToVacationAccount = settings.value.postVacationPayToVacationAccount;
   form.timesheetAutoLockEnabled = settings.value.timesheetAutoLockEnabled;
   form.timesheetAutoLockTime = settings.value.timesheetAutoLockTime;
   form.timesheetAutoLockDaysAfterPayDate = settings.value.timesheetAutoLockDaysAfterPayDate;
@@ -157,6 +175,7 @@ async function save() {
     await store.updateSettings({
       incomeTaxRate: Number((Number(form.incomeTaxRatePercent) / 100).toFixed(4)),
       secondReliefAmount: Number(form.secondReliefAmount),
+      postVacationPayToVacationAccount: form.postVacationPayToVacationAccount,
       timesheetAutoLockEnabled: form.timesheetAutoLockEnabled,
       timesheetAutoLockTime: form.timesheetAutoLockTime,
       timesheetAutoLockDaysAfterPayDate: Number(form.timesheetAutoLockDaysAfterPayDate),

@@ -15,6 +15,23 @@
       no-data-label="No certifications"
       :pagination="{ rowsPerPage: 20 }"
     >
+      <template #body-cell-file="props">
+        <q-td :props="props">
+          <q-btn
+            v-if="fileUrl(props.row)"
+            flat
+            dense
+            no-caps
+            color="primary"
+            icon="download"
+            :label="fileLabel(props.row)"
+            :href="fileUrl(props.row) ?? undefined"
+            target="_blank"
+            rel="noopener noreferrer"
+          />
+          <span v-else>—</span>
+        </q-td>
+      </template>
       <template #body-cell-actions="props">
         <q-td :props="props" class="text-right">
           <q-btn flat round dense icon="edit" color="primary" size="sm" @click="openEdit(props.row)" />
@@ -37,6 +54,10 @@ import { ref, watch } from 'vue';
 import { useQuasar, type QTableProps } from 'quasar';
 import CertificationFormDialog from './CertificationFormDialog.vue';
 import {
+  educationAttachmentDisplayName,
+  resolveEducationAttachmentUrl,
+} from './education-attachment';
+import {
   useEmployeeCertificationStore,
   type EmployeeCertification,
 } from 'src/stores/employee-certification-store';
@@ -54,8 +75,17 @@ const columns: QTableProps['columns'] = [
   { name: 'credentialId', label: 'Credential ID', field: (r) => r.credentialId ?? '—', align: 'left' },
   { name: 'issuedOn', label: 'Issued', field: (r) => r.issuedOn ?? '—', align: 'left' },
   { name: 'expiresOn', label: 'Expires', field: (r) => r.expiresOn ?? '—', align: 'left' },
+  { name: 'file', label: 'File', field: 'fileName', align: 'left' },
   { name: 'actions', label: '', field: 'actions', align: 'right' },
 ];
+
+function fileLabel(row: EmployeeCertification) {
+  return educationAttachmentDisplayName(row.fileName, row.filePath) || 'Download';
+}
+
+function fileUrl(row: EmployeeCertification) {
+  return resolveEducationAttachmentUrl(row.fileUrl, row.filePath);
+}
 
 function openCreate() {
   selectedRecord.value = null;

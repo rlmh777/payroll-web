@@ -55,6 +55,8 @@ export const useEmployeePoolStore = defineStore('employee-pool', {
     isLoadingPoints: false,
     hoursBank: null as HoursBankSummary | null,
     isLoadingHoursBank: false,
+    accruedHoursByEmployeeId: {} as Record<string, number>,
+    isLoadingAccruedHours: false,
     error: null as string | null,
   }),
 
@@ -66,6 +68,52 @@ export const useEmployeePoolStore = defineStore('employee-pool', {
         headers.Authorization = `Bearer ${authStore.token}`;
       }
       return headers;
+    },
+
+    accruedHoursFor(employeeId: string | null | undefined): number {
+      if (!employeeId) {
+        return 0;
+      }
+
+      return Number(this.accruedHoursByEmployeeId[employeeId] ?? 0);
+    },
+
+    async fetchAccruedHours(employeeIds: string[]) {
+      const ids = [...new Set(employeeIds.map((id) => String(id).trim()).filter(Boolean))];
+      if (ids.length === 0) {
+        return this.accruedHoursByEmployeeId;
+      }
+
+      this.isLoadingAccruedHours = true;
+      this.error = null;
+
+      try {
+        const response = await fetch(`${API_URL}/employees/hours-bank/balances`, {
+          method: 'POST',
+          headers: this.buildHeaders(),
+          body: JSON.stringify({ employee_ids: ids }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to load accrued hours.');
+        }
+
+        const data = await response.json();
+        const balances = (data.balances ?? {}) as Record<string, number>;
+        const next = { ...this.accruedHoursByEmployeeId };
+
+        for (const id of ids) {
+          next[id] = Number(balances[id] ?? 0);
+        }
+
+        this.accruedHoursByEmployeeId = next;
+        return this.accruedHoursByEmployeeId;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to load accrued hours.';
+        return this.accruedHoursByEmployeeId;
+      } finally {
+        this.isLoadingAccruedHours = false;
+      }
     },
 
     async fetchPoints(employeeId: string) {
@@ -133,6 +181,10 @@ export const useEmployeePoolStore = defineStore('employee-pool', {
           balanceHours: Number(data.balanceHours ?? 0),
           ledger: data.ledger ?? [],
         };
+        this.accruedHoursByEmployeeId = {
+          ...this.accruedHoursByEmployeeId,
+          [employeeId]: this.hoursBank.balanceHours,
+        };
         return this.hoursBank;
       } finally {
         this.isLoadingHoursBank = false;
@@ -147,11 +199,16 @@ export const useEmployeePoolStore = defineStore('employee-pool', {
       });
       if (!response.ok) throw new Error('Failed to adjust hours bank.');
       const data = await response.json();
-      this.hoursBank = data.data ?? {
+      const hoursBank: HoursBankSummary = data.data ?? {
         balanceHours: Number(data.balanceHours ?? 0),
         ledger: [],
       };
-      return this.hoursBank;
+      this.hoursBank = hoursBank;
+      this.accruedHoursByEmployeeId = {
+        ...this.accruedHoursByEmployeeId,
+        [employeeId]: Number(hoursBank.balanceHours ?? 0),
+      };
+      return hoursBank;
     },
   },
 });

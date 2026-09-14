@@ -297,7 +297,11 @@ const editScopeOptions = computed(() => {
 });
 
 const employeeOptionLabel = (employee: EmployeeOption) => {
-  const name = `${employee.firstName} ${employee.lastName}`.trim();
+  const name = (() => {
+    const first = (employee.firstName ?? '').trim();
+    const last = (employee.lastName ?? '').trim();
+    return last && first ? `${last}, ${first}` : `${last} ${first}`.trim();
+  })();
   return employee.code ? `${name} · ${employee.code}` : name;
 };
 
@@ -316,6 +320,7 @@ function filterEmployees(val: string, update: (callback: () => void) => void) {
         employee.lastName,
         employee.code,
         `${employee.firstName} ${employee.lastName}`.trim(),
+        `${employee.lastName}, ${employee.firstName}`.trim(),
       ],
     );
   });

@@ -156,7 +156,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useQuasar } from 'quasar';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { employeePath } from '@core/config/module-routes';
 import type { QTableColumn } from 'quasar';
 import { useEmployeeStore } from '@hr/stores/employee-store';
@@ -171,6 +171,7 @@ import {
 const PREVIEW_LIMIT = 25;
 
 const $q = useQuasar();
+const route = useRoute();
 const router = useRouter();
 const employeeStore = useEmployeeStore();
 
@@ -279,7 +280,7 @@ function asDisplayString(value: unknown): string {
 }
 
 function goBack() {
-  void router.push(employeePath());
+  void router.push(employeePath(undefined, route.path));
 }
 
 function onFileSelected(value: File | File[] | null) {

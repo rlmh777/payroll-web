@@ -16,6 +16,7 @@ export interface PayrollSettings {
   incomeTaxRate: number;
   incomeTaxRatePercent: number;
   secondReliefAmount: number;
+  postVacationPayToVacationAccount: boolean;
   timesheetLockBeforeDate: string | null;
   timesheetAutoLockEnabled: boolean;
   timesheetAutoLockTime: string;
@@ -48,6 +49,7 @@ function normalizeSettings(data: Partial<PayrollSettings> | null | undefined): P
     incomeTaxRate: rate,
     incomeTaxRatePercent: Number(data?.incomeTaxRatePercent ?? rate * 100),
     secondReliefAmount: Number(data?.secondReliefAmount ?? 100),
+    postVacationPayToVacationAccount: data?.postVacationPayToVacationAccount !== false,
     timesheetLockBeforeDate: data?.timesheetLockBeforeDate
       ? String(data.timesheetLockBeforeDate)
       : null,
@@ -70,6 +72,7 @@ function normalizeSettings(data: Partial<PayrollSettings> | null | undefined): P
 export type PayrollSettingsUpdatePayload = {
   incomeTaxRate?: number;
   secondReliefAmount?: number;
+  postVacationPayToVacationAccount?: boolean;
   timesheetLockBeforeDate?: string | null;
   timesheetAutoLockEnabled?: boolean;
   timesheetAutoLockTime?: string;

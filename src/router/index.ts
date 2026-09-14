@@ -8,7 +8,7 @@ import {
 import { useAuthStore } from 'src/stores/auth';
 import { useMenuStore } from '@core/stores/menus';
 import { isPathAllowedByMenus, collectMenuRoutes } from '@core/utils/menu-navigation';
-import { routeViewPermission } from '@core/utils/permissions';
+import { hasRoutePermission, routeViewPermission } from '@core/utils/permissions';
 import routes from './routes';
 
 /*
@@ -51,7 +51,7 @@ export default route(function (/* { store } */) {
       return true;
     }
 
-    return (authStore.user?.permissions ?? []).includes(requiredPermission);
+    return hasRoutePermission(authStore.user?.permissions ?? [], requiredPermission);
   }
 
   authStore.setUnauthorizedHandler((redirectPath) => {
@@ -84,6 +84,8 @@ export default route(function (/* { store } */) {
       if (!menuStore.menuTree.length && authStore.token) {
         await menuStore.fetchMenus();
       }
+
+      menuStore.syncActiveModuleFromPath(to.path);
 
       if (!canAccessPath(to.path)) {
         return { path: '/' };

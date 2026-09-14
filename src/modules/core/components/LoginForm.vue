@@ -49,6 +49,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useAuthStore } from '@core/stores/auth';
+import { useMenuStore } from '@core/stores/menus';
 import { useOrganizationStore } from 'src/stores/organization-store';
 import { useRouter } from 'vue-router';
 
@@ -57,6 +58,7 @@ const password = ref('Password123!');
 const loading = ref(false);
 const isPwd = ref(true);
 const authStore = useAuthStore();
+const menuStore = useMenuStore();
 const organizationStore = useOrganizationStore();
 const router = useRouter();
 
@@ -72,7 +74,12 @@ async function onSubmit() {
     const success = await authStore.login(email.value, password.value);
     if (success) {
       await organizationStore.fetchOrganizations();
-      void router.push('/');
+      await menuStore.fetchMenus();
+
+      const preferred = authStore.user?.preferences?.defaultModule ?? 'payroll';
+      menuStore.setActiveModule(preferred);
+      const target = menuStore.enabledModules.find((module) => module.code === preferred);
+      void router.push(target?.default_route || '/');
     }
   } catch (error) {
     console.error('Navigation error:', error);

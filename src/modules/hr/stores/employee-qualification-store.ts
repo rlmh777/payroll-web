@@ -1,9 +1,10 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import { useAuthStore } from '@core/stores/auth';
+import { buildMultipartBody, type EducationAttachmentFields } from '@hr/components/employee/education/education-attachment';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 
-export interface EmployeeQualification {
+export interface EmployeeQualification extends EducationAttachmentFields {
   id: string;
   employeeId: string;
   institutionId: number;
@@ -15,6 +16,8 @@ export interface EmployeeQualification {
   degree?: { id: number; name: string } | null;
 }
 
+type QualificationPayload = Partial<Omit<EmployeeQualification, 'id' | 'institution' | 'degree' | 'fileUrl' | 'filePath' | 'fileName' | 'mimeType' | 'fileSize'>>;
+
 export const useEmployeeQualificationStore = defineStore('employeeQualification', {
   state: () => ({
     records: [] as EmployeeQualification[],
@@ -25,9 +28,12 @@ export const useEmployeeQualificationStore = defineStore('employeeQualification'
   }),
 
   actions: {
-    buildHeaders() {
+    buildHeaders(includeJsonContentType = true) {
       const authStore = useAuthStore();
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      const headers: HeadersInit = {};
+      if (includeJsonContentType) {
+        headers['Content-Type'] = 'application/json';
+      }
       if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`;
       return headers;
     },
@@ -50,27 +56,29 @@ export const useEmployeeQualificationStore = defineStore('employeeQualification'
       }
     },
 
-    async createRecord(payload: Partial<EmployeeQualification>) {
+    async createRecord(payload: QualificationPayload, attachmentFile?: File | null) {
+      const { body, useJsonContentType } = buildMultipartBody(payload, attachmentFile);
       const response = await fetch(`${API_URL}/qualifications`, {
         method: 'POST',
-        headers: this.buildHeaders(),
-        body: JSON.stringify(payload),
+        headers: this.buildHeaders(useJsonContentType),
+        body,
       });
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.message || 'Create failed');
+        const responseBody = await response.json().catch(() => ({}));
+        throw new Error(responseBody.message || 'Create failed');
       }
     },
 
-    async updateRecord(id: string, payload: Partial<EmployeeQualification>) {
+    async updateRecord(id: string, payload: QualificationPayload, attachmentFile?: File | null) {
+      const { body, useJsonContentType } = buildMultipartBody(payload, attachmentFile);
       const response = await fetch(`${API_URL}/qualifications/${id}`, {
-        method: 'PUT',
-        headers: this.buildHeaders(),
-        body: JSON.stringify(payload),
+        method: attachmentFile ? 'POST' : 'PUT',
+        headers: this.buildHeaders(useJsonContentType),
+        body,
       });
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.message || 'Update failed');
+        const responseBody = await response.json().catch(() => ({}));
+        throw new Error(responseBody.message || 'Update failed');
       }
     },
 
@@ -80,8 +88,8 @@ export const useEmployeeQualificationStore = defineStore('employeeQualification'
         headers: this.buildHeaders(),
       });
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.message || 'Delete failed');
+        const responseBody = await response.json().catch(() => ({}));
+        throw new Error(responseBody.message || 'Delete failed');
       }
       this.records = this.records.filter((record) => record.id !== id);
     },

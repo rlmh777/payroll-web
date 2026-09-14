@@ -26,6 +26,14 @@
 
           <AppDialogForm v-if="editable && event.source === 'scheduled_work'">
             <div class="col-12">
+              <q-banner
+                v-if="leaveConflictMessage"
+                dense
+                rounded
+                class="bg-orange-1 text-orange-10 q-mb-md"
+              >
+                {{ leaveConflictMessage }} You can still schedule; clocked work will be recorded for payment.
+              </q-banner>
               <CalendarEventFormFields
                 v-model:kind="eventForm.kind"
                 v-model:event-subtype="eventForm.eventSubtype"
@@ -146,6 +154,10 @@ import {
   isLeaveSeries,
   leaveIdFromEvent,
 } from '@hr/utils/calendar-event-utils';
+import {
+  findSchedulerLeaveConflicts,
+  formatSchedulerLeaveConflictMessage,
+} from '@hr/utils/scheduler-leave-conflicts';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -153,6 +165,7 @@ const props = defineProps<{
   typeLabels: Record<string, string>;
   employees?: Array<{ id: string; firstName: string; lastName: string; code?: string }>;
   showEmployeePicker?: boolean;
+  leaveEvents?: CalendarEntry[];
 }>();
 
 const emit = defineEmits<{
@@ -195,6 +208,23 @@ const isSeries = computed(() => {
   const start = props.event.start_date ?? props.event.date;
   const end = props.event.end_date ?? props.event.date;
   return Boolean(start && end && start !== end);
+});
+
+const leaveConflictMessage = computed(() => {
+  if (!props.event || props.event.source !== 'scheduled_work') {
+    return '';
+  }
+
+  const conflicts = findSchedulerLeaveConflicts(
+    props.leaveEvents ?? [],
+    eventForm.value.employeeId,
+    eventForm.value.startDate,
+    eventForm.value.endDate,
+    eventForm.value.startTime,
+    eventForm.value.endTime,
+  );
+
+  return formatSchedulerLeaveConflictMessage(conflicts);
 });
 
 const dialogTitle = computed(() => {
@@ -387,6 +417,15 @@ async function saveScheduledWork() {
   if (!eventForm.value.employeeId) {
     $q.notify({ type: 'negative', message: 'Employee is required for work shifts.' });
     return;
+  }
+
+  if (leaveConflictMessage.value) {
+    $q.notify({
+      type: 'warning',
+      message: leaveConflictMessage.value,
+      caption: 'Shift will still be saved. Clocked work remains payable.',
+      timeout: 4500,
+    });
   }
 
   const result = await calendarStore.updateCalendar(scheduledWorkId, {

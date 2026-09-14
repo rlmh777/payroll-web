@@ -39,6 +39,37 @@
             <div class="col-12">
               <q-input v-model="form.notes" type="textarea" label="Notes" dense outlined :disable="saving" />
             </div>
+            <div class="col-12">
+              <q-file
+                v-model="form.attachmentFile"
+                label="Attachment"
+                hint="PDF, Word, Excel, images, or text. Max 20 MB."
+                :accept="EDUCATION_ATTACHMENT_ACCEPT"
+                dense
+                outlined
+                clearable
+                :disable="saving"
+              >
+                <template #prepend>
+                  <q-icon name="upload_file" />
+                </template>
+              </q-file>
+            </div>
+            <div
+              v-if="existingFileName && !form.attachmentFile"
+              class="col-12 text-caption text-grey-7"
+            >
+              Current file:
+              <a
+                v-if="existingFileUrl"
+                :href="existingFileUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {{ existingFileName }}
+              </a>
+              <span v-else>{{ existingFileName }}</span>
+            </div>
           </AppDialogForm>
         </q-form>
       </AppDialogBody>
@@ -59,6 +90,11 @@ import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
 import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
 import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
 import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
+import {
+  EDUCATION_ATTACHMENT_ACCEPT,
+  educationAttachmentDisplayName,
+  resolveEducationAttachmentUrl,
+} from './education-attachment';
 import {
   PROFICIENCY_LEVELS,
   useEmployeeSkillStore,
@@ -93,7 +129,15 @@ const form = reactive({
   proficiencyLevel: null as string | null,
   yearsExperience: null as number | null,
   notes: '',
+  attachmentFile: null as File | null,
 });
+
+const existingFileName = computed(() =>
+  educationAttachmentDisplayName(props.record?.fileName, props.record?.filePath),
+);
+const existingFileUrl = computed(() =>
+  resolveEducationAttachmentUrl(props.record?.fileUrl, props.record?.filePath),
+);
 
 watch(
   () => props.record,
@@ -102,6 +146,7 @@ watch(
     form.proficiencyLevel = record?.proficiencyLevel ?? null;
     form.yearsExperience = record?.yearsExperience ?? null;
     form.notes = record?.notes ?? '';
+    form.attachmentFile = null;
   },
   { immediate: true },
 );
@@ -131,9 +176,9 @@ async function save() {
     };
 
     if (isEdit.value && props.record) {
-      await store.updateRecord(props.record.id, payload);
+      await store.updateRecord(props.record.id, payload, form.attachmentFile);
     } else {
-      await store.createRecord(payload);
+      await store.createRecord(payload, form.attachmentFile);
     }
 
     $q.notify({ color: 'positive', position: 'top', message: 'Skill saved.' });

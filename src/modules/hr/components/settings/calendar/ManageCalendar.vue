@@ -5,9 +5,13 @@
         <SchedulerTopbar
           v-model:view-mode="viewMode"
           :header-label="headerLabel"
+          :can-add-notice="canEditNotices"
+          :can-import-shifts="canImportShifts"
           @prev="prevPeriod"
           @next="nextPeriod"
           @today="goToday"
+          @add-notice="openCreateNotice"
+          @import-shifts="showImportDialog = true"
         />
       </div>
 
@@ -25,11 +29,22 @@
           <span>{{ schedulerLoadingLabel }}</span>
         </div>
 
+        <div
+          v-if="importPreviewCount > 0"
+          class="scheduler-import-preview-banner row items-center justify-between q-gutter-sm"
+        >
+          <span>
+            Previewing {{ importPreviewCount }} imported shift{{ importPreviewCount === 1 ? '' : 's' }}
+            (dashed). Apply from the import panel to save.
+          </span>
+          <q-btn flat dense color="primary" label="Clear preview" @click="clearImportPreview" />
+        </div>
+
         <SchedulerGrid
           class="scheduler-grid-host"
           :rows="gridRows"
           :visible-days="visibleDays"
-          :events="workEvents"
+          :events="displayWorkEvents"
           :employees-by-id="employeesById"
           :view-by="viewBy"
           :loading="showInitialLoading"
@@ -40,20 +55,24 @@
           :load-more="handleLoadMoreEmployees"
           :timesheets-by-employee-id="timesheetsByEmployeeId"
           :departments-by-id="departmentsById"
+          :accrued-hours-by-employee-id="accruedHoursByEmployeeId"
+          :metric-definitions="metricStore.activeDefinitions"
+          :metric-values-by-date="metricStore.valuesByDate"
+          :can-edit-metrics="canEditMetrics"
+          :holiday-names-by-date="holidayNamesByDate"
+          :notices="noticeStore.notices"
+          :can-edit-notices="canEditNotices"
+          :can-schedule-shifts="canImportShifts"
           @select-shift="handleSelectShift"
           @create-shift="handleCreateShift"
+          @assign-shift-template="handleAssignShiftTemplate"
+          @create-shift-template="openCreateShiftTemplate"
+          @manage-shift-templates="showManageShiftTemplates = true"
+          @edit-day-metrics="handleEditDayMetrics"
+          @edit-notice="openEditNotice"
         />
       </div>
     </section>
-
-    <CalendarEventDialog
-      v-model="showEventDialog"
-      :event="selectedEvent"
-      :type-labels="typeLabels"
-      :employees="schedulerEmployees"
-      :show-employee-picker="canViewEmployees"
-      @saved="fetchShifts"
-    />
 
     <CalendarCreateDialog
       v-model="showCreateDialog"
@@ -63,9 +82,55 @@
       :default-employee-id="createEmployeeId"
       :employees="schedulerEmployees"
       :show-employee-picker="canViewEmployees"
+      :leave-events="leaveEvents"
       work-only
       @saved="handleCreateSaved"
       @close="clearCreateSelection"
+    />
+
+    <CalendarEventDialog
+      v-model="showEventDialog"
+      :event="selectedEvent"
+      :type-labels="typeLabels"
+      :employees="schedulerEmployees"
+      :show-employee-picker="canViewEmployees"
+      :leave-events="leaveEvents"
+      @saved="fetchShifts"
+    />
+
+    <ShiftTemplateManageDialog v-model="showManageShiftTemplates" />
+
+    <ShiftTemplateEditDialog
+      v-model="showShiftTemplateEditDialog"
+      :record="null"
+      @saved="onShiftTemplateSaved"
+    />
+
+    <SchedulerDailyMetricDialog
+      v-model="showMetricsDialog"
+      :day="metricsEditDay"
+      :definitions="metricStore.activeDefinitions"
+      :values="metricsDialogValues"
+    />
+
+    <SchedulerNoticeDialog
+      v-model="showNoticeDialog"
+      :record="editingNotice"
+      :default-start-date="noticeDefaultStart"
+      :default-end-date="noticeDefaultEnd"
+      :department-options="noticeDepartmentOptions"
+      :employee-options="noticeEmployeeOptions"
+      @saved="fetchSchedulerNotices"
+    />
+
+    <SchedulerShiftImportDialog
+      v-model="showImportDialog"
+      :employees="schedulerEmployees"
+      :preview-import="previewShiftImport"
+      :confirm-import-rows="confirmShiftImport"
+      :is-working="isImportWorking"
+      @previewed="handleImportPreviewed"
+      @imported="handleImportApplied"
     />
   </div>
 </template>
@@ -78,24 +143,49 @@ import { useCalendarStore } from '@hr/stores/calendar-store';
 import { useDepartmentStore } from '@hr/stores/department-store';
 import { useEmployeeGroupStore } from '@hr/stores/employee-group-store';
 import { useSchedulerStore } from '@hr/stores/scheduler-store';
+import { usePublicHolidayStore } from '@hr/stores/public-holiday-store';
 import { useAttendanceStore } from '@payroll/stores/attendance-store';
+import { useEmployeePoolStore } from '@payroll/stores/employee-pool-store';
 import SchedulerTopbar from './SchedulerTopbar.vue';
 import SchedulerGrid from './SchedulerGrid.vue';
 import CalendarEventDialog from './CalendarEventDialog.vue';
 import CalendarCreateDialog from './CalendarCreateDialog.vue';
+import SchedulerDailyMetricDialog from './SchedulerDailyMetricDialog.vue';
+import SchedulerNoticeDialog from './SchedulerNoticeDialog.vue';
+import SchedulerShiftImportDialog from './SchedulerShiftImportDialog.vue';
+import ShiftTemplateManageDialog from './ShiftTemplateManageDialog.vue';
+import ShiftTemplateEditDialog from './ShiftTemplateEditDialog.vue';
 import type { CalendarType } from './calendarTypes';
 import type { CalendarEntry } from '@hr/stores/calendar-store';
-import { clipDateRangeToFuture } from '@hr/utils/calendar-event-utils';
+import { useSchedulerMetricStore } from '@hr/stores/scheduler-metric-store';
+import {
+  useSchedulerNoticeStore,
+  type SchedulerNotice,
+} from '@hr/stores/scheduler-notice-store';
+import {
+  shiftTemplateDisplayLabel,
+  useShiftTemplateStore,
+  type ShiftTemplate,
+} from '@hr/stores/shift-template-store';
+import {
+  clipDateRangeToFuture,
+  enumerateDateRange,
+  scheduledWorkRecordToEvents,
+} from '@hr/utils/calendar-event-utils';
 import { getActiveEmploymentDetail } from '@hr/utils/calendar-employment-utils';
 import { prepareSchedulerEmployees } from '@hr/utils/scheduler-bootstrap';
 import {
+  canEditSchedulerDailyMetrics,
+  canEditSchedulerNotices,
+  canImportSchedulerShifts,
   canManageSchedulerEmployees,
   canViewAllSchedulerEmployees,
 } from '@hr/utils/scheduler-access';
-import {
+import type { SchedulerShiftImportPreview } from '@hr/utils/scheduler-shift-import';import {
   buildDepartmentGroupedGridRows,
   buildEmployeeGroupGridRows,
   buildEmployeeGridRows,
+  employeeDisplayName,
   filterEmployeesByName,
   formatSchedulerPeriodLabel,
   getDateRangeForView,
@@ -111,6 +201,12 @@ const calendarStore = useCalendarStore();
 const departmentStore = useDepartmentStore();
 const employeeGroupStore = useEmployeeGroupStore();
 const attendanceStore = useAttendanceStore();
+const employeePoolStore = useEmployeePoolStore();
+const metricStore = useSchedulerMetricStore();
+const noticeStore = useSchedulerNoticeStore();
+const shiftTemplateStore = useShiftTemplateStore();
+const publicHolidayStore = usePublicHolidayStore();
+const holidayNamesByDate = ref<Record<string, string>>({});
 const {
   calendars,
   error,
@@ -135,6 +231,21 @@ const canLoadMoreEmployees = computed(
 );
 
 const canViewEmployees = computed(() => canManageSchedulerEmployees());
+const canEditMetrics = computed(() => canEditSchedulerDailyMetrics());
+const canEditNotices = computed(() => canEditSchedulerNotices());
+const canImportShifts = computed(() => canImportSchedulerShifts());
+const isImportWorking = ref(false);
+const showImportDialog = ref(false);
+const importPreviewEvents = ref<CalendarEntry[]>([]);
+
+const importPreviewCount = computed(() => {
+  const ids = new Set(
+    importPreviewEvents.value
+      .map((event) => event.scheduled_work_id)
+      .filter((id): id is string => Boolean(id)),
+  );
+  return ids.size;
+});
 
 const isBootstrapping = ref(false);
 
@@ -226,6 +337,8 @@ const employeesById = computed(() => {
   return map;
 });
 
+const accruedHoursByEmployeeId = computed(() => employeePoolStore.accruedHoursByEmployeeId);
+
 const visibleDays = computed(() => getVisibleDays(viewMode.value, selectedDate.value));
 
 const headerLabel = computed(() =>
@@ -235,6 +348,16 @@ const headerLabel = computed(() =>
 const workEvents = computed(() =>
   calendars.value.filter((event) => event.type === 'work' && event.source === 'scheduled_work'),
 );
+
+const leaveEvents = computed(() =>
+  calendars.value.filter((event) => event.source === 'leave'),
+);
+
+const displayWorkEvents = computed(() => [
+  ...workEvents.value,
+  ...importPreviewEvents.value,
+  ...leaveEvents.value,
+]);
 
 const visibleEmployees = computed(() => {
   let employees = schedulerEmployees.value;
@@ -261,7 +384,7 @@ const visibleEmployees = computed(() => {
   }
 
   if (hideUnscheduledUsers.value) {
-    const scheduled = scheduledEmployeeIds(workEvents.value, visibleDays.value);
+    const scheduled = scheduledEmployeeIds(displayWorkEvents.value, visibleDays.value);
     employees = employees.filter((employee) => scheduled.has(employee.id));
   }
 
@@ -327,6 +450,78 @@ const selectedEvent = ref<CalendarEntry | null>(null);
 const showCreateDialog = ref(false);
 const createRange = ref({ start: '', end: '' });
 const createEmployeeId = ref<string | null>(null);
+const showMetricsDialog = ref(false);
+const metricsEditDay = ref<string | null>(null);
+const showNoticeDialog = ref(false);
+const editingNotice = ref<SchedulerNotice | null>(null);
+const noticeDefaultStart = ref<string | null>(null);
+const noticeDefaultEnd = ref<string | null>(null);
+const showManageShiftTemplates = ref(false);
+const showShiftTemplateEditDialog = ref(false);
+
+const metricsDialogValues = computed<Record<string, number | null>>(() => {
+  if (!metricsEditDay.value) {
+    return {};
+  }
+  return metricStore.valuesByDate[metricsEditDay.value] ?? {};
+});
+
+const noticeDepartmentOptions = computed(() =>
+  departmentStore.departments
+    .map((department) => ({ label: department.name, value: department.id }))
+    .sort((left, right) => left.label.localeCompare(right.label)),
+);
+
+const noticeEmployeeOptions = computed(() =>
+  schedulerEmployees.value
+    .map((employee) => ({
+      label: employeeDisplayName(employee),
+      value: employee.id,
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label)),
+);
+
+async function fetchDailyMetrics() {
+  const { start, end } = getDateRangeForView(viewMode.value, selectedDate.value);
+  await metricStore.fetchDailyMetrics(start, end);
+}
+
+async function fetchPublicHolidays() {
+  const { start, end } = getDateRangeForView(viewMode.value, selectedDate.value);
+
+  await publicHolidayStore.fetchHolidays({
+    start,
+    end,
+    isActive: true,
+    perPage: 100,
+  });
+
+  if (publicHolidayStore.error) {
+    holidayNamesByDate.value = {};
+    return;
+  }
+
+  const namesByDate: Record<string, string> = {};
+  for (const holiday of publicHolidayStore.holidays) {
+    if (!holiday.isActive) {
+      continue;
+    }
+
+    for (const day of enumerateDateRange(holiday.startDate, holiday.endDate)) {
+      if (day < start || day > end) {
+        continue;
+      }
+      namesByDate[day] = holiday.name;
+    }
+  }
+
+  holidayNamesByDate.value = namesByDate;
+}
+
+async function fetchSchedulerNotices() {
+  const { start, end } = getDateRangeForView(viewMode.value, selectedDate.value);
+  await noticeStore.fetchNotices(start, end);
+}
 
 async function fetchShifts() {
   const { start, end } = getDateRangeForView(viewMode.value, selectedDate.value);
@@ -374,6 +569,9 @@ async function fetchShifts() {
   await Promise.all([
     calendarStore.fetchCalendars(params),
     timesheetPromise,
+    fetchDailyMetrics(),
+    fetchPublicHolidays(),
+    fetchSchedulerNotices(),
   ]);
 
   if (error.value) {
@@ -402,8 +600,8 @@ function handleSelectShift(shift: CalendarEntry) {
   showEventDialog.value = true;
 }
 
-function handleCreateShift(payload: { row: SchedulerGridRow; day: string }) {
-  const clipped = clipDateRangeToFuture(payload.day, payload.day);
+function handleCreateShift(payload: { row: SchedulerGridRow; day: string; endDay?: string }) {
+  const clipped = clipDateRangeToFuture(payload.day, payload.endDay ?? payload.day);
   if (!clipped) {
     $q.notify({
       type: 'warning',
@@ -417,9 +615,179 @@ function handleCreateShift(payload: { row: SchedulerGridRow; day: string }) {
   showCreateDialog.value = true;
 }
 
+async function handleAssignShiftTemplate(payload: {
+  row: SchedulerGridRow;
+  day: string;
+  endDay?: string;
+  template: ShiftTemplate;
+}) {
+  if (!canImportShifts.value || payload.row.rowKind !== 'employee') {
+    return;
+  }
+
+  const clipped = clipDateRangeToFuture(payload.day, payload.endDay ?? payload.day);
+  if (!clipped) {
+    $q.notify({
+      type: 'warning',
+      message: 'Only today and future dates can be used to create shifts.',
+    });
+    return;
+  }
+
+  const employee = employeesById.value[payload.row.id];
+  const active = getActiveEmploymentDetail(employee);
+  const created = await shiftTemplateStore.assignTemplate(payload.template.id, {
+    employeeId: payload.row.id,
+    date: clipped.start,
+    endDate: clipped.end,
+    employmentDetailId: active?.id ?? null,
+    departmentId: active?.departmentId ?? null,
+    worksiteId: active?.worksiteId ?? null,
+    description: shiftTemplateDisplayLabel(payload.template),
+  });
+
+  if (!created) {
+    $q.notify({
+      type: 'negative',
+      message: shiftTemplateStore.error || 'Unable to assign shift template.',
+    });
+    return;
+  }
+
+  for (const record of created) {
+    const events = scheduledWorkRecordToEvents(record as Parameters<typeof scheduledWorkRecordToEvents>[0]);
+    const scheduledWorkId = events[0]?.scheduled_work_id;
+    if (scheduledWorkId) {
+      calendarStore.replaceScheduledWorkEvents(scheduledWorkId, events);
+    }
+  }
+
+  const daySpan = enumerateDateRange(clipped.start, clipped.end).length;
+  const isSplit = created.length > 1;
+  $q.notify({
+    type: 'positive',
+    message: isSplit
+      ? `Assigned split shift (${created.length} blocks)${daySpan > 1 ? ` across ${daySpan} days` : ''}.`
+      : daySpan > 1
+        ? `Shift assigned across ${daySpan} days.`
+        : 'Shift assigned.',
+  });
+}
+
+function openCreateShiftTemplate() {
+  if (!canImportShifts.value) {
+    return;
+  }
+  showShiftTemplateEditDialog.value = true;
+}
+
+function onShiftTemplateSaved() {
+  void shiftTemplateStore.fetchTemplates({ activeOnly: false });
+}
+
+function handleEditDayMetrics(day: string) {
+  if (!canEditMetrics.value) {
+    return;
+  }
+  metricsEditDay.value = day;
+  showMetricsDialog.value = true;
+}
+
+function openCreateNotice() {
+  if (!canEditNotices.value) {
+    return;
+  }
+  const { start, end } = getDateRangeForView(viewMode.value, selectedDate.value);
+  editingNotice.value = null;
+  noticeDefaultStart.value = start;
+  noticeDefaultEnd.value = end;
+  showNoticeDialog.value = true;
+}
+
+function openEditNotice(notice: SchedulerNotice) {
+  if (!canEditNotices.value) {
+    return;
+  }
+  editingNotice.value = notice;
+  noticeDefaultStart.value = notice.start_date;
+  noticeDefaultEnd.value = notice.end_date;
+  showNoticeDialog.value = true;
+}
+
 function handleCreateSaved() {
   clearCreateSelection();
   void fetchShifts();
+}
+
+function clearImportPreview() {
+  importPreviewEvents.value = [];
+}
+
+function handleImportPreviewed(preview: SchedulerShiftImportPreview | null) {
+  if (!preview) {
+    importPreviewEvents.value = [];
+    return;
+  }
+
+  const events: CalendarEntry[] = [];
+
+  for (const row of preview.rows) {
+    if (row.errors.length || !row.employeeId || !row.startDate || !row.endDate) {
+      continue;
+    }
+
+    const previewId = `import-preview-${row.rowNumber}`;
+    for (const day of enumerateDateRange(row.startDate, row.endDate)) {
+      events.push({
+        id: `${previewId}-${day}`,
+        scheduled_work_id: previewId,
+        date: day,
+        description: row.description?.trim() || 'Imported shift',
+        type: 'work',
+        rate: row.rate,
+        source: 'scheduled_work',
+        employee_id: row.employeeId,
+        employee_name: row.employeeName ?? null,
+        employment_detail_id: row.employmentDetailId ?? null,
+        department_id: row.departmentId ?? null,
+        department_name: row.departmentName ?? null,
+        worksite_id: row.worksiteId ?? null,
+        worksite_name: row.worksiteName ?? null,
+        include_lunch_hour: row.includeLunchHour,
+        lunch_hour_hours: row.includeLunchHour ? row.lunchHourHours : null,
+        start_date: row.startDate,
+        end_date: row.endDate,
+        start_time: row.startTime,
+        end_time: row.endTime,
+        is_import_preview: true,
+      });
+    }
+  }
+
+  importPreviewEvents.value = events;
+}
+
+async function previewShiftImport(rows: Parameters<typeof calendarStore.previewScheduledWorkImport>[0]) {
+  isImportWorking.value = true;
+  try {
+    return await calendarStore.previewScheduledWorkImport(rows);
+  } finally {
+    isImportWorking.value = false;
+  }
+}
+
+async function confirmShiftImport(rows: Parameters<typeof calendarStore.confirmScheduledWorkImport>[0]) {
+  isImportWorking.value = true;
+  try {
+    return await calendarStore.confirmScheduledWorkImport(rows);
+  } finally {
+    isImportWorking.value = false;
+  }
+}
+
+async function handleImportApplied() {
+  clearImportPreview();
+  await fetchShifts();
 }
 
 function clearCreateSelection() {
@@ -445,6 +813,18 @@ async function handleLoadMoreEmployees() {
 watch([selectedDate, viewMode, filterEmployeeId, filterDepartmentId, filterEmployeeGroupId], () => {
   void fetchShifts();
 });
+
+watch(
+  () => schedulerEmployees.value.map((employee) => employee.id).join(','),
+  (idsKey) => {
+    if (!idsKey) {
+      return;
+    }
+
+    void employeePoolStore.fetchAccruedHours(idsKey.split(','));
+  },
+  { immediate: true },
+);
 
 watch([viewBy, hideUnscheduledUsers], () => {
   // row composition only
@@ -478,6 +858,7 @@ async function initializeSchedulerView() {
         ? Promise.resolve()
         : employeeGroupStore.fetchGroups({ withMembers: true, activeOnly: false }),
       prepareSchedulerEmployees(),
+      shiftTemplateStore.ensureTemplatesLoaded(),
     ]);
 
     if (employeesError.value) {
@@ -559,5 +940,14 @@ onMounted(async () => {
   color: #52606d;
   font-size: 13px;
   pointer-events: none;
+}
+
+.scheduler-import-preview-banner {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  background: #fff8e7;
+  color: #92400e;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(146, 64, 14, 0.12);
 }
 </style>

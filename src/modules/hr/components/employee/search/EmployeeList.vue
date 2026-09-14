@@ -275,7 +275,7 @@ const isEmployeeSelected = (employeeId: string): boolean => {
 };
 
 const navigateToEmployee = (employeeId: string) => {
-  router.push(employeePath(employeeId)).catch((err) => {
+  router.push(employeePath(employeeId, route.path)).catch((err) => {
     console.error('Navigation error:', err);
   });
 };

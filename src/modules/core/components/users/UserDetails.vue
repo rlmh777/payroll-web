@@ -23,7 +23,7 @@
         <q-separator class="q-my-md" />
 
         <!-- Roles Section -->
-        <div class="q-mb-md">
+        <div v-if="canManageUsers" class="q-mb-md">
           <div class="text-subtitle1 q-mb-sm">Roles</div>
           <div class="row q-gutter-sm q-mb-sm items-center">
             <q-chip
@@ -65,6 +65,23 @@
                 :loading="isUpdatingRoles"
                 @click="onAddRole"
               />
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="q-mb-md">
+          <div class="text-subtitle1 q-mb-sm">Roles</div>
+          <div class="row q-gutter-sm q-mb-sm items-center">
+            <q-chip
+              v-for="role in userRoles"
+              :key="role.id"
+              color="primary"
+              text-color="white"
+            >
+              {{ role.name }}
+            </q-chip>
+            <div v-if="userRoles.length === 0" class="text-body2 text-grey-6">
+              No roles assigned
             </div>
           </div>
         </div>
@@ -125,7 +142,7 @@
         <q-separator class="q-my-md" />
 
         <!-- Link to Employee Section -->
-        <div class="q-mb-md">
+        <div v-if="canManageUsers" class="q-mb-md">
           <div class="text-subtitle1 q-mb-sm">Link to Employee</div>
           <div v-if="user.employee" class="q-mb-sm">
             <q-chip color="positive" text-color="white" icon="badge">
@@ -160,7 +177,14 @@
           </div>
         </div>
 
-        <q-separator class="q-my-md" />
+        <div v-else-if="user.employee" class="q-mb-md">
+          <div class="text-subtitle1 q-mb-sm">Linked Employee</div>
+          <q-chip color="positive" text-color="white" icon="badge">
+            {{ user.employee.firstName }} {{ user.employee.lastName }} ({{ user.employee.code }})
+          </q-chip>
+        </div>
+
+        <q-separator v-if="canManageUsers || user.employee" class="q-my-md" />
 
         <!-- User Info -->
         <div class="q-mb-md">
@@ -205,6 +229,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import { usePermissions } from '@core/composables/usePermissions';
 import { useUserStore, type User } from '../../stores/user-store';
 import { useRoleStore } from '../../stores/role-store';
 import EmployeeSelect from '@hr/components/shared/EmployeeSelect.vue';
@@ -221,6 +246,9 @@ const emit = defineEmits<{
 const userStore = useUserStore();
 const roleStore = useRoleStore();
 const $q = useQuasar();
+const { can } = usePermissions();
+
+const canManageUsers = computed(() => can('manager-users'));
 
 const passwordForm = ref({
   newPassword: '',
@@ -247,7 +275,7 @@ const availableRoleOptions = computed(() => {
 });
 
 onMounted(async () => {
-  if (roleStore.roles.length === 0) {
+  if (canManageUsers.value && roleStore.roles.length === 0) {
     await roleStore.fetchRoles(1, 100);
   }
 });

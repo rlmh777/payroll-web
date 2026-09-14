@@ -34,19 +34,9 @@ export const coreRoutes: RouteRecordRaw[] = [
         component: () => import('@core/pages/SettingPage.vue'),
         props: { title: 'Setting Pay Items' },
       },
-      {
-        path: '/payroll/settings/roles',
-        component: () => import('@core/settings/role/ManageRoles.vue'),
-      },
-      {
-        path: '/payroll/settings/menu',
-        component: () => import('@core/settings/menu/ManageMenus.vue'),
-      },
-      {
-        path: '/payroll/settings/modules',
-        component: () => import('@core/settings/modules/ManageModules.vue'),
-        props: { title: 'Modules' },
-      },
+      { path: '/payroll/settings/roles', redirect: '/admin/settings/roles' },
+      { path: '/payroll/settings/menu', redirect: '/admin/settings/menu' },
+      { path: '/payroll/settings/modules', redirect: '/admin/settings/modules' },
       {
         path: '/payroll/settings/country',
         component: () => import('@core/settings/country/ManageCountry.vue'),
@@ -104,20 +94,9 @@ export const coreRoutes: RouteRecordRaw[] = [
         path: '/payroll/settings/general/bank-account-type',
         redirect: '/payroll/settings/bank-account-type',
       },
-      {
-        path: '/payroll/settings/organization',
-        component: () => import('@core/settings/organization/ManageOrganization.vue'),
-        props: { title: 'Organization' },
-      },
-      {
-        path: '/payroll/settings/users',
-        component: () => import('@core/components/users/ManageUsers.vue'),
-      },
-      {
-        path: '/payroll/settings/database-backup',
-        component: () => import('@core/settings/database-backup/ManageDatabaseBackup.vue'),
-        props: { title: 'Database Backup' },
-      },
+      { path: '/payroll/settings/organization', redirect: '/admin/settings/organization' },
+      { path: '/payroll/settings/users', redirect: '/admin/settings/users' },
+      { path: '/payroll/settings/database-backup', redirect: '/admin/settings/database-backup' },
       { path: '/payroll/settings/pay-period', redirect: '/payroll/pay-period' },
     ],
   },

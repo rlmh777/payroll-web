@@ -3,6 +3,22 @@
     <div class="row items-center q-gutter-sm">
       <div class="text-h6">Scheduler</div>
       <q-btn outline label="Today" class="q-ml-md" @click="emit('today')" />
+      <q-btn
+        v-if="canImportShifts"
+        color="primary"
+        outline
+        icon="upload_file"
+        label="Import shifts"
+        @click="emit('import-shifts')"
+      />
+      <q-btn
+        v-if="canAddNotice"
+        color="primary"
+        outline
+        icon="event"
+        label="Add event"
+        @click="emit('add-notice')"
+      />
     </div>
 
     <div class="row items-center q-gutter-sm">
@@ -26,16 +42,23 @@
 <script setup lang="ts">
 import type { SchedulerViewMode } from '@hr/utils/scheduler-utils';
 
-defineProps<{
+withDefaults(defineProps<{
   viewMode: SchedulerViewMode;
   headerLabel: string;
-}>();
+  canAddNotice?: boolean;
+  canImportShifts?: boolean;
+}>(), {
+  canAddNotice: false,
+  canImportShifts: false,
+});
 
 const emit = defineEmits<{
   (event: 'update:viewMode', value: SchedulerViewMode): void;
   (event: 'prev'): void;
   (event: 'next'): void;
   (event: 'today'): void;
+  (event: 'add-notice'): void;
+  (event: 'import-shifts'): void;
 }>();
 
 const viewOptions = [

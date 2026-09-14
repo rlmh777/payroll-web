@@ -8,6 +8,12 @@ import {
   migrateLegacyAuthToken,
   setAuthCookies,
 } from '@core/utils/auth-cookies';
+import { clearStoredActiveModule } from '@core/utils/module-navigation';
+import type { EmployeeFormAccess } from '@core/types/employee-form-access';
+
+export interface UserPreferences {
+  defaultModule: string;
+}
 
 interface User {
   id: string | number;
@@ -16,12 +22,34 @@ interface User {
   role: string;
   roles?: string[];
   permissions?: string[];
+  employeeFormAccess?: EmployeeFormAccess;
+  preferences?: UserPreferences;
 }
 
 type UnauthorizedHandler = (redirectPath?: string) => void;
 
 const API_URL = import.meta.env.VITE_API_URL || process.env.API_URL || 'http://localhost:3031/api';
 const SESSION_VALIDATION_TTL_MS = 60 * 1000;
+
+function normalizeUser(data: Partial<User> & { preferences?: { defaultModule?: string } }): User {
+  const user: User = {
+    id: data.id as string | number,
+    email: data.email ?? '',
+    name: data.name ?? '',
+    role: data.role ?? 'employee',
+    roles: data.roles ?? (data.role ? [data.role] : []),
+    permissions: data.permissions ?? [],
+    preferences: {
+      defaultModule: data.preferences?.defaultModule ?? 'payroll',
+    },
+  };
+
+  if (data.employeeFormAccess) {
+    user.employeeFormAccess = data.employeeFormAccess;
+  }
+
+  return user;
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null);
@@ -38,10 +66,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   function setSession(tokenValue: string, userValue: User) {
     token.value = tokenValue;
-    user.value = userValue;
+    user.value = normalizeUser(userValue);
     isAuthenticated.value = true;
     lastValidatedAt.value = Date.now();
-    setAuthCookies(tokenValue, JSON.stringify(userValue));
+    setAuthCookies(tokenValue, JSON.stringify(user.value));
   }
 
   function clearSession() {
@@ -50,6 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated.value = false;
     lastValidatedAt.value = 0;
     clearAuthCookies();
+    clearStoredActiveModule();
   }
 
   async function login(email: string, password: string) {
@@ -107,7 +136,7 @@ export const useAuthStore = defineStore('auth', () => {
     const storedUser = getAuthUserFromCookie();
     if (storedUser) {
       try {
-        user.value = JSON.parse(storedUser) as User;
+        user.value = normalizeUser(JSON.parse(storedUser) as User);
       } catch {
         user.value = null;
       }
@@ -123,8 +152,9 @@ export const useAuthStore = defineStore('auth', () => {
 
     const hasPermissions = Array.isArray(user.value?.permissions) && user.value.permissions.length > 0;
     const hasRole = Boolean(user.value?.role || user.value?.roles?.length);
+    const hasFormAccess = Boolean(user.value?.employeeFormAccess);
 
-    if (hasPermissions && hasRole) {
+    if (hasPermissions && hasRole && hasFormAccess) {
       return validateSession();
     }
 
@@ -168,7 +198,8 @@ export const useAuthStore = defineStore('auth', () => {
 
     const isFresh = Date.now() - lastValidatedAt.value < SESSION_VALIDATION_TTL_MS;
     const missingPermissions = !Array.isArray(user.value?.permissions) || user.value.permissions.length === 0;
-    if (!options.force && isFresh && !missingPermissions) {
+    const missingFormAccess = !user.value?.employeeFormAccess;
+    if (!options.force && isFresh && !missingPermissions && !missingFormAccess) {
       return true;
     }
 
@@ -190,14 +221,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       const data = await response.json();
-      const hydrated: User = {
-        id: data.id,
-        email: data.email,
-        name: data.name,
-        role: data.role ?? 'employee',
-        roles: data.roles ?? (data.role ? [data.role] : []),
-        permissions: data.permissions ?? [],
-      };
+      const hydrated = normalizeUser(data);
       user.value = hydrated;
       isAuthenticated.value = true;
       lastValidatedAt.value = Date.now();
@@ -222,6 +246,36 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function updatePreferences(preferences: { defaultModule: string }) {
+    if (!token.value) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_URL}/user/preferences`, {
+      method: 'PUT',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token.value}`,
+      },
+      body: JSON.stringify(preferences),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.message || 'Failed to update preferences');
+    }
+
+    const data = await response.json();
+    const hydrated = normalizeUser(data);
+    user.value = hydrated;
+    if (token.value) {
+      setAuthCookies(token.value, JSON.stringify(hydrated));
+    }
+
+    return hydrated;
+  }
+
   return {
     token,
     user,
@@ -232,6 +286,7 @@ export const useAuthStore = defineStore('auth', () => {
     ensureUser,
     ensureHydratedPermissions,
     validateSession,
+    updatePreferences,
     handleUnauthorized,
     handleSessionTimeout,
     setUnauthorizedHandler,
