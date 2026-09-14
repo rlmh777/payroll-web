@@ -88,6 +88,125 @@
 
         <q-separator class="q-my-md" />
 
+        <!-- Security Section -->
+        <div v-if="canManageUsers" class="q-mb-md">
+          <div class="text-subtitle1 q-mb-sm">Security</div>
+          <div class="text-body2 q-mb-sm">
+            <div class="row q-mb-xs">
+              <div class="col-6 text-grey-7">Passkeys registered:</div>
+              <div class="col-6">{{ user.security?.passkey_count ?? 0 }}</div>
+            </div>
+            <div class="row q-mb-xs">
+              <div class="col-6 text-grey-7">Authenticator 2FA:</div>
+              <div class="col-6">{{ user.security?.two_factor_enabled ? 'Enabled' : 'Not set up' }}</div>
+            </div>
+            <div class="row q-mb-xs">
+              <div class="col-6 text-grey-7">Policy effective:</div>
+              <div class="col-6">{{ user.security?.requires_two_factor ? '2FA required' : '2FA not required' }}</div>
+            </div>
+          </div>
+          <div class="text-caption text-grey-7 q-mb-sm">
+            Company policy can require 2FA for everyone. Per-user override: leave as Inherit, or Force / Exempt this account.
+          </div>
+          <div class="row q-gutter-sm items-end">
+            <div class="col">
+              <q-select
+                v-model="twoFactorRequiredOverride"
+                :options="twoFactorOverrideOptions"
+                label="2FA requirement"
+                outlined
+                dense
+                emit-value
+                map-options
+                :disable="isUpdatingSecurity"
+              />
+            </div>
+            <div class="col-auto">
+              <q-btn
+                label="Save"
+                color="primary"
+                :loading="isUpdatingSecurity"
+                @click="onSaveSecurity"
+              />
+            </div>
+            <div class="col-auto">
+              <q-btn
+                flat
+                color="negative"
+                label="Reset 2FA"
+                :loading="isUpdatingSecurity"
+                :disable="!user.security?.two_factor_enabled"
+                @click="onResetTwoFactor"
+              />
+            </div>
+          </div>
+          <div v-if="isViewingSelf" class="q-mt-md column q-gutter-sm">
+            <q-btn
+              outline
+              color="primary"
+              icon="fingerprint"
+              label="Register passkey on this device"
+              :loading="isRegisteringPasskey"
+              @click="onRegisterPasskey"
+            />
+            <template v-if="!user.security?.two_factor_enabled && !selfTwoFactorSetup">
+              <q-btn
+                outline
+                color="primary"
+                icon="phonelink_lock"
+                label="Set up authenticator 2FA"
+                :loading="isSettingUpTwoFactor"
+                @click="onBeginSelfTwoFactor"
+              />
+            </template>
+            <div v-if="selfTwoFactorSetup" class="q-mt-sm">
+              <div class="text-body2 q-mb-sm">Scan this QR code, then enter the 6-digit code to confirm.</div>
+              <div class="flex flex-center q-mb-sm">
+                <img :src="selfTwoFactorSetup.qr_svg" alt="Authenticator QR code" style="width: 180px; height: 180px" />
+              </div>
+              <div class="text-caption text-grey-7 q-mb-sm text-center">
+                Manual key: <strong>{{ selfTwoFactorSetup.secret }}</strong>
+              </div>
+              <q-input
+                v-model="selfTwoFactorCode"
+                label="Authentication code"
+                outlined
+                dense
+                class="q-mb-sm"
+                autocomplete="one-time-code"
+              />
+              <div class="row q-gutter-sm">
+                <q-btn
+                  color="primary"
+                  label="Confirm 2FA"
+                  :loading="isSettingUpTwoFactor"
+                  @click="onConfirmSelfTwoFactor"
+                />
+                <q-btn flat label="Cancel" :disable="isSettingUpTwoFactor" @click="cancelSelfTwoFactor" />
+              </div>
+            </div>
+            <div v-if="selfRecoveryCodes.length" class="q-mt-sm">
+              <div class="text-body2 q-mb-sm">Save these recovery codes now. They will not be shown again.</div>
+              <q-list bordered dense class="rounded-borders q-mb-sm">
+                <q-item v-for="code in selfRecoveryCodes" :key="code">
+                  <q-item-section>{{ code }}</q-item-section>
+                </q-item>
+              </q-list>
+              <q-btn flat color="primary" label="Dismiss" @click="selfRecoveryCodes = []" />
+            </div>
+            <q-btn
+              v-if="user.security?.two_factor_enabled && !user.security?.requires_two_factor"
+              flat
+              color="negative"
+              label="Disable authenticator 2FA"
+              :loading="isSettingUpTwoFactor"
+              @click="onDisableSelfTwoFactor"
+            />
+          </div>
+        </div>
+
+        <q-separator v-if="canManageUsers" class="q-my-md" />
+
         <!-- Send Password Reset Email Section -->
         <div class="q-mb-md">
           <div class="text-subtitle1 q-mb-sm">Password Reset Email</div>
@@ -232,6 +351,7 @@ import { useQuasar } from 'quasar';
 import { usePermissions } from '@core/composables/usePermissions';
 import { useUserStore, type User } from '../../stores/user-store';
 import { useRoleStore } from '../../stores/role-store';
+import { useAuthStore } from '@core/stores/auth';
 import EmployeeSelect from '@hr/components/shared/EmployeeSelect.vue';
 import { getUserAvatarColor, getUserInitials } from './user-avatar';
 
@@ -261,6 +381,24 @@ const isChangingPassword = ref(false);
 const isLinkingEmployee = ref(false);
 const isSendingResetEmail = ref(false);
 const isUpdatingRoles = ref(false);
+const isUpdatingSecurity = ref(false);
+const isRegisteringPasskey = ref(false);
+const isSettingUpTwoFactor = ref(false);
+const selfTwoFactorSetup = ref<{ secret: string; qr_svg: string } | null>(null);
+const selfTwoFactorCode = ref('');
+const selfRecoveryCodes = ref<string[]>([]);
+const twoFactorRequiredOverride = ref<boolean | null>(null);
+const authStore = useAuthStore();
+
+const twoFactorOverrideOptions = [
+  { label: 'Inherit company policy', value: null },
+  { label: 'Force 2FA for this user', value: true },
+  { label: 'Exempt this user from 2FA', value: false },
+];
+
+const isViewingSelf = computed(
+  () => !!props.user && String(props.user.id) === String(authStore.user?.id ?? ''),
+);
 
 const userRoles = computed(() => props.user?.rolesManyToMany || []);
 
@@ -283,8 +421,10 @@ onMounted(async () => {
 watch(() => props.user, (newUser) => {
   if (newUser) {
     selectedEmployeeId.value = newUser.employee?.id || null;
+    twoFactorRequiredOverride.value = newUser.security?.two_factor_required ?? null;
   } else {
     selectedEmployeeId.value = null;
+    twoFactorRequiredOverride.value = null;
   }
   roleToAdd.value = null;
   passwordForm.value = {
@@ -338,6 +478,230 @@ const onAddRole = async () => {
   } finally {
     isUpdatingRoles.value = false;
   }
+};
+
+const saveUserSecurity = async (payload: {
+  two_factor_required?: boolean | null;
+  reset_two_factor?: boolean;
+}) => {
+  if (!props.user) return;
+  isUpdatingSecurity.value = true;
+  try {
+    const authStore = useAuthStore();
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:3031/api'}/users/${props.user.id}/security`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authStore.token}`,
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!response.ok) {
+      throw new Error('Failed to update security settings');
+    }
+    $q.notify({
+      type: 'positive',
+      message: 'Security settings updated',
+      position: 'top',
+    });
+    await refreshUser(props.user.id);
+  } catch (error) {
+    console.error(error);
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to update security settings',
+      position: 'top',
+    });
+  } finally {
+    isUpdatingSecurity.value = false;
+  }
+};
+
+const onSaveSecurity = async () => {
+  await saveUserSecurity({ two_factor_required: twoFactorRequiredOverride.value });
+};
+
+const onResetTwoFactor = () => {
+  $q.dialog({
+    title: 'Reset 2FA',
+    message: 'Clear this user’s authenticator setup? They will need to enroll again if 2FA is required.',
+    cancel: true,
+  }).onOk(() => {
+    void saveUserSecurity({ reset_two_factor: true });
+  });
+};
+
+const onRegisterPasskey = async () => {
+  if (!props.user) return;
+  isRegisteringPasskey.value = true;
+  try {
+    const { startRegistration } = await import('@simplewebauthn/browser');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
+    const optionsResponse = await fetch(`${apiUrl}/passkeys/options`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+    });
+    if (!optionsResponse.ok) {
+      throw new Error('Unable to start passkey registration');
+    }
+    const { options, challenge_key: challengeKey } = await optionsResponse.json();
+    const credential = await startRegistration({ optionsJSON: options });
+    const registerResponse = await fetch(`${apiUrl}/passkeys`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+      body: JSON.stringify({
+        challenge_key: challengeKey,
+        credential,
+        name: 'This device',
+      }),
+    });
+    if (!registerResponse.ok) {
+      const err = await registerResponse.json().catch(() => ({}));
+      throw new Error(err.message || 'Passkey registration failed');
+    }
+    $q.notify({
+      type: 'positive',
+      message: 'Passkey registered. You can use it on the login screen.',
+      position: 'top',
+    });
+    await refreshUser(props.user.id);
+  } catch (error) {
+    console.error(error);
+    $q.notify({
+      type: 'negative',
+      message: error instanceof Error ? error.message : 'Passkey registration failed',
+      position: 'top',
+    });
+  } finally {
+    isRegisteringPasskey.value = false;
+  }
+};
+
+const cancelSelfTwoFactor = () => {
+  selfTwoFactorSetup.value = null;
+  selfTwoFactorCode.value = '';
+};
+
+const onBeginSelfTwoFactor = async () => {
+  isSettingUpTwoFactor.value = true;
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
+    const response = await fetch(`${apiUrl}/two-factor/setup`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || 'Unable to start 2FA setup');
+    }
+    selfTwoFactorSetup.value = {
+      secret: data.secret,
+      qr_svg: data.qr_svg,
+    };
+    selfTwoFactorCode.value = '';
+    selfRecoveryCodes.value = [];
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error instanceof Error ? error.message : 'Unable to start 2FA setup',
+      position: 'top',
+    });
+  } finally {
+    isSettingUpTwoFactor.value = false;
+  }
+};
+
+const onConfirmSelfTwoFactor = async () => {
+  if (!props.user || !selfTwoFactorCode.value.trim()) {
+    return;
+  }
+  isSettingUpTwoFactor.value = true;
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
+    const response = await fetch(`${apiUrl}/two-factor/confirm`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+      body: JSON.stringify({ code: selfTwoFactorCode.value.trim() }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || 'Invalid authentication code');
+    }
+    selfRecoveryCodes.value = Array.isArray(data.recovery_codes) ? data.recovery_codes : [];
+    cancelSelfTwoFactor();
+    $q.notify({
+      type: 'positive',
+      message: 'Authenticator 2FA enabled',
+      position: 'top',
+    });
+    await refreshUser(props.user.id);
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error instanceof Error ? error.message : 'Failed to enable 2FA',
+      position: 'top',
+    });
+  } finally {
+    isSettingUpTwoFactor.value = false;
+  }
+};
+
+const onDisableSelfTwoFactor = () => {
+  $q.dialog({
+    title: 'Disable 2FA',
+    message: 'Turn off authenticator 2FA for your account?',
+    cancel: true,
+  }).onOk(() => {
+    void (async () => {
+      if (!props.user) return;
+      isSettingUpTwoFactor.value = true;
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
+        const response = await fetch(`${apiUrl}/two-factor`, {
+          method: 'DELETE',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${authStore.token}`,
+          },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.message || 'Unable to disable 2FA');
+        }
+        selfRecoveryCodes.value = [];
+        $q.notify({
+          type: 'positive',
+          message: 'Authenticator 2FA disabled',
+          position: 'top',
+        });
+        await refreshUser(props.user.id);
+      } catch (error) {
+        $q.notify({
+          type: 'negative',
+          message: error instanceof Error ? error.message : 'Unable to disable 2FA',
+          position: 'top',
+        });
+      } finally {
+        isSettingUpTwoFactor.value = false;
+      }
+    })();
+  });
 };
 
 const onRemoveRole = (roleId: string) => {

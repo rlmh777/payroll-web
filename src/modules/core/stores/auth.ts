@@ -26,6 +26,19 @@ interface User {
   preferences?: UserPreferences;
 }
 
+export type PasswordLoginResult =
+  | { type: 'success' }
+  | { type: 'two_factor'; challengeKey: string }
+  | { type: 'two_factor_setup'; challengeKey: string }
+  | { type: 'error' };
+
+export interface TwoFactorSetupOptions {
+  secret: string;
+  otpauth_url: string;
+  qr_svg: string;
+  challenge_key?: string | null;
+}
+
 type UnauthorizedHandler = (redirectPath?: string) => void;
 
 const API_URL = import.meta.env.VITE_API_URL || process.env.API_URL || 'http://localhost:3031/api';
@@ -81,14 +94,23 @@ export const useAuthStore = defineStore('auth', () => {
     clearStoredActiveModule();
   }
 
-  async function login(email: string, password: string) {
+  function applyLoginPayload(data: { token?: string; user?: User }): boolean {
+    if (!data.token || !data.user) {
+      return false;
+    }
+    setSession(data.token, data.user);
+    return true;
+  }
+
+  async function login(usernameOrEmail: string, password: string): Promise<PasswordLoginResult> {
     try {
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        // API field is still "email" but accepts username or email.
+        body: JSON.stringify({ email: usernameOrEmail, password }),
       });
 
       if (!response.ok) {
@@ -96,11 +118,152 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       const data = await response.json();
-      setSession(data.token, data.user);
 
-      return true;
+      if (data.requires_two_factor && data.challenge_key) {
+        return { type: 'two_factor', challengeKey: data.challenge_key };
+      }
+
+      if (data.requires_two_factor_setup && data.challenge_key) {
+        return { type: 'two_factor_setup', challengeKey: data.challenge_key };
+      }
+
+      if (!applyLoginPayload(data)) {
+        throw new Error('Login response missing session');
+      }
+
+      return { type: 'success' };
     } catch (error) {
       console.error('Login error:', error);
+      Notify.create({
+        type: 'negative',
+        message: 'Invalid username/email or password.',
+        position: 'top',
+      });
+      return { type: 'error' };
+    }
+  }
+
+  async function verifyTwoFactor(challengeKey: string, code: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_URL}/login/two-factor/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge_key: challengeKey, code }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || 'Invalid authentication code.');
+      }
+      if (!applyLoginPayload(data)) {
+        throw new Error('Two-factor response missing session');
+      }
+      return true;
+    } catch (error) {
+      console.error('Two-factor verify error:', error);
+      Notify.create({
+        type: 'negative',
+        message: error instanceof Error ? error.message : 'Invalid authentication code.',
+        position: 'top',
+      });
+      return false;
+    }
+  }
+
+  async function beginTwoFactorSetup(challengeKey: string): Promise<TwoFactorSetupOptions | null> {
+    try {
+      const response = await fetch(`${API_URL}/login/two-factor/setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge_key: challengeKey }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || 'Unable to start authenticator setup.');
+      }
+      return data as TwoFactorSetupOptions;
+    } catch (error) {
+      console.error('Two-factor setup start error:', error);
+      Notify.create({
+        type: 'negative',
+        message: error instanceof Error ? error.message : 'Unable to start authenticator setup.',
+        position: 'top',
+      });
+      return null;
+    }
+  }
+
+  async function confirmTwoFactorSetup(
+    challengeKey: string,
+    code: string,
+  ): Promise<{ recoveryCodes: string[] } | null> {
+    try {
+      const response = await fetch(`${API_URL}/login/two-factor/setup/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge_key: challengeKey, code }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || 'Invalid authentication code.');
+      }
+      if (!applyLoginPayload(data)) {
+        throw new Error('Two-factor setup response missing session');
+      }
+      return {
+        recoveryCodes: Array.isArray(data.recovery_codes) ? data.recovery_codes : [],
+      };
+    } catch (error) {
+      console.error('Two-factor setup confirm error:', error);
+      Notify.create({
+        type: 'negative',
+        message: error instanceof Error ? error.message : 'Invalid authentication code.',
+        position: 'top',
+      });
+      return null;
+    }
+  }
+
+  async function loginWithPasskey(usernameOrEmail: string) {
+    try {
+      const { startAuthentication } = await import('@simplewebauthn/browser');
+
+      const optionsResponse = await fetch(`${API_URL}/login/passkey/options`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: usernameOrEmail }),
+      });
+      if (!optionsResponse.ok) {
+        throw new Error('Unable to start passkey login');
+      }
+      const { options, challenge_key: challengeKey } = await optionsResponse.json();
+
+      const credential = await startAuthentication({ optionsJSON: options });
+
+      const verifyResponse = await fetch(`${API_URL}/login/passkey`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challenge_key: challengeKey,
+          credential,
+        }),
+      });
+      if (!verifyResponse.ok) {
+        const err = await verifyResponse.json().catch(() => ({}));
+        throw new Error(err.message || 'Passkey login failed');
+      }
+
+      const data = await verifyResponse.json();
+      if (!applyLoginPayload(data)) {
+        throw new Error('Passkey login response missing session');
+      }
+      return true;
+    } catch (error) {
+      console.error('Passkey login error:', error);
+      Notify.create({
+        type: 'negative',
+        message: error instanceof Error ? error.message : 'Passkey login failed.',
+        position: 'top',
+      });
       return false;
     }
   }
@@ -281,6 +444,10 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isAuthenticated,
     login,
+    verifyTwoFactor,
+    beginTwoFactorSetup,
+    confirmTwoFactorSetup,
+    loginWithPasskey,
     logout,
     checkAuth,
     ensureUser,

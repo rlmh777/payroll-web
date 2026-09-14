@@ -20,6 +20,12 @@ export interface User {
     id: string;
     name: string;
   }>;
+  security?: {
+    two_factor_enabled: boolean;
+    two_factor_required: boolean | null;
+    passkey_count: number;
+    requires_two_factor: boolean;
+  };
 }
 
 export interface CreateUserPayload {

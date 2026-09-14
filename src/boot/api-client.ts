@@ -1,8 +1,10 @@
 import { boot } from 'quasar/wrappers';
 import { useAuthStore } from 'src/stores/auth';
 import { useNetworkStore } from 'src/stores/network-store';
+import { resolveTenantSlug } from '@core/utils/tenant';
 
 const API_URL = import.meta.env.VITE_API_URL || process.env.API_URL || 'http://localhost:3031/api';
+const TENANT_HEADER = 'X-Tenant';
 
 function resolveUrl(input: RequestInfo | URL): string {
   if (typeof input === 'string') {
@@ -22,24 +24,29 @@ function isApiRequest(input: RequestInfo | URL): boolean {
 
 function isAuthExemptRequest(input: RequestInfo | URL): boolean {
   const url = resolveUrl(input);
-  return url.endsWith('/login') || url.includes('/users/reset-password');
+  return url.includes('/login') || url.includes('/users/reset-password');
 }
 
 function hasAuthorizationHeader(headers: Headers): boolean {
   return headers.has('Authorization') || headers.has('authorization');
 }
 
-function withAuthHeader(
+function withApiHeaders(
   input: RequestInfo | URL,
   init: RequestInit | undefined,
-  token: string,
+  token: string | null,
 ): { input: RequestInfo | URL; init?: RequestInit } {
   const headers = new Headers(
     init?.headers
     ?? (typeof input !== 'string' && !(input instanceof URL) ? input.headers : undefined),
   );
 
-  if (!hasAuthorizationHeader(headers)) {
+  const tenantSlug = resolveTenantSlug();
+  if (tenantSlug && !headers.has(TENANT_HEADER)) {
+    headers.set(TENANT_HEADER, tenantSlug);
+  }
+
+  if (token && !hasAuthorizationHeader(headers)) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
@@ -75,10 +82,14 @@ export default boot(() => {
     let requestInput = input;
     let requestInit = init;
 
-    if (isApiRequest(input) && authStore.token && !isAuthExemptRequest(input)) {
-      const authorized = withAuthHeader(input, init, authStore.token);
-      requestInput = authorized.input;
-      requestInit = authorized.init;
+    if (isApiRequest(input)) {
+      const withHeaders = withApiHeaders(
+        input,
+        init,
+        !isAuthExemptRequest(input) ? authStore.token : null,
+      );
+      requestInput = withHeaders.input;
+      requestInit = withHeaders.init;
     }
 
     try {
