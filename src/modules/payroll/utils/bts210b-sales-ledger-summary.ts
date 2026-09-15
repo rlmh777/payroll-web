@@ -7,8 +7,32 @@
  * - Non-Taxable Sales — should not be taxed (shown in raw; omitted from BTS210b)
  * - Zero Rate — rated at 0%
  *
- * Amount per line = Credit − Debit.
+ * Taxable Sales (and every sales-ledger line) = Credit − Debit.
+ * Returns / debit notes reduce the taxable amount; do not use debit-only or credit-only.
  */
+
+export function workbookNumber(value: unknown): number {
+  if (value == null || value === '') return 0;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(/,/g, '').trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  if (typeof value === 'object' && value !== null && 'v' in value) {
+    return workbookNumber((value as { v: unknown }).v);
+  }
+  return 0;
+}
+
+/** BTS210b line amount: Credit − Debit. */
+export function salesLedgerNetAmount(
+  row: Record<string, unknown>,
+  debitColumn: string,
+  creditColumn: string,
+): number {
+  return workbookNumber(row[creditColumn]) - workbookNumber(row[debitColumn]);
+}
 
 export type SalesLedgerInvoiceBuckets = {
   /** Taxable sales net amount excluding GST. */

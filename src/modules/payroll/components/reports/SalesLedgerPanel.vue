@@ -58,7 +58,7 @@
 
     <q-banner v-if="!hasData" class="bg-blue-1 text-grey-9" rounded>
       Upload the monthly raw sales ledger workbook to view BTS210b or the detail sheet.
-      Taxable Sales amounts are GST-exclusive; GST payable = amount × standard rate from settings.
+      Taxable Sales on BTS210b is Credit − Debit (GST-exclusive). GST payable = that amount × standard rate from settings.
     </q-banner>
 
     <div v-else class="sales-ledger-table-wrap">
@@ -138,6 +138,7 @@ import { useOrganizationStore } from '@core/stores/organization-store';
 import { exportBts210bSalesLedger } from '@payroll/utils/bts210b-sales-ledger-export';
 import {
   salesClassBucket,
+  salesLedgerNetAmount,
   summarizeBts210bInvoice,
 } from '@payroll/utils/bts210b-sales-ledger-summary';
 
@@ -236,7 +237,7 @@ onBeforeUnmount(() => {
 });
 
 function lineAmount(row: DetailRow): number {
-  return Number(row[creditColumn.value] ?? 0) - Number(row[debitColumn.value] ?? 0);
+  return salesLedgerNetAmount(row, debitColumn.value, creditColumn.value);
 }
 
 function isDataRow(row: DetailRow): boolean {
