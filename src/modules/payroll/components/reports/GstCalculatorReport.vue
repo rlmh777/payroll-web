@@ -678,10 +678,8 @@ const taxBases = computed(() => {
   const totals: Record<string, number> = {};
   for (const column of taxColumns.value) {
     totals[column.code] = (workspace.value?.lines ?? []).reduce((sum, line) => {
-      if (!lineApplies(line, column.code)) return sum;
-      const amount = Number(line.amount || 0);
-      if (amount < 0) return sum;
-      return sum + amount;
+      const base = taxBaseAmount(line, column.code);
+      return base == null ? sum : sum + base;
     }, 0);
   }
   return totals;
@@ -952,16 +950,21 @@ function isNegativeAmount(line: TaxCalculatorLine) {
   return Number(line.amount || 0) < 0;
 }
 
-function appliedTax(line: TaxCalculatorLine, code: string) {
+function taxBaseAmount(line: TaxCalculatorLine, code: string): number | null {
   if (!lineApplies(line, code)) return null;
   const amount = Number(line.amount || 0);
-  if (amount < 0) return null;
-  return amount * rateFor(code);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function appliedTax(line: TaxCalculatorLine, code: string) {
+  const base = taxBaseAmount(line, code);
+  if (base == null) return null;
+  return base * rateFor(code);
 }
 
 function taxCell(line: TaxCalculatorLine, code: string) {
-  const tax = appliedTax(line, code);
-  return tax == null ? '—' : money(tax);
+  const base = taxBaseAmount(line, code);
+  return base == null ? '—' : money(base);
 }
 
 async function onWorkbookSelected(file: File | File[] | null) {
