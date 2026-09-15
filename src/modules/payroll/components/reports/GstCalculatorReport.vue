@@ -265,7 +265,7 @@
                 outlined
                 prefix="$"
                 label="Net of 2251 account"
-                hint="Filled from Total 2251 · GST Payable balance on the GST sheet."
+                hint="Sum of GST sheet 2251 transaction debits (positive; not the signed total/balance)."
                 @change="recalculate"
               />
             </div>
