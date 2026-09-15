@@ -241,7 +241,7 @@
                 outlined
                 prefix="$"
                 label="Total Debits"
-                hint="Filled from Total 2251 · GST Payable debit on the GST sheet."
+                hint="Filled from Total 2251 · GST Payable debit, or the debit-side of Amount when the GST sheet has no Debit column."
                 @change="recalculate"
               />
             </div>
@@ -253,7 +253,7 @@
                 outlined
                 prefix="$"
                 label="Total partial exemptions"
-                hint="Filled from Total 2251-a · Partial Exemption GST debit on the GST sheet."
+                hint="Filled from Total 2251-a · Partial Exemption GST debit, or |Amount| on that total row when there is no Debit column."
                 @change="recalculate"
               />
             </div>
