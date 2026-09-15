@@ -697,9 +697,10 @@ const taxTotals = computed(() => {
 const partialExemption = computed(() => {
   const lines = workspace.value?.lines ?? [];
   const gstSum = (code: string) =>
-    lines
-      .filter((line) => line.gst_code === code)
-      .reduce((sum, line) => sum + Number(line.amount || 0), 0);
+    lines.reduce((sum, line) => {
+      const base = taxBaseAmount(line, code);
+      return base == null ? sum : sum + base;
+    }, 0);
 
   const gstIncome = gstSum('GST_INCOME');
   const gstZero = gstSum('GST_ZERO_INCOME');
@@ -880,8 +881,8 @@ function isTaxBaseLine(line: TaxCalculatorLine) {
 }
 
 function lineHasAssignment(line: TaxCalculatorLine, code: string) {
-  if (line.tax_rate_assignments?.length) {
-    return line.tax_rate_assignments.some((assignment) => assignment.code === code);
+  if (line.tax_rate_assignments?.some((assignment) => assignment.code === code)) {
+    return true;
   }
   return lineTaxCodes(line, 'business').includes(code) || lineTaxCodes(line, 'gst').includes(code);
 }
