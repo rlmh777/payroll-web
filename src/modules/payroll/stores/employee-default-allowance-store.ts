@@ -18,11 +18,14 @@ interface ErrorWithData extends Error {
 interface CreateEmployeeDefaultAllowanceBody {
   employeeId: string;
   allowanceId: string;
-  accountId: string;
+  accountId?: string | null;
   note: string;
   quantity: number;
   unitAmount: number;
   amount: number;
+  occurrence: string;
+  occurrenceCycleLength?: number | null;
+  occurrenceCycleOffset?: number | null;
 }
 
 interface UpdateEmployeeDefaultAllowanceBody {
@@ -33,6 +36,9 @@ interface UpdateEmployeeDefaultAllowanceBody {
   quantity?: number;
   unitAmount?: number;
   amount?: number;
+  occurrence?: string;
+  occurrenceCycleLength?: number | null;
+  occurrenceCycleOffset?: number | null;
 }
 
 function extractErrorMessage(errorData: ApiErrorData, fallback: string): string {
@@ -64,6 +70,7 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
       search: null as string | null,
       allowanceId: null as string | null,
       accountId: null as string | null,
+      occurrence: null as string | null,
     },
   }),
 
@@ -91,6 +98,9 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
         }
         if (this.searchFilters.accountId) {
           queryParams.append('account_id', this.searchFilters.accountId);
+        }
+        if (this.searchFilters.occurrence) {
+          queryParams.append('occurrence', this.searchFilters.occurrence);
         }
 
         const currentPage = page ?? this.currentPage;
@@ -136,10 +146,13 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
     async createEmployeeDefaultAllowance(
       employeeId: string,
       allowanceId: string,
-      accountId: string,
       note: string,
       quantity: number,
       unitAmount: number,
+      accountId?: string | null,
+      occurrence?: string,
+      occurrenceCycleLength?: number | null,
+      occurrenceCycleOffset?: number | null,
     ): Promise<EmployeeDefaultAllowance | null> {
       this.isLoading = true;
       this.error = null;
@@ -158,12 +171,21 @@ export const useEmployeeDefaultAllowanceStore = defineStore('employeeDefaultAllo
         const body: CreateEmployeeDefaultAllowanceBody = {
           employeeId,
           allowanceId,
-          accountId,
           note,
           quantity,
           unitAmount,
           amount,
+          occurrence: occurrence ?? 'every_payroll',
         };
+        if (occurrenceCycleLength != null) {
+          body.occurrenceCycleLength = occurrenceCycleLength;
+        }
+        if (occurrenceCycleOffset != null) {
+          body.occurrenceCycleOffset = occurrenceCycleOffset;
+        }
+        if (accountId) {
+          body.accountId = accountId;
+        }
 
         const response = await fetch(`${API_URL}/employee-default-allowances`, {
           method: 'POST',

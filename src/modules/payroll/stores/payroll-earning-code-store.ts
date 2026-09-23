@@ -8,12 +8,23 @@ export interface PayrollEarningCode {
   code: string;
   name: string;
   account_id?: string | null;
+  source?: string | null;
+  post_to_department_account?: boolean;
   is_taxable: boolean;
   is_ss_subject: boolean;
   is_active: boolean;
   sort_order: number;
   account?: { id: string; name: string; code1: string } | null;
 }
+
+export const EARNING_CODE_SOURCE_OPTIONS = [
+  { label: 'None — only when assigned to other payments or pools', value: null },
+  { label: 'Timesheet regular', value: 'timesheet_regular' },
+  { label: 'Timesheet overtime', value: 'timesheet_overtime' },
+  { label: 'Timesheet holiday', value: 'timesheet_holiday' },
+  { label: 'Vacation pay', value: 'vacation' },
+  { label: 'Other payments fallback', value: 'allowance_fallback' },
+];
 
 export const usePayrollEarningCodeStore = defineStore('payrollEarningCode', {
   state: () => ({

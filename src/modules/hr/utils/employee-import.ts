@@ -8,6 +8,10 @@ export const EMPLOYEE_IMPORT_SHEET_NAMES = [
   'Contacts',
   'LeaveEntitlements',
   'SsBenefits',
+  'PoolPoints',
+  'Allowances',
+  'Deductions',
+  'DepartmentHeads',
   'ScheduledWork',
   'ClockingLogs',
 ] as const;
@@ -24,6 +28,10 @@ export interface EmployeeImportSheets {
   contacts: EmployeeImportRow[];
   leaveEntitlements: EmployeeImportRow[];
   ssBenefits: EmployeeImportRow[];
+  poolPoints: EmployeeImportRow[];
+  allowances: EmployeeImportRow[];
+  deductions: EmployeeImportRow[];
+  departmentHeads: EmployeeImportRow[];
   scheduledWork: EmployeeImportRow[];
   clockingLogs: EmployeeImportRow[];
 }
@@ -38,6 +46,10 @@ export interface EmployeeImportPayload {
   contacts?: EmployeeImportRow[];
   leaveEntitlements?: EmployeeImportRow[];
   ssBenefits?: EmployeeImportRow[];
+  poolPoints?: EmployeeImportRow[];
+  allowances?: EmployeeImportRow[];
+  deductions?: EmployeeImportRow[];
+  departmentHeads?: EmployeeImportRow[];
 }
 
 const SHEET_TO_PAYLOAD_KEY: Record<EmployeeImportSheetName, keyof EmployeeImportSheets> = {
@@ -48,6 +60,10 @@ const SHEET_TO_PAYLOAD_KEY: Record<EmployeeImportSheetName, keyof EmployeeImport
   Contacts: 'contacts',
   LeaveEntitlements: 'leaveEntitlements',
   SsBenefits: 'ssBenefits',
+  PoolPoints: 'poolPoints',
+  Allowances: 'allowances',
+  Deductions: 'deductions',
+  DepartmentHeads: 'departmentHeads',
   ScheduledWork: 'scheduledWork',
   ClockingLogs: 'clockingLogs',
 };
@@ -192,6 +208,10 @@ export function emptyEmployeeImportSheets(): EmployeeImportSheets {
     contacts: [],
     leaveEntitlements: [],
     ssBenefits: [],
+    poolPoints: [],
+    allowances: [],
+    deductions: [],
+    departmentHeads: [],
     scheduledWork: [],
     clockingLogs: [],
   };
@@ -228,6 +248,10 @@ export function toEmployeeImportPayload(sheets: EmployeeImportSheets): EmployeeI
   if (sheets.contacts.length) payload.contacts = sheets.contacts;
   if (sheets.leaveEntitlements.length) payload.leaveEntitlements = sheets.leaveEntitlements;
   if (sheets.ssBenefits.length) payload.ssBenefits = sheets.ssBenefits;
+  if (sheets.poolPoints.length) payload.poolPoints = sheets.poolPoints;
+  if (sheets.allowances.length) payload.allowances = sheets.allowances;
+  if (sheets.deductions.length) payload.deductions = sheets.deductions;
+  if (sheets.departmentHeads.length) payload.departmentHeads = sheets.departmentHeads;
 
   return payload;
 }
@@ -241,6 +265,10 @@ export function employeeImportSheetCounts(sheets: EmployeeImportSheets): { label
     { label: 'Contacts', count: sheets.contacts.length },
     { label: 'Leave entitlements', count: sheets.leaveEntitlements.length },
     { label: 'SS benefits', count: sheets.ssBenefits.length },
+    { label: 'Pool points', count: sheets.poolPoints.length },
+    { label: 'Allowances', count: sheets.allowances.length },
+    { label: 'Deductions', count: sheets.deductions.length },
+    { label: 'Department heads', count: sheets.departmentHeads.length },
     { label: 'Scheduled work', count: sheets.scheduledWork.length },
     { label: 'Clocking logs', count: sheets.clockingLogs.length },
   ];

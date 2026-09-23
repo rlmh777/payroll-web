@@ -32,6 +32,19 @@
         />
       </div>
       <div class="col-12 col-md-2">
+        <q-select
+          v-model="searchFilters.occurrence"
+          :options="PAYROLL_OCCURRENCE_OPTIONS"
+          emit-value
+          map-options
+          label="Filter by Occurrence"
+          outlined
+          dense
+          clearable
+          @update:model-value="onSearch"
+        />
+      </div>
+      <div class="col-12 col-md-2">
         <q-btn
           flat
           label="Clear Filters"
@@ -64,6 +77,7 @@ import { useEmployeeStore } from '@/stores/employee-store';
 import AllowanceSelect from '@payroll/components/shared/allowance/AllowanceSelect.vue';
 import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
 import AddEmployeeDefaultAllowance from './AddEmployeeDefaultAllowance.vue';
+import { PAYROLL_OCCURRENCE_OPTIONS } from '@payroll/components/shared/occurrence/payroll-occurrence';
 
 const employeeDefaultAllowanceStore = useEmployeeDefaultAllowanceStore();
 const employeeStore = useEmployeeStore();
@@ -80,6 +94,7 @@ const hasActiveFilters = computed(() => {
     searchFilters.value.search
     || searchFilters.value.allowanceId
     || searchFilters.value.accountId
+    || searchFilters.value.occurrence
   );
 });
 
@@ -92,6 +107,7 @@ const clearFilters = async () => {
     search: null,
     allowanceId: null,
     accountId: null,
+    occurrence: null,
   };
   await onSearch();
 };

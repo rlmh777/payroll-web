@@ -38,6 +38,18 @@ export const workflowRoutes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: adminSettingsPath('file-storage'),
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('@core/settings/file-storage/ManageFileStorage.vue'),
+        props: { title: 'File Storage' },
+      },
+    ],
+  },
+  {
     path: adminSettingsPath('menu'),
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },

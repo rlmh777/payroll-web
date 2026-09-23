@@ -307,6 +307,10 @@ const onAllowanceChanged = (allowanceId: string | null) => {
   if (allowance?.defaultAmount != null) {
     form.value.unitAmount = Number(allowance.defaultAmount);
   }
+  const typeAccountId = allowance?.accountId ?? allowance?.account?.id ?? null;
+  if (typeAccountId) {
+    form.value.accountId = typeAccountId;
+  }
 };
 
 const resetForm = () => {

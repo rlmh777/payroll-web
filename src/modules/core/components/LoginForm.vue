@@ -61,6 +61,9 @@
         :disable="loading"
         @click="onPasskeyLogin"
       />
+      <div v-if="passkeysSupported" class="text-caption text-grey-7 text-center">
+        Create a passkey after you sign in with your password.
+      </div>
     </div>
   </q-form>
 
@@ -160,7 +163,7 @@ import { useAuthStore } from '@core/stores/auth';
 import { useMenuStore } from '@core/stores/menus';
 import { useOrganizationStore } from 'src/stores/organization-store';
 import { useRouter } from 'vue-router';
-import { Notify } from 'quasar';
+import { Dialog, Notify } from 'quasar';
 import {
   getRememberedUsername,
   isRememberUsernameEnabled,
@@ -186,6 +189,7 @@ const challengeKey = ref('');
 const totpCode = ref('');
 const setupOptions = ref<LoginTwoFactorSetup | null>(null);
 const recoveryCodes = ref<string[]>([]);
+const pendingOfferPasskey = ref(true);
 
 const authStore = useAuthStore();
 const menuStore = useMenuStore();
@@ -211,9 +215,31 @@ function resetChallenge() {
   totpCode.value = '';
   setupOptions.value = null;
   recoveryCodes.value = [];
+  pendingOfferPasskey.value = true;
 }
 
-async function afterLoginSuccess() {
+function promptCreatePasskey(): Promise<boolean> {
+  return new Promise((resolve) => {
+    Dialog.create({
+      title: 'Create a passkey?',
+      message:
+        'Save a passkey on this device so next time you can sign in with Face ID, Touch ID, or Windows Hello instead of a password.',
+      cancel: { label: 'Not now', flat: true },
+      ok: { label: 'Create passkey', color: 'primary' },
+    })
+      .onOk(() => resolve(true))
+      .onCancel(() => resolve(false));
+  });
+}
+
+async function afterLoginSuccess(options: { offerPasskey?: boolean } = {}) {
+  if (options.offerPasskey && passkeysSupported.value) {
+    const shouldCreate = await promptCreatePasskey();
+    if (shouldCreate) {
+      await authStore.registerCurrentDevicePasskey();
+    }
+  }
+
   setRememberUsername(rememberUsername.value, username.value);
   await organizationStore.fetchOrganizations();
   await menuStore.fetchMenus();
@@ -246,7 +272,7 @@ async function onSubmit() {
   try {
     const result = await authStore.login(username.value.trim(), password.value);
     if (result.type === 'success') {
-      await afterLoginSuccess();
+      await afterLoginSuccess({ offerPasskey: !result.hasPasskeys });
       return;
     }
     if (result.type === 'two_factor') {
@@ -268,9 +294,9 @@ async function onSubmit() {
 async function onVerifyTwoFactor() {
   loading.value = true;
   try {
-    const success = await authStore.verifyTwoFactor(challengeKey.value, totpCode.value.trim());
-    if (success) {
-      await afterLoginSuccess();
+    const result = await authStore.verifyTwoFactor(challengeKey.value, totpCode.value.trim());
+    if (result.ok) {
+      await afterLoginSuccess({ offerPasskey: !result.hasPasskeys });
     }
   } catch (error) {
     console.error('Two-factor verify error:', error);
@@ -288,10 +314,11 @@ async function onConfirmSetup() {
     }
     recoveryCodes.value = result.recoveryCodes;
     if (recoveryCodes.value.length > 0) {
+      pendingOfferPasskey.value = !result.hasPasskeys;
       step.value = 'recovery';
       return;
     }
-    await afterLoginSuccess();
+    await afterLoginSuccess({ offerPasskey: !result.hasPasskeys });
   } catch (error) {
     console.error('Two-factor setup error:', error);
   } finally {
@@ -301,7 +328,7 @@ async function onConfirmSetup() {
 
 async function finishAfterRecovery() {
   recoveryCodes.value = [];
-  await afterLoginSuccess();
+  await afterLoginSuccess({ offerPasskey: pendingOfferPasskey.value });
 }
 
 async function onPasskeyLogin() {

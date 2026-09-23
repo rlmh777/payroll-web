@@ -35,10 +35,12 @@ export interface DashboardPayload {
   departmentShare: Array<{ departmentId: number | null; name: string; value: number }>;
   costByDepartment: {
     departments: string[];
-    regular: number[];
-    overtime: number[];
-    holiday: number[];
-    allowances: number[];
+    series: Array<{ key: string; name: string; data: number[] }>;
+    regular?: number[];
+    overtime?: number[];
+    holiday?: number[];
+    allowances?: number[];
+    vacation?: number[];
   };
   deductionsMix: Array<{ name: string; value: number }>;
   ytdVsCurrentByDepartment: {

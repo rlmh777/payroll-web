@@ -22,14 +22,6 @@
             :showEdit="true"
           />
 
-          <AccountSelect
-            v-model="form.accountId"
-            :rules="[(val: string | null | undefined) => !!val || 'Account is required']"
-            :disable="employeeDefaultAllowanceStore.isLoading"
-            :showAddNew="true"
-            :showEdit="true"
-          />
-
           <q-input
             v-model.number="form.quantity"
             label="Quantity *"
@@ -59,6 +51,13 @@
             outlined
             readonly
             hint="Calculated as quantity × unit amount"
+            :disable="employeeDefaultAllowanceStore.isLoading"
+          />
+
+          <PayrollOccurrenceFields
+            v-model:occurrence="form.occurrence"
+            v-model:occurrence-cycle-length="form.occurrenceCycleLength"
+            v-model:occurrence-cycle-offset="form.occurrenceCycleOffset"
             :disable="employeeDefaultAllowanceStore.isLoading"
           />
 
@@ -100,7 +99,12 @@ import { useQuasar } from 'quasar';
 import { useEmployeeDefaultAllowanceStore } from '@/stores/employee-default-allowance-store';
 import { useEmployeeStore } from '@/stores/employee-store';
 import AllowanceSelect from '@payroll/components/shared/allowance/AllowanceSelect.vue';
-import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
+import PayrollOccurrenceFields from '@payroll/components/shared/occurrence/PayrollOccurrenceFields.vue';
+import {
+  PAYROLL_OCCURRENCE,
+  normalizePayrollOccurrenceFields,
+  type PayrollOccurrence,
+} from '@payroll/components/shared/occurrence/payroll-occurrence';
 import type { EmployeeDefaultAllowance } from '@core/types/models';
 
 const $q = useQuasar();
@@ -130,10 +134,12 @@ const isOpen = computed({
 
 const form = ref({
   allowanceId: null as string | null,
-  accountId: null as string | null,
   quantity: 1 as number | null,
   unitAmount: null as number | null,
   note: '',
+  occurrence: PAYROLL_OCCURRENCE.everyPayroll as PayrollOccurrence,
+  occurrenceCycleLength: null as number | null,
+  occurrenceCycleOffset: null as number | null,
 });
 
 const computedAmount = computed(() => {
@@ -147,7 +153,6 @@ const initialAllowanceId = ref<string | null>(null);
 const onSubmit = async () => {
   if (
     !form.value.allowanceId
-    || !form.value.accountId
     || form.value.quantity === null
     || form.value.quantity === undefined
     || form.value.unitAmount === null
@@ -158,14 +163,21 @@ const onSubmit = async () => {
   }
 
   try {
+    const occurrence = normalizePayrollOccurrenceFields({
+      occurrence: form.value.occurrence,
+      occurrenceCycleLength: form.value.occurrenceCycleLength,
+      occurrenceCycleOffset: form.value.occurrenceCycleOffset,
+    });
     const updated = await employeeDefaultAllowanceStore.updateEmployeeDefaultAllowance(
       props.employeeDefaultAllowance.id,
       {
         allowanceId: form.value.allowanceId,
-        accountId: form.value.accountId,
         note: form.value.note,
         quantity: form.value.quantity,
         unitAmount: form.value.unitAmount,
+        occurrence: occurrence.occurrence,
+        occurrenceCycleLength: occurrence.occurrenceCycleLength,
+        occurrenceCycleOffset: occurrence.occurrenceCycleOffset,
       },
     );
 
@@ -220,20 +232,20 @@ watch(isOpen, async (newValue) => {
 
   form.value = {
     allowanceId: props.employeeDefaultAllowance.allowanceId || null,
-    accountId: props.employeeDefaultAllowance.accountId || null,
     quantity: props.employeeDefaultAllowance.quantity ?? 1,
     unitAmount: props.employeeDefaultAllowance.unitAmount
       ?? props.employeeDefaultAllowance.amount
       ?? null,
     note: props.employeeDefaultAllowance.note || '',
+    occurrence: (props.employeeDefaultAllowance.occurrence as PayrollOccurrence)
+      || PAYROLL_OCCURRENCE.everyPayroll,
+    occurrenceCycleLength: props.employeeDefaultAllowance.occurrenceCycleLength ?? null,
+    occurrenceCycleOffset: props.employeeDefaultAllowance.occurrenceCycleOffset ?? null,
   };
   initialAllowanceId.value = props.employeeDefaultAllowance.allowanceId || null;
 
   if (employeeStore.allowances.length === 0) {
     await employeeStore.fetchAllowances();
-  }
-  if (employeeStore.accounts.length === 0) {
-    await employeeStore.fetchAccounts();
   }
 });
 </script>

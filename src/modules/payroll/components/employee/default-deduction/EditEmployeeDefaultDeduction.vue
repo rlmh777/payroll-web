@@ -19,11 +19,13 @@
             :rules="[(val: number | null | undefined) => !!val || 'Deduction type is required']"
             :disable="employeeDefaultDeductionStore.isLoading"
             :showAddNew="true"
+            :showEdit="true"
           />
 
           <BankSelect
             v-model="form.bankId"
-            :rules="[(val: string | null | undefined) => !!val || 'Bank is required']"
+            label="Bank"
+            clearable
             :disable="employeeDefaultDeductionStore.isLoading"
             :showAddNew="true"
             :showEdit="true"
@@ -31,28 +33,19 @@
 
           <q-input
             v-model="form.accountNumber"
-            label="Account Number *"
+            label="Account Number"
             outlined
             maxlength="255"
             counter
-            :rules="[(val: string | null | undefined) => !!val || 'Account number is required']"
+            clearable
             :disable="employeeDefaultDeductionStore.isLoading"
           />
 
-          <PayRateFrequencySelect
-            v-model="form.frequencyId"
-            :rules="[(val: number | null | undefined) => !!val || 'Frequency is required']"
+          <PayrollOccurrenceFields
+            v-model:occurrence="form.occurrence"
+            v-model:occurrence-cycle-length="form.occurrenceCycleLength"
+            v-model:occurrence-cycle-offset="form.occurrenceCycleOffset"
             :disable="employeeDefaultDeductionStore.isLoading"
-            :showAddNew="true"
-            :showEdit="true"
-          />
-
-          <AccountSelect
-            v-model="form.accountId"
-            :rules="[(val: string | null | undefined) => !!val || 'Account is required']"
-            :disable="employeeDefaultDeductionStore.isLoading"
-            :showAddNew="true"
-            :showEdit="true"
           />
 
           <q-input
@@ -88,10 +81,12 @@
 
           <q-input
             v-model="form.applicationRule"
+            class="field-hint-multiline"
             label="Application Rule"
             outlined
             maxlength="255"
             counter
+            hint="Examples: Stop when loan is paid off. Skip if net pay would go below $50. Hold while on unpaid leave."
             :disable="employeeDefaultDeductionStore.isLoading"
           />
 
@@ -131,12 +126,15 @@
 import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useEmployeeDefaultDeductionStore } from '@/stores/employee-default-deduction-store';
-import { useEmployeeStore } from '@/stores/employee-store';
 import { useDeductionTypeStore } from '@/stores/deduction-type-store';
 import DeductionTypeSelect from '@payroll/components/shared/deduction-type/DeductionTypeSelect.vue';
 import BankSelect from '@payroll/components/shared/bank/BankSelect.vue';
-import PayRateFrequencySelect from '@hr/components/employee/common/PayRateFrequencySelect.vue';
-import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
+import PayrollOccurrenceFields from '@payroll/components/shared/occurrence/PayrollOccurrenceFields.vue';
+import {
+  PAYROLL_OCCURRENCE,
+  normalizePayrollOccurrenceFields,
+  type PayrollOccurrence,
+} from '@payroll/components/shared/occurrence/payroll-occurrence';
 import type { EmployeeDefaultDeduction } from '@core/types/models';
 
 const $q = useQuasar();
@@ -157,7 +155,6 @@ const emit = defineEmits<{
 }>();
 
 const employeeDefaultDeductionStore = useEmployeeDefaultDeductionStore();
-const employeeStore = useEmployeeStore();
 const deductionTypeStore = useDeductionTypeStore();
 
 // Track initial deduction type ID to detect changes
@@ -172,8 +169,9 @@ const form = ref({
   deductionTypeId: null as number | null,
   bankId: null as string | null,
   accountNumber: null as string | null,
-  frequencyId: null as number | null,
-  accountId: null as string | null,
+  occurrence: PAYROLL_OCCURRENCE.everyPayroll as PayrollOccurrence,
+  occurrenceCycleLength: null as number | null,
+  occurrenceCycleOffset: null as number | null,
   amount: null as number | null,
   note: null as string | null,
   allowPartialDeduction: false,
@@ -182,36 +180,34 @@ const form = ref({
 });
 
 const onSubmit = async () => {
-  if (!form.value.deductionTypeId || !form.value.bankId || !form.value.accountNumber ||
-      !form.value.frequencyId || !form.value.accountId ||
+  if (!form.value.deductionTypeId ||
+      !form.value.occurrence ||
       form.value.amount === null || form.value.amount === undefined ||
       !props.employeeDefaultDeduction) {
     return;
   }
 
   try {
-    // Extract values after validation - TypeScript knows they're non-null
-    const deductionTypeId = form.value.deductionTypeId;
-    const bankId = form.value.bankId;
-    const accountNumber = form.value.accountNumber;
-    const frequencyId = form.value.frequencyId;
-    const accountId = form.value.accountId;
-    const amount = form.value.amount;
-
+    const occurrence = normalizePayrollOccurrenceFields({
+      occurrence: form.value.occurrence,
+      occurrenceCycleLength: form.value.occurrenceCycleLength,
+      occurrenceCycleOffset: form.value.occurrenceCycleOffset,
+    });
     const updatedEmployeeDefaultDeduction = await employeeDefaultDeductionStore.updateEmployeeDefaultDeduction(
       props.employeeDefaultDeduction.id,
       undefined, // employeeId - not updating
-      deductionTypeId,
-      bankId,
-      accountNumber,
-      frequencyId,
-      accountId,
+      form.value.deductionTypeId,
+      form.value.bankId,
+      form.value.accountNumber,
+      occurrence.occurrence,
       form.value.note,
-      amount,
+      form.value.amount,
       {
         allowPartialDeduction: form.value.allowPartialDeduction,
         applicationRule: form.value.applicationRule,
         priority: form.value.priority,
+        occurrenceCycleLength: occurrence.occurrenceCycleLength,
+        occurrenceCycleOffset: occurrence.occurrenceCycleOffset,
       }
     );
 
@@ -268,8 +264,10 @@ watch(isOpen, async (newValue) => {
       deductionTypeId: props.employeeDefaultDeduction.deductionTypeId || null,
       bankId: props.employeeDefaultDeduction.bankId || null,
       accountNumber: props.employeeDefaultDeduction.accountNumber || null,
-      frequencyId: props.employeeDefaultDeduction.frequencyId ||  null,
-      accountId: props.employeeDefaultDeduction.accountId || null,
+      occurrence: (props.employeeDefaultDeduction.occurrence as PayrollOccurrence)
+        || PAYROLL_OCCURRENCE.everyPayroll,
+      occurrenceCycleLength: props.employeeDefaultDeduction.occurrenceCycleLength ?? null,
+      occurrenceCycleOffset: props.employeeDefaultDeduction.occurrenceCycleOffset ?? null,
       amount: props.employeeDefaultDeduction.amount !== null && props.employeeDefaultDeduction.amount !== undefined ? props.employeeDefaultDeduction.amount : null,
       note: props.employeeDefaultDeduction.note || null,
       allowPartialDeduction: props.employeeDefaultDeduction.allowPartialDeduction ?? false,
@@ -281,9 +279,6 @@ watch(isOpen, async (newValue) => {
     // Fetch required data if not already loaded
     if (deductionTypeStore.deductionTypes.length === 0) {
       await deductionTypeStore.fetchDeductionTypes();
-    }
-    if (employeeStore.accounts.length === 0) {
-      await employeeStore.fetchAccounts();
     }
   }
 });
@@ -300,6 +295,11 @@ watch(isOpen, async (newValue) => {
 
 .edit-employee-default-deduction-card :deep(.q-card__section) {
   overflow-y: auto;
+}
+
+.field-hint-multiline :deep(.q-field__messages),
+.field-hint-multiline :deep(.q-field__messages > div) {
+  line-height: 1.6;
 }
 </style>
 

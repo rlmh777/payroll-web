@@ -22,14 +22,6 @@
             :showEdit="true"
           />
 
-          <AccountSelect
-            v-model="form.accountId"
-            :rules="[(val: string | null | undefined) => !!val || 'Account is required']"
-            :disable="employeeDefaultAllowanceStore.isLoading"
-            :showAddNew="true"
-            :showEdit="true"
-          />
-
           <q-input
             v-model.number="form.quantity"
             label="Quantity *"
@@ -59,6 +51,13 @@
             outlined
             readonly
             hint="Calculated as quantity × unit amount"
+            :disable="employeeDefaultAllowanceStore.isLoading"
+          />
+
+          <PayrollOccurrenceFields
+            v-model:occurrence="form.occurrence"
+            v-model:occurrence-cycle-length="form.occurrenceCycleLength"
+            v-model:occurrence-cycle-offset="form.occurrenceCycleOffset"
             :disable="employeeDefaultAllowanceStore.isLoading"
           />
 
@@ -100,7 +99,13 @@ import { useQuasar } from 'quasar';
 import { useEmployeeDefaultAllowanceStore } from '@/stores/employee-default-allowance-store';
 import { useEmployeeStore } from '@/stores/employee-store';
 import AllowanceSelect from '@payroll/components/shared/allowance/AllowanceSelect.vue';
-import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
+import PayrollOccurrenceFields from '@payroll/components/shared/occurrence/PayrollOccurrenceFields.vue';
+import {
+  defaultPayrollOccurrenceFields,
+  normalizePayrollOccurrenceFields,
+  PAYROLL_OCCURRENCE,
+  type PayrollOccurrence,
+} from '@payroll/components/shared/occurrence/payroll-occurrence';
 
 const $q = useQuasar();
 
@@ -125,10 +130,12 @@ const isOpen = computed({
 
 const form = ref({
   allowanceId: null as string | null,
-  accountId: null as string | null,
   quantity: 1 as number | null,
   unitAmount: null as number | null,
   note: '',
+  occurrence: PAYROLL_OCCURRENCE.everyPayroll as PayrollOccurrence,
+  occurrenceCycleLength: null as number | null,
+  occurrenceCycleOffset: null as number | null,
 });
 
 const computedAmount = computed(() => {
@@ -140,17 +147,16 @@ const computedAmount = computed(() => {
 const resetForm = () => {
   form.value = {
     allowanceId: null,
-    accountId: null,
     quantity: 1,
     unitAmount: null,
     note: '',
+    ...defaultPayrollOccurrenceFields(),
   };
 };
 
 const onSubmit = async () => {
   if (
     !form.value.allowanceId
-    || !form.value.accountId
     || form.value.quantity === null
     || form.value.quantity === undefined
     || form.value.unitAmount === null
@@ -170,13 +176,21 @@ const onSubmit = async () => {
   }
 
   try {
+    const occurrence = normalizePayrollOccurrenceFields({
+      occurrence: form.value.occurrence,
+      occurrenceCycleLength: form.value.occurrenceCycleLength,
+      occurrenceCycleOffset: form.value.occurrenceCycleOffset,
+    });
     const created = await employeeDefaultAllowanceStore.createEmployeeDefaultAllowance(
       employeeStore.selectedEmployee.id,
       form.value.allowanceId,
-      form.value.accountId,
       form.value.note,
       form.value.quantity,
       form.value.unitAmount,
+      null,
+      occurrence.occurrence,
+      occurrence.occurrenceCycleLength,
+      occurrence.occurrenceCycleOffset,
     );
 
     if (created) {
@@ -228,9 +242,6 @@ watch(isOpen, async (newValue) => {
   resetForm();
   if (employeeStore.allowances.length === 0) {
     await employeeStore.fetchAllowances();
-  }
-  if (employeeStore.accounts.length === 0) {
-    await employeeStore.fetchAccounts();
   }
 });
 </script>

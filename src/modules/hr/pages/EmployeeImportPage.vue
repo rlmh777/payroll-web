@@ -101,7 +101,7 @@
 
       <q-card-section class="row items-center justify-between">
         <div class="text-caption text-grey-7">
-          Commit sends JSON sheet arrays to the API. Optional banks/contacts sheets are included when present.
+          Commit sends JSON sheet arrays to the API. Profile sheets (banks, contacts, leave, SS, shares, allowances, deductions, department heads) are included when present.
         </div>
         <q-btn
           unelevated

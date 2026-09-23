@@ -43,12 +43,30 @@
               ─ Default: {{ formatCurrency(scope.opt.defaultAmount) }}
             </q-item-label>
           </q-item-section>
+          <q-item-section v-if="showEdit && !readonly" side>
+            <q-btn
+              flat
+              round
+              dense
+              icon="edit"
+              color="primary"
+              size="sm"
+              @click.stop="openEditDeductionTypeDialog(scope.opt as DeductionType)"
+            >
+              <q-tooltip>Edit Deduction Type</q-tooltip>
+            </q-btn>
+          </q-item-section>
         </q-item>
       </template>
     </q-select>
     <AddDeductionType
       v-model="showAddDialog"
       @saved="onDeductionTypeSaved"
+    />
+    <EditDeductionType
+      v-model="showEditDialog"
+      :deductionType="selectedDeductionType"
+      @updated="onDeductionTypeUpdated"
     />
   </div>
 </template>
@@ -58,6 +76,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useDeductionTypeStore } from '@payroll/stores/deduction-type-store';
 import type { DeductionType } from '@core/types/models';
 import AddDeductionType from './AddDeductionType.vue';
+import EditDeductionType from './EditDeductionType.vue';
 
 interface Props {
   modelValue?: number | null;
@@ -67,6 +86,7 @@ interface Props {
   clearable?: boolean;
   label?: string;
   showAddNew?: boolean;
+  showEdit?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -77,6 +97,7 @@ const props = withDefaults(defineProps<Props>(), {
   clearable: false,
   label: 'Deduction Type',
   showAddNew: false,
+  showEdit: false,
 });
 
 const emit = defineEmits<{
@@ -88,6 +109,8 @@ const deductionTypeStore = useDeductionTypeStore();
 
 const filterTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
 const showAddDialog = ref<boolean>(false);
+const showEditDialog = ref<boolean>(false);
+const selectedDeductionType = ref<DeductionType | null>(null);
 
 const isLoadingDeductionTypes = computed(() => deductionTypeStore.isLoadingDeductionTypes);
 
@@ -155,12 +178,21 @@ const openAddDeductionTypeDialog = () => {
   showAddDialog.value = true;
 };
 
+const openEditDeductionTypeDialog = (deductionType: DeductionType) => {
+  selectedDeductionType.value = deductionType;
+  showEditDialog.value = true;
+};
+
 const onDeductionTypeSaved = async (deductionTypeId: number) => {
   // Refresh deduction types to include the newly created one
   await deductionTypeStore.fetchDeductionTypes();
   // Select the newly created deduction type
   emit('update:modelValue', deductionTypeId);
   emit('change', deductionTypeId);
+};
+
+const onDeductionTypeUpdated = async () => {
+  await deductionTypeStore.fetchDeductionTypes();
 };
 
 // Fetch deduction types on mount if not already loaded

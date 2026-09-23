@@ -16,6 +16,11 @@
       @request="onRequest"
       server-side
     >
+      <template v-slot:body-cell-account="props">
+        <q-td :props="props">
+          {{ formatAccount(props.value) }}
+        </q-td>
+      </template>
       <template v-slot:body-cell-isTaxable="props">
         <q-td :props="props">
           <q-icon
@@ -108,7 +113,7 @@ import { useQuasar } from 'quasar';
 import { useAllowanceStore } from '@payroll/stores/allowance-store';
 import SearchAllowances from './SearchAllowances.vue';
 import EditAllowance from './EditAllowance.vue';
-import type { Allowance } from '@core/types/models';
+import type { Account, Allowance } from '@core/types/models';
 
 const $q = useQuasar();
 const allowanceStore = useAllowanceStore();
@@ -130,6 +135,13 @@ const columns = [
     field: 'name',
     align: 'left' as const,
     sortable: true,
+  },
+  {
+    name: 'account',
+    label: 'Account',
+    field: (row: Allowance) => row.account,
+    align: 'left' as const,
+    sortable: false,
   },
   {
     name: 'isTaxable',
@@ -212,6 +224,14 @@ const formatCurrency = (value: number): string => {
     style: 'currency',
     currency: 'USD',
   }).format(value);
+};
+
+const formatAccount = (account: Account | null | undefined): string => {
+  if (!account) {
+    return '-';
+  }
+  const code = account.code1?.trim();
+  return code ? `${code} — ${account.name}` : (account.name || '-');
 };
 
 const openEditDialog = (allowance: Allowance) => {

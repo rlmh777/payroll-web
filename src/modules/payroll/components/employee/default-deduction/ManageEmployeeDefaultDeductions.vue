@@ -31,14 +31,14 @@
           {{ props.value || '-' }}
         </q-td>
       </template>
-      <template v-slot:body-cell-payrateFrequency="props">
+      <template v-slot:body-cell-occurrence="props">
         <q-td :props="props">
-          {{ props.value?.name || '-' }}
+          {{ formatPayrollOccurrence(props.row) }}
         </q-td>
       </template>
       <template v-slot:body-cell-chartOfAccount="props">
         <q-td :props="props">
-          {{ props.value?.name || '-' }}
+          {{ formatAccount(props.value) }}
         </q-td>
       </template>
       <template v-slot:body-cell-amount="props">
@@ -121,7 +121,8 @@ import { useEmployeeDefaultDeductionStore } from '@/stores/employee-default-dedu
 import { useEmployeeStore } from '@/stores/employee-store';
 import SearchEmployeeDefaultDeductions from './SearchEmployeeDefaultDeductions.vue';
 import EditEmployeeDefaultDeduction from './EditEmployeeDefaultDeduction.vue';
-import type { EmployeeDefaultDeduction } from '@core/types/models';
+import type { Account, EmployeeDefaultDeduction } from '@core/types/models';
+import { formatPayrollOccurrence } from '@payroll/components/shared/occurrence/payroll-occurrence';
 
 const $q = useQuasar();
 const employeeDefaultDeductionStore = useEmployeeDefaultDeductionStore();
@@ -169,16 +170,20 @@ const columns = [
     sortable: true,
   },
   {
-    name: 'payrateFrequency',
-    label: 'Frequency',
-    field: (row: EmployeeDefaultDeduction) => row.payrate_frequency,
+    name: 'occurrence',
+    label: 'Occurrence',
+    field: 'occurrence',
     align: 'left' as const,
     sortable: true,
   },
   {
     name: 'chartOfAccount',
     label: 'Account',
-    field: (row: EmployeeDefaultDeduction) => row.chart_of_account,
+    field: (row: EmployeeDefaultDeduction) =>
+      row.deductionType?.account
+      || row.deduction?.account
+      || row.chartOfAccount
+      || row.chart_of_account,
     align: 'left' as const,
     sortable: true,
   },
@@ -270,6 +275,14 @@ const formatCurrency = (value: number): string => {
     style: 'currency',
     currency: 'USD',
   }).format(value);
+};
+
+const formatAccount = (account: Account | null | undefined): string => {
+  if (!account) {
+    return '-';
+  }
+  const code = account.code1?.trim();
+  return code ? `${code} — ${account.name}` : (account.name || '-');
 };
 
 const openEditDialog = (employeeDefaultDeduction: EmployeeDefaultDeduction) => {

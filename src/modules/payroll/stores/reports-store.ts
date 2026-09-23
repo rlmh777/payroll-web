@@ -46,17 +46,20 @@ export interface SalaryReviewReport {
   departments: SalaryReviewDepartment[];
 }
 
+export interface PayrollSummaryEarningColumn {
+  id: number;
+  key: string;
+  name: string;
+  source?: string | null;
+  showHours: boolean;
+}
+
 export interface PayrollSummaryByDepartmentRow {
   employeeId: string;
   employeeCode: string | null;
   employeeName: string;
-  regularHours: number;
-  regularAmount: number;
-  overtimeHours: number;
-  overtimeAmount: number;
-  doubleTimeHours: number;
-  doubleTimeAmount: number;
-  allowances: number;
+  hours: Record<string, number>;
+  amounts: Record<string, number>;
   grossPay: number;
 }
 
@@ -65,13 +68,8 @@ export interface PayrollSummaryByDepartmentDepartment {
   departmentName: string;
   rows: PayrollSummaryByDepartmentRow[];
   totals: {
-    regularHours: number;
-    regularAmount: number;
-    overtimeHours: number;
-    overtimeAmount: number;
-    doubleTimeHours: number;
-    doubleTimeAmount: number;
-    allowances: number;
+    hours: Record<string, number>;
+    amounts: Record<string, number>;
     grossPay: number;
   };
 }
@@ -83,6 +81,7 @@ export interface PayrollSummaryByDepartmentReport {
   payPeriodStartDate: string;
   payPeriodEndDate: string;
   payPeriodNumber: number;
+  earningColumns: PayrollSummaryEarningColumn[];
   departments: PayrollSummaryByDepartmentDepartment[];
 }
 

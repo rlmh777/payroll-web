@@ -20,74 +20,56 @@ function sanitizeFilename(value: string): string {
 }
 
 export function exportPayrollSummaryByDepartmentExcel(report: PayrollSummaryByDepartmentReport): void {
+  const columns = report.earningColumns ?? [];
+  const header: Array<string | number> = ['Department', 'Employee Code', 'Employee Name'];
+  columns.forEach((column) => {
+    if (column.showHours) {
+      header.push(`${column.name} Hours`);
+    }
+    header.push(column.name);
+  });
+  header.push('Gross Pay');
+
   const rows: Array<Array<string | number>> = [
     ['Payroll Summary by Department'],
     ['Pay period group', report.payPeriodGroupName ?? '—'],
     ['Pay period date range', `${formatDate(report.payPeriodStartDate)} - ${formatDate(report.payPeriodEndDate)}`],
     ['Pay period number', report.payPeriodNumber],
     [],
-    [
-      'Department',
-      'Employee Code',
-      'Employee Name',
-      'Regular Hours',
-      'Regular Amount',
-      'Overtime Hours',
-      'Overtime Amount',
-      'Double Time',
-      'Double Time Amount',
-      'Other Payments',
-      'Gross Pay',
-    ],
+    header,
   ];
 
   report.departments.forEach((department) => {
     department.rows.forEach((row) => {
-      rows.push([
+      const line: Array<string | number> = [
         department.departmentName,
         row.employeeCode ?? '',
         row.employeeName,
-        row.regularHours,
-        row.regularAmount,
-        row.overtimeHours,
-        row.overtimeAmount,
-        row.doubleTimeHours,
-        row.doubleTimeAmount,
-        row.allowances,
-        row.grossPay,
-      ]);
+      ];
+      columns.forEach((column) => {
+        if (column.showHours) {
+          line.push(row.hours?.[column.key] ?? 0);
+        }
+        line.push(row.amounts?.[column.key] ?? 0);
+      });
+      line.push(row.grossPay);
+      rows.push(line);
     });
 
-    rows.push([
-      `${department.departmentName} Totals`,
-      '',
-      '',
-      department.totals.regularHours,
-      department.totals.regularAmount,
-      department.totals.overtimeHours,
-      department.totals.overtimeAmount,
-      department.totals.doubleTimeHours,
-      department.totals.doubleTimeAmount,
-      department.totals.allowances,
-      department.totals.grossPay,
-    ]);
+    const totals: Array<string | number> = [`${department.departmentName} Totals`, '', ''];
+    columns.forEach((column) => {
+      if (column.showHours) {
+        totals.push(department.totals.hours?.[column.key] ?? 0);
+      }
+      totals.push(department.totals.amounts?.[column.key] ?? 0);
+    });
+    totals.push(department.totals.grossPay);
+    rows.push(totals);
     rows.push([]);
   });
 
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
-  worksheet['!cols'] = [
-    { wch: 22 },
-    { wch: 14 },
-    { wch: 30 },
-    { wch: 14 },
-    { wch: 16 },
-    { wch: 14 },
-    { wch: 16 },
-    { wch: 14 },
-    { wch: 18 },
-    { wch: 14 },
-    { wch: 14 },
-  ];
+  worksheet['!cols'] = header.map((_, index) => ({ wch: index < 3 ? 22 : 16 }));
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Payroll Summary');

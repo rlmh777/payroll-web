@@ -52,17 +52,16 @@
 
           <q-separator />
 
-          <div class="text-subtitle1 text-weight-bold">Vacation pay posting</div>
+          <div class="text-subtitle1 text-weight-bold">Vacation pay tracking</div>
           <div class="text-body2 text-grey-7">
-            When enabled, vacation leave pay posts to the Vacation Pay expense account on journal entries
-            instead of the employee’s department wage account. Choose the account under
-            <router-link to="/payroll/settings/account-mapping" class="text-primary text-weight-medium">Account Mapping</router-link>
-            (<code>VACATION_PAY</code>).
+            When enabled, vacation leave pay is recorded on the earning code with the Vacation pay source so Salary Review and other reports can show it separately.
+            Department posting still follows that earning code’s GL / department account setting.
+            Turn this off to fold vacation into base pay with no vacation earning line.
           </div>
 
           <q-toggle
             v-model="form.postVacationPayToVacationAccount"
-            label="Post vacation pay to vacation expense account"
+            label="Track vacation pay as its own earning type"
             :disable="store.isLoading || store.isSaving"
           />
 

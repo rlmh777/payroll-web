@@ -97,6 +97,7 @@ export const coreRoutes: RouteRecordRaw[] = [
       { path: '/payroll/settings/organization', redirect: '/admin/settings/organization' },
       { path: '/payroll/settings/users', redirect: '/admin/settings/users' },
       { path: '/payroll/settings/database-backup', redirect: '/admin/settings/database-backup' },
+      { path: '/payroll/settings/file-storage', redirect: '/admin/settings/file-storage' },
       { path: '/payroll/settings/pay-period', redirect: '/payroll/pay-period' },
     ],
   },

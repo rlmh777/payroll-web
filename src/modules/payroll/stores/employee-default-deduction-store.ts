@@ -19,15 +19,20 @@ export interface EmployeeDefaultDeductionFields {
   allowPartialDeduction?: boolean;
   applicationRule?: string | null;
   priority?: number;
+  occurrence?: string;
+  occurrenceCycleLength?: number | null;
+  occurrenceCycleOffset?: number | null;
 }
 
 interface CreateEmployeeDefaultDeductionBody {
   employeeId: string;
   deductionTypeId: number;
-  bankId: string;
-  accountNumber: string;
-  frequencyId: number;
-  accountId: string;
+  bankId?: string | null;
+  accountNumber?: string | null;
+  occurrence: string;
+  occurrenceCycleLength?: number | null;
+  occurrenceCycleOffset?: number | null;
+  accountId?: string | null;
   note?: string | null;
   amount: number;
   allowPartialDeduction?: boolean;
@@ -38,9 +43,11 @@ interface CreateEmployeeDefaultDeductionBody {
 interface UpdateEmployeeDefaultDeductionBody {
   employeeId?: string;
   deductionTypeId?: number;
-  bankId?: string;
-  accountNumber?: string;
-  frequencyId?: number;
+  bankId?: string | null;
+  accountNumber?: string | null;
+  occurrence?: string;
+  occurrenceCycleLength?: number | null;
+  occurrenceCycleOffset?: number | null;
   accountId?: string;
   note?: string | null;
   amount?: number;
@@ -61,7 +68,7 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
     searchFilters: {
       search: null as string | null,
       deductionTypeId: null as number | null,
-      frequencyId: null as number | null,
+      occurrence: null as string | null,
       accountId: null as string | null,
     },
   }),
@@ -93,8 +100,8 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
           queryParams.append('deductionId', this.searchFilters.deductionTypeId.toString());
         }
         // Note: API uses 'deductionId' for filtering but 'deductionTypeId' in the body
-        if (this.searchFilters.frequencyId) {
-          queryParams.append('frequency_id', String(this.searchFilters.frequencyId));
+        if (this.searchFilters.occurrence) {
+          queryParams.append('occurrence', this.searchFilters.occurrence);
         }
         if (this.searchFilters.accountId) {
           queryParams.append('account_id', this.searchFilters.accountId);
@@ -147,13 +154,13 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
     async createEmployeeDefaultDeduction(
       employeeId: string,
       deductionTypeId: number,
-      bankId: string,
-      accountNumber: string,
-      frequencyId: number,
-      accountId: string,
+      bankId: string | null,
+      accountNumber: string | null,
+      occurrence: string,
       note: string | null,
       amount: number,
-      fields?: EmployeeDefaultDeductionFields
+      fields?: EmployeeDefaultDeductionFields,
+      accountId?: string | null,
     ): Promise<EmployeeDefaultDeduction | null> {
       this.isLoading = true;
       this.error = null;
@@ -171,16 +178,28 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
         const body: CreateEmployeeDefaultDeductionBody = {
           employeeId,
           deductionTypeId,
-          bankId,
-          accountNumber,
-          frequencyId,
-          accountId,
+          occurrence,
           note,
           amount,
           allowPartialDeduction: fields?.allowPartialDeduction ?? false,
           applicationRule: fields?.applicationRule ?? null,
           priority: fields?.priority ?? 0,
         };
+        if (fields?.occurrenceCycleLength != null) {
+          body.occurrenceCycleLength = fields.occurrenceCycleLength;
+        }
+        if (fields?.occurrenceCycleOffset != null) {
+          body.occurrenceCycleOffset = fields.occurrenceCycleOffset;
+        }
+        if (bankId) {
+          body.bankId = bankId;
+        }
+        if (accountNumber) {
+          body.accountNumber = accountNumber;
+        }
+        if (accountId) {
+          body.accountId = accountId;
+        }
 
         const response = await fetch(`${API_URL}/employee-default-deductions`, {
           method: 'POST',
@@ -230,13 +249,13 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
       id: string,
       employeeId?: string,
       deductionTypeId?: number,
-      bankId?: string,
-      accountNumber?: string,
-      frequencyId?: number,
-      accountId?: string,
+      bankId?: string | null,
+      accountNumber?: string | null,
+      occurrence?: string,
       note?: string | null,
       amount?: number,
-      fields?: EmployeeDefaultDeductionFields
+      fields?: EmployeeDefaultDeductionFields,
+      accountId?: string,
     ): Promise<EmployeeDefaultDeduction | null> {
       this.isLoading = true;
       this.error = null;
@@ -265,8 +284,14 @@ export const useEmployeeDefaultDeductionStore = defineStore('employeeDefaultDedu
         if (accountNumber !== undefined) {
           body.accountNumber = accountNumber;
         }
-        if (frequencyId !== undefined) {
-          body.frequencyId = frequencyId;
+        if (occurrence !== undefined) {
+          body.occurrence = occurrence;
+        }
+        if (fields?.occurrenceCycleLength !== undefined) {
+          body.occurrenceCycleLength = fields.occurrenceCycleLength;
+        }
+        if (fields?.occurrenceCycleOffset !== undefined) {
+          body.occurrenceCycleOffset = fields.occurrenceCycleOffset;
         }
         if (accountId !== undefined) {
           body.accountId = accountId;

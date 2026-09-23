@@ -187,6 +187,12 @@ const departmentShareOption = computed(() => {
 const departmentStackOption = computed(() => {
   const cost = store.data?.costByDepartment;
   if (!cost?.departments?.length) return emptyMessage;
+  const series = (cost.series ?? []).map((item) => ({
+    name: item.name,
+    type: 'bar' as const,
+    stack: 'total',
+    data: item.data,
+  }));
   return {
     tooltip: {
       trigger: 'axis',
@@ -197,12 +203,7 @@ const departmentStackOption = computed(() => {
     grid: { left: 48, right: 8, top: 30, bottom: 28 },
     xAxis: { type: 'category', data: cost.departments },
     yAxis: { type: 'value' },
-    series: [
-      { name: 'Regular', type: 'bar', stack: 'total', data: cost.regular },
-      { name: 'Overtime', type: 'bar', stack: 'total', data: cost.overtime },
-      { name: 'Holiday', type: 'bar', stack: 'total', data: cost.holiday },
-      { name: 'Other Payments', type: 'bar', stack: 'total', data: cost.allowances },
-    ],
+    series,
   };
 });
 

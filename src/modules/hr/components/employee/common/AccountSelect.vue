@@ -16,6 +16,7 @@
       :rules="rules"
       :clearable="clearable"
       :label="label"
+      :hint="hint"
       :loading="employeeStore.isLoadingAccounts"
       @filter="filterAccounts"
     >
@@ -86,6 +87,7 @@ interface Props {
   rules?: Array<(val: string | null | undefined) => boolean | string>;
   clearable?: boolean;
   label?: string;
+  hint?: string;
   showAddNew?: boolean;
   showEdit?: boolean;
 }

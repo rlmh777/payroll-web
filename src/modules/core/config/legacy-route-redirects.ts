@@ -37,6 +37,7 @@ export const legacyRouteRedirects: RouteRecordRaw[] = [
   { path: '/payroll/settings/pipelines', redirect: '/admin/settings/pipelines' },
   { path: '/payroll/settings/modules', redirect: '/admin/settings/modules' },
   { path: '/payroll/settings/database-backup', redirect: '/admin/settings/database-backup' },
+  { path: '/payroll/settings/file-storage', redirect: '/admin/settings/file-storage' },
   { path: '/payroll/settings/menu', redirect: '/admin/settings/menu' },
   { path: '/payroll/settings/roles', redirect: '/admin/settings/roles' },
   { path: '/payroll/settings/organization', redirect: '/admin/settings/organization' },

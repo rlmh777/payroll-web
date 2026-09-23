@@ -24,9 +24,14 @@
         />
       </div>
       <div class="col-12 col-md-2">
-        <PayRateFrequencySelect
-          v-model="searchFilters.frequencyId"
-          label="Filter by Frequency"
+        <q-select
+          v-model="searchFilters.occurrence"
+          :options="PAYROLL_OCCURRENCE_OPTIONS"
+          emit-value
+          map-options
+          label="Filter by Occurrence"
+          outlined
+          dense
           clearable
           @update:model-value="onSearch"
         />
@@ -71,9 +76,9 @@ import { useEmployeeDefaultDeductionStore } from '@/stores/employee-default-dedu
 import { useEmployeeStore } from '@/stores/employee-store';
 import { useDeductionTypeStore } from '@/stores/deduction-type-store';
 import DeductionTypeSelect from '@payroll/components/shared/deduction-type/DeductionTypeSelect.vue';
-import PayRateFrequencySelect from '@hr/components/employee/common/PayRateFrequencySelect.vue';
 import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
 import AddEmployeeDefaultDeduction from './AddEmployeeDefaultDeduction.vue';
+import { PAYROLL_OCCURRENCE_OPTIONS } from '@payroll/components/shared/occurrence/payroll-occurrence';
 
 const employeeDefaultDeductionStore = useEmployeeDefaultDeductionStore();
 const employeeStore = useEmployeeStore();
@@ -90,7 +95,7 @@ const hasActiveFilters = computed(() => {
   return !!(
     searchFilters.value.search ||
     searchFilters.value.deductionTypeId ||
-    searchFilters.value.frequencyId ||
+    searchFilters.value.occurrence ||
     searchFilters.value.accountId
   );
 });
@@ -103,7 +108,7 @@ const clearFilters = async () => {
   employeeDefaultDeductionStore.searchFilters = {
     search: null,
     deductionTypeId: null,
-    frequencyId: null,
+    occurrence: null,
     accountId: null,
   };
   await onSearch();
@@ -123,9 +128,6 @@ onMounted(async () => {
   }
   if (employeeStore.accounts.length === 0) {
     await employeeStore.fetchAccounts();
-  }
-  if (employeeStore.payrateFrequencies.length === 0) {
-    await employeeStore.fetchPayrateFrequencies();
   }
 });
 </script>

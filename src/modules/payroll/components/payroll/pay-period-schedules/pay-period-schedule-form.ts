@@ -31,8 +31,8 @@ export function validatePayPeriodScheduleForm(form: PayPeriodScheduleFormModel):
     return 'End date must be on or after the start date.';
   }
 
-  if (form.pay_date < form.end_date) {
-    return 'Pay date must be on or after the end date.';
+  if (form.pay_date < form.start_date) {
+    return 'Pay date must be on or after the start date.';
   }
 
   return null;

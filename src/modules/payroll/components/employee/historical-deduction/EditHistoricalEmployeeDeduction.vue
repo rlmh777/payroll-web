@@ -14,6 +14,7 @@
             :rules="[(val: number | null | undefined) => !!val || 'Deduction type is required']"
             :disable="store.isLoading"
             :showAddNew="true"
+            :showEdit="true"
           />
 
           <VendorSelect

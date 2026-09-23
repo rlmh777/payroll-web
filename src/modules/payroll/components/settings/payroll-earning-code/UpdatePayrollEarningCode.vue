@@ -14,7 +14,25 @@
           <AccountSelect
             v-model="form.account_id"
             label="GL Account"
+            hint="Multiple earning codes can share one GL account. Reports still split by earning code and department."
             clearable
+            :disable="saving"
+          />
+          <q-select
+            v-model="form.source"
+            :options="EARNING_CODE_SOURCE_OPTIONS"
+            emit-value
+            map-options
+            clearable
+            label="Payroll source"
+            hint="Only one earning code can own each timesheet/vacation/fallback source. Leave blank for codes assigned on other payments or pools."
+            dense
+            outlined
+            :disable="saving"
+          />
+          <q-toggle
+            v-model="form.post_to_department_account"
+            label="Post through department GL when the department has an account"
             :disable="saving"
           />
           <q-input
@@ -42,7 +60,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { usePayrollEarningCodeStore } from 'src/stores/payroll-earning-code-store';
+import { usePayrollEarningCodeStore, EARNING_CODE_SOURCE_OPTIONS } from 'src/stores/payroll-earning-code-store';
 import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
 
 const $q = useQuasar();
@@ -54,6 +72,8 @@ const form = ref<{
   code: string;
   name: string;
   account_id: string | null;
+  source: string | null;
+  post_to_department_account: boolean;
   sort_order: number;
   is_taxable: boolean;
   is_ss_subject: boolean;
@@ -79,6 +99,8 @@ watch(
       code: code.code,
       name: code.name,
       account_id: code.account_id ?? null,
+      source: code.source ?? null,
+      post_to_department_account: Boolean(code.post_to_department_account),
       sort_order: code.sort_order,
       is_taxable: code.is_taxable,
       is_ss_subject: code.is_ss_subject,
@@ -104,6 +126,8 @@ async function save() {
       code: form.value.code.trim().toUpperCase(),
       name: form.value.name.trim(),
       account_id: form.value.account_id,
+      source: form.value.source,
+      post_to_department_account: form.value.post_to_department_account,
       sort_order: form.value.sort_order,
       is_taxable: form.value.is_taxable,
       is_ss_subject: form.value.is_ss_subject,

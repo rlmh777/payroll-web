@@ -145,7 +145,7 @@
               outline
               color="primary"
               icon="fingerprint"
-              label="Register passkey on this device"
+              label="Create passkey on this device"
               :loading="isRegisteringPasskey"
               @click="onRegisterPasskey"
             />
@@ -538,49 +538,10 @@ const onRegisterPasskey = async () => {
   if (!props.user) return;
   isRegisteringPasskey.value = true;
   try {
-    const { startRegistration } = await import('@simplewebauthn/browser');
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
-    const optionsResponse = await fetch(`${apiUrl}/passkeys/options`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authStore.token}`,
-      },
-    });
-    if (!optionsResponse.ok) {
-      throw new Error('Unable to start passkey registration');
+    const created = await authStore.registerCurrentDevicePasskey();
+    if (created) {
+      await refreshUser(props.user.id);
     }
-    const { options, challenge_key: challengeKey } = await optionsResponse.json();
-    const credential = await startRegistration({ optionsJSON: options });
-    const registerResponse = await fetch(`${apiUrl}/passkeys`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authStore.token}`,
-      },
-      body: JSON.stringify({
-        challenge_key: challengeKey,
-        credential,
-        name: 'This device',
-      }),
-    });
-    if (!registerResponse.ok) {
-      const err = await registerResponse.json().catch(() => ({}));
-      throw new Error(err.message || 'Passkey registration failed');
-    }
-    $q.notify({
-      type: 'positive',
-      message: 'Passkey registered. You can use it on the login screen.',
-      position: 'top',
-    });
-    await refreshUser(props.user.id);
-  } catch (error) {
-    console.error(error);
-    $q.notify({
-      type: 'negative',
-      message: error instanceof Error ? error.message : 'Passkey registration failed',
-      position: 'top',
-    });
   } finally {
     isRegisteringPasskey.value = false;
   }

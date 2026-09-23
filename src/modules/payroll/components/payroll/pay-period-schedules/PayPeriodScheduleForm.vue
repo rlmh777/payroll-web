@@ -18,6 +18,9 @@
       required
       :disable="props.disable"
     />
+    <div class="text-caption text-grey-7 pay-date-hint">
+      Pay date can be inside the period (for example the 25th, paying the whole month in advance) or on/after the end date. Days after payday stay on the timesheet as attendance, not as hours to earn this check.
+    </div>
   </div>
 </template>
 
@@ -55,3 +58,9 @@ watch(
   { deep: true },
 );
 </script>
+
+<style scoped>
+.pay-date-hint {
+  line-height: 1.6;
+}
+</style>

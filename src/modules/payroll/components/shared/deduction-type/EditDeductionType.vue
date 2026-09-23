@@ -5,9 +5,9 @@
     :maximized="false"
     @hide="onClose"
   >
-    <q-card class="add-deduction-type-card">
+    <q-card class="edit-deduction-type-card">
       <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">Add Deduction Type</div>
+        <div class="text-h6">Edit Deduction Type</div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
       </q-card-section>
@@ -66,7 +66,7 @@
             />
             <q-btn
               type="submit"
-              label="Save"
+              label="Update"
               color="primary"
               :loading="isLoading"
             />
@@ -83,6 +83,7 @@ import { useQuasar } from 'quasar';
 import { useAuthStore } from '@core/stores/auth';
 import { useDeductionTypeStore } from '@payroll/stores/deduction-type-store';
 import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
+import type { DeductionType } from '@core/types/models';
 
 const $q = useQuasar();
 const authStore = useAuthStore();
@@ -90,13 +91,17 @@ const deductionTypeStore = useDeductionTypeStore();
 
 interface Props {
   modelValue: boolean;
+  deductionType: DeductionType | null;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: false,
+  deductionType: null,
+});
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  'saved': [deductionTypeId: number];
+  updated: [deductionTypeId: number];
 }>();
 
 const isLoading = ref(false);
@@ -114,7 +119,13 @@ const form = ref({
 });
 
 const onSubmit = async () => {
-  if (!form.value.name || form.value.defaultAmount === null || form.value.defaultAmount === undefined || !form.value.accountId) {
+  if (
+    !form.value.name
+    || form.value.defaultAmount === null
+    || form.value.defaultAmount === undefined
+    || !form.value.accountId
+    || !props.deductionType
+  ) {
     return;
   }
 
@@ -130,46 +141,39 @@ const onSubmit = async () => {
       headers['Authorization'] = `Bearer ${authStore.token}`;
     }
 
-    const body = {
-      name: form.value.name,
-      defaultAmount: form.value.defaultAmount,
-      note: form.value.note || null,
-      accountId: form.value.accountId,
-    };
-
-    const response = await fetch(`${API_URL}/deduction-types`, {
-      method: 'POST',
+    const response = await fetch(`${API_URL}/deduction-types/${props.deductionType.id}`, {
+      method: 'PUT',
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        name: form.value.name,
+        defaultAmount: form.value.defaultAmount,
+        note: form.value.note || null,
+        accountId: form.value.accountId,
+      }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Failed to create deduction type: ${response.statusText}`);
+      throw new Error(errorData.error || `Failed to update deduction type: ${response.statusText}`);
     }
 
-    const result = await response.json();
-    const newDeductionType = result.data || result;
-
-    // Refresh deduction types
     await deductionTypeStore.fetchDeductionTypes();
 
     $q.notify({
       color: 'positive',
       position: 'top',
       icon: 'check_circle',
-      message: 'Deduction type created successfully!',
+      message: 'Deduction type updated successfully!',
     });
 
-    emit('saved', newDeductionType.id);
+    emit('updated', props.deductionType.id);
     onClose();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to create deduction type';
     $q.notify({
       color: 'negative',
       position: 'top',
       icon: 'error',
-      message: errorMessage,
+      message: error instanceof Error ? error.message : 'Failed to update deduction type',
     });
   } finally {
     isLoading.value = false;
@@ -177,30 +181,23 @@ const onSubmit = async () => {
 };
 
 const onClose = () => {
-  form.value = {
-    name: '',
-    defaultAmount: null,
-    note: null,
-    accountId: null,
-  };
   isOpen.value = false;
 };
 
-// Reset form when dialog opens
 watch(isOpen, (newValue) => {
-  if (newValue) {
+  if (newValue && props.deductionType) {
     form.value = {
-      name: '',
-      defaultAmount: null,
-      note: null,
-      accountId: null,
+      name: props.deductionType.name || '',
+      defaultAmount: props.deductionType.defaultAmount ?? null,
+      note: props.deductionType.note || null,
+      accountId: props.deductionType.accountId ?? props.deductionType.account?.id ?? null,
     };
   }
 });
 </script>
 
 <style scoped>
-.add-deduction-type-card {
+.edit-deduction-type-card {
   width: 30vw;
   height: 100vh;
   max-height: 100vh;
@@ -208,8 +205,7 @@ watch(isOpen, (newValue) => {
   flex-direction: column;
 }
 
-.add-deduction-type-card :deep(.q-card__section) {
+.edit-deduction-type-card :deep(.q-card__section) {
   overflow-y: auto;
 }
 </style>
-

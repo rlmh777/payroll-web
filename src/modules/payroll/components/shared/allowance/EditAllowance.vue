@@ -36,6 +36,27 @@
             :disable="allowanceStore.isLoading"
           />
 
+          <AccountSelect
+            v-model="form.accountId"
+            :rules="[(val: string | null | undefined) => !!val || 'Account is required']"
+            :disable="allowanceStore.isLoading"
+            :showAddNew="true"
+            :showEdit="true"
+            hint="GL account used when this other payment is processed on payroll."
+          />
+
+          <q-select
+            v-model="form.payroll_earning_code_id"
+            :options="earningCodeOptions"
+            emit-value
+            map-options
+            clearable
+            label="Payroll earning code"
+            hint="Optional. Use this to report the payment as its own earning type even if it shares a GL account."
+            outlined
+            :disable="allowanceStore.isLoading"
+          />
+
           <q-checkbox
             v-model="form.isTaxable"
             label="Is Taxable"
@@ -81,9 +102,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useAllowanceStore } from '@payroll/stores/allowance-store';
+import { usePayrollEarningCodeStore } from 'src/stores/payroll-earning-code-store';
+import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
 import type { Allowance } from '@core/types/models';
 
 const $q = useQuasar();
@@ -104,6 +127,12 @@ const emit = defineEmits<{
 }>();
 
 const allowanceStore = useAllowanceStore();
+const earningCodeStore = usePayrollEarningCodeStore();
+const earningCodeOptions = computed(() =>
+  earningCodeStore.earningCodes
+    .filter((code) => code.is_active)
+    .map((code) => ({ label: `${code.code} — ${code.name}`, value: code.id })),
+);
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -116,10 +145,12 @@ const form = ref({
   isTaxable: false,
   isSocialSecurityDeductable: false,
   note: '',
+  payroll_earning_code_id: null as number | null,
+  accountId: null as string | null,
 });
 
 const onSubmit = async () => {
-  if (!form.value.name || form.value.defaultAmount === null || form.value.defaultAmount === undefined || !props.allowance) {
+  if (!form.value.name || form.value.defaultAmount === null || form.value.defaultAmount === undefined || !form.value.accountId || !props.allowance) {
     return;
   }
 
@@ -130,7 +161,9 @@ const onSubmit = async () => {
       form.value.defaultAmount,
       form.value.isTaxable,
       form.value.isSocialSecurityDeductable,
-      form.value.note || null
+      form.value.note || null,
+      form.value.payroll_earning_code_id,
+      form.value.accountId,
     );
 
     if (updatedAllowance) {
@@ -175,8 +208,14 @@ watch(isOpen, (newValue) => {
       isTaxable: props.allowance.isTaxable || false,
       isSocialSecurityDeductable: props.allowance.isSocialSecurityDeductable || false,
       note: props.allowance.note || '',
+      payroll_earning_code_id: props.allowance.payroll_earning_code_id ?? null,
+      accountId: props.allowance.accountId ?? props.allowance.account?.id ?? null,
     };
   }
+});
+
+onMounted(() => {
+  void earningCodeStore.fetchEarningCodes();
 });
 </script>
 

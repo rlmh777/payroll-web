@@ -280,6 +280,7 @@ export interface Employee {
   paymentMethodId: string;
   notes?: string | null;
   picturePath?: string | null;
+  pictureUrl?: string | null;
   health?: string | null;
   unionMembership?: string | null;
   employmentStatusId?: number | null;
@@ -320,6 +321,9 @@ export interface Allowance {
   isSocialSecurityDeductable?: boolean;
   note?: string | null;
   defaultAmount: number;
+  payroll_earning_code_id?: number | null;
+  accountId?: string | null;
+  account?: Account | null;
 }
 
 export interface AccountType {
@@ -344,25 +348,31 @@ export interface Account {
 }
 
 export interface DeductionType {
-    id: number;
-    name: string;
+  id: number;
+  name: string;
   isTaxable?: boolean;
   isSocialSecurityDeductable?: boolean;
   note?: string | null;
   defaultAmount?: number;
+  accountId?: string | null;
+  account?: Account | null;
 }
 
 export interface EmployeeDefaultAllowance {
   id: string;
   employeeId: string;
   allowanceId: string;
-  accountId: string;
+  accountId?: string | null;
   note: string;
   quantity: number;
   unitAmount: number;
   amount: number;
+  occurrence: string;
+  occurrenceCycleLength?: number | null;
+  occurrenceCycleOffset?: number | null;
   employee?: Employee | null;
   allowance?: Allowance | null;
+  chartOfAccount?: Account | null;
   chart_of_account?: Account | null;
 }
 
@@ -397,10 +407,12 @@ export interface EmployeeDefaultDeduction {
   id: string;
   employeeId: string;
   deductionTypeId: number;
-  bankId: string;
-  accountNumber: string;
-  frequencyId: number;
-  accountId: string;
+  bankId?: string | null;
+  accountNumber?: string | null;
+  occurrence: string;
+  occurrenceCycleLength?: number | null;
+  occurrenceCycleOffset?: number | null;
+  accountId?: string | null;
   note?: string | null;
   amount: number;
   allowPartialDeduction: boolean;
@@ -409,7 +421,7 @@ export interface EmployeeDefaultDeduction {
   employee?: Employee | null;
   deduction?: DeductionType | null;
   deductionType?: DeductionType | null;
-  payrate_frequency?: PayrateFrequency | null;
+  chartOfAccount?: Account | null;
   chart_of_account?: Account | null;
   bank?: Bank | null;
 }

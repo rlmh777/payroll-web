@@ -24,10 +24,11 @@ interface User {
   permissions?: string[];
   employeeFormAccess?: EmployeeFormAccess;
   preferences?: UserPreferences;
+  hasPasskeys?: boolean;
 }
 
 export type PasswordLoginResult =
-  | { type: 'success' }
+  | { type: 'success'; hasPasskeys: boolean }
   | { type: 'two_factor'; challengeKey: string }
   | { type: 'two_factor_setup'; challengeKey: string }
   | { type: 'error' };
@@ -44,7 +45,11 @@ type UnauthorizedHandler = (redirectPath?: string) => void;
 const API_URL = import.meta.env.VITE_API_URL || process.env.API_URL || 'http://localhost:3031/api';
 const SESSION_VALIDATION_TTL_MS = 60 * 1000;
 
-function normalizeUser(data: Partial<User> & { preferences?: { defaultModule?: string } }): User {
+function normalizeUser(data: Partial<User> & {
+  preferences?: { defaultModule?: string };
+  hasPasskeys?: boolean;
+  has_passkeys?: boolean;
+}): User {
   const user: User = {
     id: data.id as string | number,
     email: data.email ?? '',
@@ -55,6 +60,7 @@ function normalizeUser(data: Partial<User> & { preferences?: { defaultModule?: s
     preferences: {
       defaultModule: data.preferences?.defaultModule ?? 'payroll',
     },
+    hasPasskeys: Boolean(data.hasPasskeys ?? data.has_passkeys),
   };
 
   if (data.employeeFormAccess) {
@@ -62,6 +68,13 @@ function normalizeUser(data: Partial<User> & { preferences?: { defaultModule?: s
   }
 
   return user;
+}
+
+function payloadHasPasskeys(data: {
+  has_passkeys?: boolean;
+  user?: { hasPasskeys?: boolean; has_passkeys?: boolean };
+}): boolean {
+  return Boolean(data.has_passkeys ?? data.user?.hasPasskeys ?? data.user?.has_passkeys);
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -131,7 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('Login response missing session');
       }
 
-      return { type: 'success' };
+      return { type: 'success', hasPasskeys: payloadHasPasskeys(data) };
     } catch (error) {
       console.error('Login error:', error);
       Notify.create({
@@ -143,7 +156,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function verifyTwoFactor(challengeKey: string, code: string): Promise<boolean> {
+  async function verifyTwoFactor(
+    challengeKey: string,
+    code: string,
+  ): Promise<{ ok: true; hasPasskeys: boolean } | { ok: false }> {
     try {
       const response = await fetch(`${API_URL}/login/two-factor/verify`, {
         method: 'POST',
@@ -157,7 +173,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (!applyLoginPayload(data)) {
         throw new Error('Two-factor response missing session');
       }
-      return true;
+      return { ok: true, hasPasskeys: payloadHasPasskeys(data) };
     } catch (error) {
       console.error('Two-factor verify error:', error);
       Notify.create({
@@ -165,7 +181,7 @@ export const useAuthStore = defineStore('auth', () => {
         message: error instanceof Error ? error.message : 'Invalid authentication code.',
         position: 'top',
       });
-      return false;
+      return { ok: false };
     }
   }
 
@@ -195,7 +211,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function confirmTwoFactorSetup(
     challengeKey: string,
     code: string,
-  ): Promise<{ recoveryCodes: string[] } | null> {
+  ): Promise<{ recoveryCodes: string[]; hasPasskeys: boolean } | null> {
     try {
       const response = await fetch(`${API_URL}/login/two-factor/setup/confirm`, {
         method: 'POST',
@@ -211,6 +227,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
       return {
         recoveryCodes: Array.isArray(data.recovery_codes) ? data.recovery_codes : [],
+        hasPasskeys: payloadHasPasskeys(data),
       };
     } catch (error) {
       console.error('Two-factor setup confirm error:', error);
@@ -235,7 +252,12 @@ export const useAuthStore = defineStore('auth', () => {
       if (!optionsResponse.ok) {
         throw new Error('Unable to start passkey login');
       }
-      const { options, challenge_key: challengeKey } = await optionsResponse.json();
+      const { options, challenge_key: challengeKey, has_passkeys: hasPasskeys } = await optionsResponse.json();
+      if (hasPasskeys === false) {
+        throw new Error(
+          'No passkey is registered for this account. Sign in with your password, then create a passkey for this device.',
+        );
+      }
 
       const credential = await startAuthentication({ optionsJSON: options });
 
@@ -262,6 +284,69 @@ export const useAuthStore = defineStore('auth', () => {
       Notify.create({
         type: 'negative',
         message: error instanceof Error ? error.message : 'Passkey login failed.',
+        position: 'top',
+      });
+      return false;
+    }
+  }
+
+  async function registerCurrentDevicePasskey(name = 'This device'): Promise<boolean> {
+    if (!token.value) {
+      Notify.create({
+        type: 'negative',
+        message: 'Sign in before creating a passkey.',
+        position: 'top',
+      });
+      return false;
+    }
+
+    try {
+      const { startRegistration } = await import('@simplewebauthn/browser');
+      const optionsResponse = await fetch(`${API_URL}/passkeys/options`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token.value}`,
+        },
+      });
+      if (!optionsResponse.ok) {
+        const err = await optionsResponse.json().catch(() => ({}));
+        throw new Error(err.message || 'Unable to start passkey registration');
+      }
+      const { options, challenge_key: challengeKey } = await optionsResponse.json();
+      const credential = await startRegistration({ optionsJSON: options });
+      const registerResponse = await fetch(`${API_URL}/passkeys`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token.value}`,
+        },
+        body: JSON.stringify({
+          challenge_key: challengeKey,
+          credential,
+          name,
+        }),
+      });
+      if (!registerResponse.ok) {
+        const err = await registerResponse.json().catch(() => ({}));
+        throw new Error(err.message || 'Passkey registration failed');
+      }
+      Notify.create({
+        type: 'positive',
+        message: 'Passkey created. You can use it the next time you sign in.',
+        position: 'top',
+      });
+      return true;
+    } catch (error) {
+      const cancelled =
+        error instanceof Error &&
+        /not allowed|abort|cancel/i.test(error.message);
+      if (!cancelled) {
+        console.error('Passkey registration error:', error);
+      }
+      Notify.create({
+        type: cancelled ? 'warning' : 'negative',
+        message: error instanceof Error ? error.message : 'Passkey registration failed.',
         position: 'top',
       });
       return false;
@@ -448,6 +533,7 @@ export const useAuthStore = defineStore('auth', () => {
     beginTwoFactorSetup,
     confirmTwoFactorSetup,
     loginWithPasskey,
+    registerCurrentDevicePasskey,
     logout,
     checkAuth,
     ensureUser,

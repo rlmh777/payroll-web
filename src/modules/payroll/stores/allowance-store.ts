@@ -20,6 +20,8 @@ interface CreateAllowanceBody {
   isSocialSecurityDeductable?: boolean;
   note?: string | null;
   defaultAmount: number;
+  payroll_earning_code_id?: number | null;
+  accountId?: string | null;
 }
 
 interface UpdateAllowanceBody {
@@ -28,6 +30,8 @@ interface UpdateAllowanceBody {
   isSocialSecurityDeductable?: boolean;
   note?: string | null;
   defaultAmount?: number;
+  payroll_earning_code_id?: number | null;
+  accountId?: string | null;
 }
 
 export const useAllowanceStore = defineStore('allowance', {
@@ -127,7 +131,9 @@ export const useAllowanceStore = defineStore('allowance', {
       defaultAmount: number,
       isTaxable?: boolean,
       isSocialSecurityDeductable?: boolean,
-      note?: string | null
+      note?: string | null,
+      payrollEarningCodeId?: number | null,
+      accountId?: string | null,
     ): Promise<Allowance | null> {
       this.isLoading = true;
       this.error = null;
@@ -155,6 +161,12 @@ export const useAllowanceStore = defineStore('allowance', {
         }
         if (note !== undefined && note !== null) {
           body.note = note;
+        }
+        if (payrollEarningCodeId !== undefined) {
+          body.payroll_earning_code_id = payrollEarningCodeId;
+        }
+        if (accountId !== undefined) {
+          body.accountId = accountId;
         }
 
         const response = await fetch(`${API_URL}/allowances`, {
@@ -207,7 +219,9 @@ export const useAllowanceStore = defineStore('allowance', {
       defaultAmount?: number,
       isTaxable?: boolean,
       isSocialSecurityDeductable?: boolean,
-      note?: string | null
+      note?: string | null,
+      payrollEarningCodeId?: number | null,
+      accountId?: string | null,
     ): Promise<Allowance | null> {
       this.isLoading = true;
       this.error = null;
@@ -238,6 +252,12 @@ export const useAllowanceStore = defineStore('allowance', {
         }
         if (note !== undefined) {
           body.note = note;
+        }
+        if (payrollEarningCodeId !== undefined) {
+          body.payroll_earning_code_id = payrollEarningCodeId;
+        }
+        if (accountId !== undefined) {
+          body.accountId = accountId;
         }
 
         const response = await fetch(`${API_URL}/allowances/${id}`, {

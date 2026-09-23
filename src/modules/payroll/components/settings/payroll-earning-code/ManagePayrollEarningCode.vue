@@ -15,6 +15,11 @@
           no-data-label="No earning codes"
           :pagination="{ rowsPerPage: 20 }"
         >
+          <template #body-cell-source="props">
+            <q-td :props="props">
+              {{ sourceLabel(props.row.source) }}
+            </q-td>
+          </template>
           <template #body-cell-account="props">
             <q-td :props="props">
               <span v-if="props.row.account">{{ props.row.account.code1 }} — {{ props.row.account.name }}</span>
@@ -70,6 +75,7 @@ import { computed, onMounted } from 'vue';
 import { useQuasar, type QTableProps } from 'quasar';
 import {
   usePayrollEarningCodeStore,
+  EARNING_CODE_SOURCE_OPTIONS,
   type PayrollEarningCode,
 } from 'src/stores/payroll-earning-code-store';
 import SearchPayrollEarningCode from './SearchPayrollEarningCode.vue';
@@ -81,6 +87,7 @@ const $q = useQuasar();
 const columns: QTableProps['columns'] = [
   { name: 'code', label: 'Code', field: 'code', align: 'left', sortable: true },
   { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true },
+  { name: 'source', label: 'Payroll source', field: 'source', align: 'left', sortable: true },
   { name: 'account', label: 'GL Account', field: 'account', align: 'left' },
   { name: 'sort_order', label: 'Order', field: 'sort_order', align: 'right', sortable: true },
   { name: 'flags', label: 'Flags', field: 'flags', align: 'left' },
@@ -88,6 +95,13 @@ const columns: QTableProps['columns'] = [
 ];
 
 const earningCodes = computed(() => store.earningCodes);
+
+function sourceLabel(source: string | null | undefined): string {
+  if (!source) {
+    return 'Assigned only';
+  }
+  return EARNING_CODE_SOURCE_OPTIONS.find((option) => option.value === source)?.label ?? source;
+}
 
 const onEdit = (row: PayrollEarningCode) => store.setCodeToEdit(row);
 

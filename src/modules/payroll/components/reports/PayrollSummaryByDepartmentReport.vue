@@ -2,7 +2,7 @@
   <div class="payroll-summary-by-department-report">
     <div class="text-h5 text-weight-bold q-mb-xs">Payroll Summary by Department</div>
     <div class="text-body2 text-grey-7 q-mb-lg">
-      View payroll hours and amounts by department for a processed payroll run.
+      View payroll hours and amounts by department for a processed payroll run. Columns follow earning codes.
     </div>
 
     <q-banner v-if="reportsStore.error" rounded class="bg-red-1 text-red-9 q-mb-md">
@@ -108,7 +108,7 @@
           >
             <q-table
               :rows="department.rows"
-              :columns="columns"
+              :columns="buildColumns(report.earningColumns ?? [])"
               row-key="employeeId"
               flat
               bordered
@@ -117,33 +117,38 @@
               no-data-label="No employees found for this department."
               :pagination="{ rowsPerPage: 20 }"
             >
-              <template #body-cell-regularAmount="props">
-                <q-td :props="props" class="text-right">{{ formatPayrollSummaryCurrency(props.row.regularAmount) }}</q-td>
-              </template>
-              <template #body-cell-overtimeAmount="props">
-                <q-td :props="props" class="text-right">{{ formatPayrollSummaryCurrency(props.row.overtimeAmount) }}</q-td>
-              </template>
-              <template #body-cell-doubleTimeAmount="props">
-                <q-td :props="props" class="text-right">{{ formatPayrollSummaryCurrency(props.row.doubleTimeAmount) }}</q-td>
-              </template>
-              <template #body-cell-allowances="props">
-                <q-td :props="props" class="text-right">{{ formatPayrollSummaryCurrency(props.row.allowances) }}</q-td>
-              </template>
-              <template #body-cell-grossPay="props">
-                <q-td :props="props" class="text-right">{{ formatPayrollSummaryCurrency(props.row.grossPay) }}</q-td>
+              <template #body-cell="props">
+                <q-td
+                  :props="props"
+                  :class="['employeeCode', 'employeeName'].includes(String(props.col.name)) ? '' : 'text-right'"
+                >
+                  <template v-if="props.col.name === 'employeeCode' || props.col.name === 'employeeName'">
+                    {{ props.value }}
+                  </template>
+                  <template v-else-if="String(props.col.name).endsWith('-hours')">
+                    {{ Number(props.value ?? 0).toFixed(2) }}
+                  </template>
+                  <template v-else>
+                    {{ formatPayrollSummaryCurrency(Number(props.value ?? 0)) }}
+                  </template>
+                </q-td>
               </template>
 
               <template #bottom-row>
                 <q-tr class="payroll-summary-by-department-report__totals-row">
-                  <q-td colspan="3" class="text-weight-bold">Totals</q-td>
-                  <q-td class="text-right text-weight-bold">{{ department.totals.regularHours.toFixed(2) }}</q-td>
-                  <q-td class="text-right text-weight-bold">{{ formatPayrollSummaryCurrency(department.totals.regularAmount) }}</q-td>
-                  <q-td class="text-right text-weight-bold">{{ department.totals.overtimeHours.toFixed(2) }}</q-td>
-                  <q-td class="text-right text-weight-bold">{{ formatPayrollSummaryCurrency(department.totals.overtimeAmount) }}</q-td>
-                  <q-td class="text-right text-weight-bold">{{ department.totals.doubleTimeHours.toFixed(2) }}</q-td>
-                  <q-td class="text-right text-weight-bold">{{ formatPayrollSummaryCurrency(department.totals.doubleTimeAmount) }}</q-td>
-                  <q-td class="text-right text-weight-bold">{{ formatPayrollSummaryCurrency(department.totals.allowances) }}</q-td>
-                  <q-td class="text-right text-weight-bold">{{ formatPayrollSummaryCurrency(department.totals.grossPay) }}</q-td>
+                  <q-td class="text-weight-bold">Totals</q-td>
+                  <q-td />
+                  <template v-for="column in report.earningColumns ?? []" :key="`total-${column.key}`">
+                    <q-td v-if="column.showHours" class="text-right text-weight-bold">
+                      {{ (department.totals.hours[column.key] ?? 0).toFixed(2) }}
+                    </q-td>
+                    <q-td class="text-right text-weight-bold">
+                      {{ formatPayrollSummaryCurrency(department.totals.amounts[column.key] ?? 0) }}
+                    </q-td>
+                  </template>
+                  <q-td class="text-right text-weight-bold">
+                    {{ formatPayrollSummaryCurrency(department.totals.grossPay) }}
+                  </q-td>
                 </q-tr>
               </template>
             </q-table>
@@ -167,6 +172,7 @@ import {
   useReportsStore,
   type PayrollSummaryByDepartmentDepartment,
   type PayrollSummaryByDepartmentReport,
+  type PayrollSummaryEarningColumn,
 } from '@payroll/stores/reports-store';
 import {
   exportPayrollSummaryByDepartmentExcel,
@@ -185,18 +191,34 @@ const selectedPayPeriodGroupId = ref<string | null>(null);
 const selectedPayrollRunId = ref<string | null>(null);
 const selectedDepartmentKey = ref<string | null>(null);
 
-const columns: QTableProps['columns'] = [
-  { name: 'employeeCode', label: 'Employee Code', field: 'employeeCode', align: 'left', sortable: true },
-  { name: 'employeeName', label: 'Employee Name', field: 'employeeName', align: 'left', sortable: true },
-  { name: 'regularHours', label: 'Regular Hours', field: 'regularHours', align: 'right', sortable: true },
-  { name: 'regularAmount', label: 'Amount', field: 'regularAmount', align: 'right', sortable: true },
-  { name: 'overtimeHours', label: 'Overtime Hours', field: 'overtimeHours', align: 'right', sortable: true },
-  { name: 'overtimeAmount', label: 'Amount', field: 'overtimeAmount', align: 'right', sortable: true },
-  { name: 'doubleTimeHours', label: 'Double Time', field: 'doubleTimeHours', align: 'right', sortable: true },
-  { name: 'doubleTimeAmount', label: 'Amount', field: 'doubleTimeAmount', align: 'right', sortable: true },
-  { name: 'allowances', label: 'Other Payments', field: 'allowances', align: 'right', sortable: true },
-  { name: 'grossPay', label: 'Gross Pay', field: 'grossPay', align: 'right', sortable: true },
-];
+function buildColumns(earningColumns: PayrollSummaryEarningColumn[]): QTableProps['columns'] {
+  const dynamic: NonNullable<QTableProps['columns']> = [];
+  earningColumns.forEach((column) => {
+    if (column.showHours) {
+      dynamic.push({
+        name: `${column.key}-hours`,
+        label: `${column.name} Hours`,
+        field: (row: { hours?: Record<string, number> }) => row.hours?.[column.key] ?? 0,
+        align: 'right',
+        sortable: true,
+      });
+    }
+    dynamic.push({
+      name: `${column.key}-amount`,
+      label: column.name,
+      field: (row: { amounts?: Record<string, number> }) => row.amounts?.[column.key] ?? 0,
+      align: 'right',
+      sortable: true,
+    });
+  });
+
+  return [
+    { name: 'employeeCode', label: 'Employee Code', field: 'employeeCode', align: 'left', sortable: true },
+    { name: 'employeeName', label: 'Employee Name', field: 'employeeName', align: 'left', sortable: true },
+    ...dynamic,
+    { name: 'grossPay', label: 'Gross Pay', field: 'grossPay', align: 'right', sortable: true },
+  ];
+}
 
 const isLoadingPayRunSetup = computed(() =>
   isLoadingPayPeriods.value || isLoadingPayrollRuns.value || payPeriodGroupStore.isLoadingPayPeriodGroups,

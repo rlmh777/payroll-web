@@ -23,6 +23,7 @@ export interface Person {
   nationalityId?: string | null;
   notes?: string | null;
   picturePath?: string | null;
+  pictureUrl?: string | null;
   health?: string | null;
   unionMembership?: string | null;
   locality?: Locality | null;

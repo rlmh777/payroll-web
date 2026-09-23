@@ -28,7 +28,25 @@
           <AccountSelect
             v-model="form.account_id"
             label="GL Account"
+            hint="Multiple earning codes can share one GL account. Reports still split by earning code and department."
             clearable
+            :disable="saving"
+          />
+          <q-select
+            v-model="form.source"
+            :options="EARNING_CODE_SOURCE_OPTIONS"
+            emit-value
+            map-options
+            clearable
+            label="Payroll source"
+            hint="Only one earning code can own each timesheet/vacation/fallback source. Leave blank for codes assigned on other payments or pools."
+            dense
+            outlined
+            :disable="saving"
+          />
+          <q-toggle
+            v-model="form.post_to_department_account"
+            label="Post through department GL when the department has an account"
             :disable="saving"
           />
           <q-input
@@ -56,7 +74,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import { useQuasar } from 'quasar';
-import { usePayrollEarningCodeStore } from 'src/stores/payroll-earning-code-store';
+import { usePayrollEarningCodeStore, EARNING_CODE_SOURCE_OPTIONS } from 'src/stores/payroll-earning-code-store';
 import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
 
 const $q = useQuasar();
@@ -67,6 +85,8 @@ const form = reactive({
   code: '',
   name: '',
   account_id: null as string | null,
+  source: null as string | null,
+  post_to_department_account: false,
   sort_order: 0,
   is_taxable: true,
   is_ss_subject: true,
@@ -84,6 +104,8 @@ function resetForm() {
   form.code = '';
   form.name = '';
   form.account_id = null;
+  form.source = null;
+  form.post_to_department_account = false;
   form.sort_order = 0;
   form.is_taxable = true;
   form.is_ss_subject = true;
@@ -107,6 +129,8 @@ async function save() {
       code: form.code.trim().toUpperCase(),
       name: form.name.trim(),
       account_id: form.account_id,
+      source: form.source,
+      post_to_department_account: form.post_to_department_account,
       sort_order: form.sort_order,
       is_taxable: form.is_taxable,
       is_ss_subject: form.is_ss_subject,

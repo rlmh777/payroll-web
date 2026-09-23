@@ -1,5 +1,6 @@
 export * from './dashboard-store';
 export * from './database-backup-store';
+export * from './file-storage-store';
 export * from './auth';
 export * from './bank-account-type-store';
 export * from './bank-store';
