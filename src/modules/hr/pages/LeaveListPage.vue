@@ -7,7 +7,7 @@
     </q-banner>
 
     <template v-else>
-      <q-card flat bordered class="q-mb-md">
+      <q-card flat bordered class="q-mb-md" data-onboarding="leaves-search">
         <q-card-section>
           <div class="text-subtitle2 q-mb-md">Search options</div>
           <div class="row q-col-gutter-md">
@@ -117,6 +117,7 @@
         bordered
         dense
         row-key="id"
+        data-onboarding="leaves-flow"
         :rows="store.teamLeaves"
         :columns="columns"
         :loading="store.isLoadingTeamLeaves"

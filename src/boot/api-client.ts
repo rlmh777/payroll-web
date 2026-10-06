@@ -24,7 +24,11 @@ function isApiRequest(input: RequestInfo | URL): boolean {
 
 function isAuthExemptRequest(input: RequestInfo | URL): boolean {
   const url = resolveUrl(input);
-  return url.includes('/login') || url.includes('/users/reset-password');
+  if (url.includes('/users/reset-password')) {
+    return true;
+  }
+
+  return /\/login(?:\/|\?|$)/.test(url) && !url.includes('/login-page');
 }
 
 function hasAuthorizationHeader(headers: Headers): boolean {

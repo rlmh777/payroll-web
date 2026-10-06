@@ -1,5 +1,5 @@
 <template>
-  <div class="scheduler-topbar">
+  <div class="scheduler-topbar" data-onboarding="scheduler-assign">
     <div class="row items-center q-gutter-sm">
       <div class="text-h6">Scheduler</div>
       <q-btn outline label="Today" class="q-ml-md" @click="emit('today')" />

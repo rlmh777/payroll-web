@@ -22,4 +22,5 @@ export * from './scheduler-metric-store';
 export * from './scheduler-notice-store';
 export * from './timesheet-store';
 export * from './timesheet-template-store';
+export * from './vacancy-store';
 export * from './worksite-store';

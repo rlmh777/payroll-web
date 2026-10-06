@@ -1,5 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router';
-import { MODULE_ROUTES } from '@core/config/module-routes';
+import { MODULE_ROUTES, hrSettingsPath } from '@core/config/module-routes';
 
 export const hrRoutes: RouteRecordRaw[] = [
   {
@@ -45,8 +45,40 @@ export const hrRoutes: RouteRecordRaw[] = [
         component: () => import('@hr/pages/EmployeeImportPage.vue'),
       },
       {
+        path: 'vacancies',
+        redirect: MODULE_ROUTES.vacancies,
+      },
+      {
+        path: 'candidates',
+        redirect: MODULE_ROUTES.candidates,
+      },
+      {
         path: ':id',
         component: () => import('@hr/pages/ViewEmployeePage.vue'),
+      },
+    ],
+  },
+  {
+    path: MODULE_ROUTES.vacancies,
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true, fullHeight: true },
+    children: [
+      {
+        path: '',
+        name: 'hr-vacancies',
+        component: () => import('@hr/pages/VacanciesPage.vue'),
+      },
+    ],
+  },
+  {
+    path: MODULE_ROUTES.candidates,
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true, fullHeight: true },
+    children: [
+      {
+        path: '',
+        name: 'hr-candidates',
+        component: () => import('@hr/pages/CandidatesPage.vue'),
       },
     ],
   },
@@ -69,6 +101,14 @@ export const hrRoutes: RouteRecordRaw[] = [
         path: 'import',
         name: 'payroll-employees-import',
         component: () => import('@hr/pages/EmployeeImportPage.vue'),
+      },
+      {
+        path: 'vacancies',
+        redirect: MODULE_ROUTES.vacancies,
+      },
+      {
+        path: 'candidates',
+        redirect: MODULE_ROUTES.candidates,
       },
       {
         path: ':id',
@@ -113,6 +153,80 @@ export const hrRoutes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: MODULE_ROUTES.hrSettings,
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'hr-settings',
+        component: () => import('@hr/pages/HrSettingsPage.vue'),
+      },
+      {
+        path: 'vacancy-stages',
+        name: 'hr-vacancy-stages',
+        component: () => import('@hr/components/settings/vacancy-stages/ManageVacancyStages.vue'),
+        props: { title: 'Vacancy pipeline' },
+      },
+      {
+        path: 'candidate-stages',
+        name: 'hr-candidate-stages',
+        component: () => import('@hr/components/settings/vacancy-stages/ManageCandidateStages.vue'),
+        props: { title: 'Candidate pipeline' },
+      },
+      {
+        path: 'job-titles',
+        component: () => import('@core/settings/job-title/ManageJobTitle.vue'),
+        props: { title: 'Job Titles' },
+      },
+      {
+        path: 'department',
+        component: () => import('@hr/components/settings/department/ManageDepartment.vue'),
+        props: { title: 'Setting Department' },
+      },
+      {
+        path: 'worksite',
+        component: () => import('@hr/components/settings/worksite/ManageWorksite.vue'),
+        props: { title: 'Setting Work Site' },
+      },
+      {
+        path: 'holidays',
+        component: () => import('@hr/components/settings/holiday/ManagePublicHolidays.vue'),
+        props: { title: 'Public Holidays' },
+      },
+      {
+        path: 'relationship',
+        component: () => import('@core/settings/relationship/ManageRelationship.vue'),
+        props: { title: 'Setting Relationship' },
+      },
+      {
+        path: 'degree',
+        component: () => import('@core/settings/degree/ManageDegree.vue'),
+        props: { title: 'Setting Degree' },
+      },
+      {
+        path: 'country',
+        component: () => import('@core/settings/country/ManageCountry.vue'),
+        props: { title: 'Setting Country' },
+      },
+      {
+        path: 'district',
+        component: () => import('@core/settings/district/ManageDistrict.vue'),
+        props: { title: 'Setting District' },
+      },
+      {
+        path: 'locality',
+        component: () => import('@core/settings/locality/ManageLocality.vue'),
+        props: { title: 'Setting Locality' },
+      },
+      {
+        path: 'institution',
+        component: () => import('@core/settings/institution/ManageInstitution.vue'),
+        props: { title: 'Setting Institution' },
+      },
+    ],
+  },
+  {
     path: MODULE_ROUTES.settings,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
@@ -132,10 +246,9 @@ export const hrRoutes: RouteRecordRaw[] = [
       },
       {
         path: '/payroll/settings/holidays',
-        component: () => import('@hr/components/settings/holiday/ManagePublicHolidays.vue'),
-        props: { title: 'Public Holidays' },
+        redirect: hrSettingsPath('holidays'),
       },
-      { path: '/payroll/settings/general/holidays', redirect: '/payroll/settings/holidays' },
+      { path: '/payroll/settings/general/holidays', redirect: hrSettingsPath('holidays') },
       {
         path: '/payroll/settings/attendance',
         component: () => import('@hr/components/settings/attendance/ManageAttendanceSettings.vue'),
@@ -146,6 +259,22 @@ export const hrRoutes: RouteRecordRaw[] = [
         path: '/payroll/settings/scheduler-metrics',
         component: () => import('@hr/components/settings/scheduler-metrics/ManageSchedulerMetrics.vue'),
         props: { title: 'Scheduler Metrics' },
+      },
+      {
+        path: '/payroll/settings/vacancy-stages',
+        redirect: hrSettingsPath('vacancy-stages'),
+      },
+      {
+        path: '/payroll/settings/general/vacancy-stages',
+        redirect: hrSettingsPath('vacancy-stages'),
+      },
+      {
+        path: '/payroll/settings/candidate-stages',
+        redirect: hrSettingsPath('candidate-stages'),
+      },
+      {
+        path: '/payroll/settings/general/candidate-stages',
+        redirect: hrSettingsPath('candidate-stages'),
       },
       {
         path: '/payroll/settings/general/scheduler-metrics',
@@ -167,21 +296,19 @@ export const hrRoutes: RouteRecordRaw[] = [
       },
       {
         path: '/payroll/settings/department',
-        component: () => import('@hr/components/settings/department/ManageDepartment.vue'),
-        props: { title: 'Setting Department' },
+        redirect: hrSettingsPath('department'),
       },
-      { path: '/payroll/settings/general/department', redirect: '/payroll/settings/department' },
+      { path: '/payroll/settings/general/department', redirect: hrSettingsPath('department') },
       {
         path: '/payroll/settings/worksite',
-        component: () => import('@hr/components/settings/worksite/ManageWorksite.vue'),
-        props: { title: 'Setting Work Site' },
+        redirect: hrSettingsPath('worksite'),
       },
       {
         path: '/payroll/settings/employee-groups',
         component: () => import('@hr/components/settings/employee-group/ManageEmployeeGroups.vue'),
         props: { title: 'Employee Groups' },
       },
-      { path: '/payroll/settings/general/worksite', redirect: '/payroll/settings/worksite' },
+      { path: '/payroll/settings/general/worksite', redirect: hrSettingsPath('worksite') },
       { path: '/payroll/settings/general/calendar', redirect: '/payroll/settings/timesheet-templates' },
       {
         path: '/payroll/settings/general/calendar/define-work-timesheet',

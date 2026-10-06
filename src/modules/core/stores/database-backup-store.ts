@@ -34,6 +34,9 @@ export interface DatabaseBackupSettings {
   timezone: string;
   backupCount: number;
   totalSizeBytes: number;
+  storageDriver?: string | null;
+  storageContainer?: string | null;
+  storageDirectory?: string | null;
 }
 
 export const useDatabaseBackupStore = defineStore('databaseBackup', {

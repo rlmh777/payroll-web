@@ -1,6 +1,6 @@
 <template>
   <div class="reports-left-pane">
-    <div class="reports-left-pane__header text-subtitle1 text-weight-bold">
+    <div class="reports-left-pane__header text-subtitle1 text-weight-bold" data-onboarding="reports">
       Reports
     </div>
     <q-list padding>

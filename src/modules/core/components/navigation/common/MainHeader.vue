@@ -11,7 +11,11 @@
         @click="toggleDrawer"
       />
 
-      <div class="row items-center q-gutter-sm" :class="showDrawerToggle ? 'q-ml-md' : ''">
+      <div
+        class="row items-center q-gutter-sm"
+        data-onboarding="navigation"
+        :class="showDrawerToggle ? 'q-ml-md' : ''"
+      >
         <template v-for="(item, idx) in topMenus" :key="item.id">
           <q-btn-dropdown
             v-if="item.children?.length"
@@ -20,6 +24,7 @@
             dense
             :label="item.title"
             :icon="item.icon ?? undefined"
+            :data-onboarding="(item.route || '').includes('/payroll/reports') || item.title.toLowerCase() === 'reports' ? 'reports' : undefined"
             :class="selectedTopId === item.id ? 'bg-white text-primary' : 'text-white'"
             menu-anchor="bottom start"
             menu-self="top start"
@@ -32,6 +37,7 @@
                 :key="child.id"
                 clickable
                 v-close-popup
+                :data-onboarding="(child.route || '').includes('/payroll/reports') || child.title.toLowerCase() === 'reports' ? 'reports' : undefined"
                 @click="openChildMenu(item, child)"
               >
                 <q-item-section v-if="child.icon" avatar>
@@ -50,6 +56,7 @@
             dense
             :label="item.title"
             :icon="item.icon ?? undefined"
+            :data-onboarding="(item.route || '').includes('/payroll/reports') || item.title.toLowerCase() === 'reports' ? 'reports' : undefined"
             :class="selectedTopId === item.id ? 'bg-white text-primary' : 'text-white'"
             @click="openTopMenu(item)"
           />
@@ -64,6 +71,7 @@
       <NotificationBell />
       <LogoutCard />
     </q-toolbar>
+    <OnboardingTour />
   </q-header>
 </template>
 
@@ -75,6 +83,7 @@ import { findTopMenuForPath } from '../../../utils/menu-navigation';
 import ModuleLauncher from '../common/ModuleLauncher.vue';
 import LogoutCard from '../common/LogoutCard.vue';
 import NotificationBell from '../common/NotificationBell.vue';
+import OnboardingTour from '../common/OnboardingTour.vue';
 
 withDefaults(
   defineProps<{

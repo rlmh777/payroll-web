@@ -1,5 +1,5 @@
 <template>
-  <div class="manage-users-container">
+  <div class="manage-users-container" data-onboarding="admin-settings">
     <div class="users-pane">
       <div class="users-pane__search">
         <SearchUsers @user-created="onUserCreated" />

@@ -16,6 +16,7 @@
           </q-avatar>
           <div>
             <div class="text-h6">{{ user.name }}</div>
+            <div v-if="user.username" class="text-body2 text-grey-8">{{ user.username }}</div>
             <div class="text-body2 text-grey-7">{{ user.email }}</div>
           </div>
         </div>
@@ -309,6 +310,14 @@
         <div class="q-mb-md">
           <div class="text-subtitle1 q-mb-sm">User Information</div>
           <div class="text-body2">
+            <div v-if="user.username" class="row q-mb-xs">
+              <div class="col-4 text-grey-7">Username:</div>
+              <div class="col-8">{{ user.username }}</div>
+            </div>
+            <div class="row q-mb-xs">
+              <div class="col-4 text-grey-7">Email:</div>
+              <div class="col-8">{{ user.email }}</div>
+            </div>
             <div class="row q-mb-xs">
               <div class="col-4 text-grey-7">Email Verified:</div>
               <div class="col-8">

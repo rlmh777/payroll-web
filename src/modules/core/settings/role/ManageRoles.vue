@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="q-pa-md" data-onboarding="admin-settings">
     <div class="row q-col-gutter-md full-height">
       <div class="col-3">
         <q-card flat class="full-height">

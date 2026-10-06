@@ -1,5 +1,5 @@
 <template>
-  <q-page class="organization-page q-pa-md">
+  <q-page class="organization-page q-pa-md" data-onboarding="admin-settings">
     <div v-if="store.isLoadingOrganization" class="flex flex-center" style="min-height: 240px">
       <q-spinner-dots color="primary" size="40px" />
     </div>

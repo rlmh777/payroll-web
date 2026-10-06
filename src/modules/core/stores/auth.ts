@@ -13,12 +13,17 @@ import type { EmployeeFormAccess } from '@core/types/employee-form-access';
 
 export interface UserPreferences {
   defaultModule: string;
+  onboardingEnabled: boolean;
+  onboardingCompleted: boolean;
+  onboardingSeen: Record<string, boolean>;
 }
 
 interface User {
   id: string | number;
   email: string;
+  username?: string | null;
   name: string;
+  pictureUrl?: string | null;
   role: string;
   roles?: string[];
   permissions?: string[];
@@ -45,20 +50,49 @@ type UnauthorizedHandler = (redirectPath?: string) => void;
 const API_URL = import.meta.env.VITE_API_URL || process.env.API_URL || 'http://localhost:3031/api';
 const SESSION_VALIDATION_TTL_MS = 60 * 1000;
 
+function normalizeOnboardingSeen(value: unknown): Record<string, boolean> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, seen]) => [key, Boolean(seen)]),
+  );
+}
+
 function normalizeUser(data: Partial<User> & {
-  preferences?: { defaultModule?: string };
+  preferences?: {
+    defaultModule?: string;
+    onboardingEnabled?: boolean;
+    onboardingCompleted?: boolean;
+    onboardingSeen?: Record<string, boolean>;
+    onboarding_enabled?: boolean;
+    onboarding_completed?: boolean;
+    onboarding_seen?: Record<string, boolean>;
+  };
   hasPasskeys?: boolean;
   has_passkeys?: boolean;
+  pictureUrl?: string | null;
+  picture_url?: string | null;
 }): User {
   const user: User = {
     id: data.id as string | number,
     email: data.email ?? '',
+    username: data.username ?? null,
     name: data.name ?? '',
+    pictureUrl: data.pictureUrl ?? data.picture_url ?? null,
     role: data.role ?? 'employee',
     roles: data.roles ?? (data.role ? [data.role] : []),
     permissions: data.permissions ?? [],
     preferences: {
       defaultModule: data.preferences?.defaultModule ?? 'payroll',
+      onboardingEnabled: data.preferences?.onboardingEnabled ?? data.preferences?.onboarding_enabled !== false,
+      onboardingCompleted: Boolean(
+        data.preferences?.onboardingCompleted ?? data.preferences?.onboarding_completed,
+      ),
+      onboardingSeen: normalizeOnboardingSeen(
+        data.preferences?.onboardingSeen ?? data.preferences?.onboarding_seen,
+      ),
     },
     hasPasskeys: Boolean(data.hasPasskeys ?? data.has_passkeys),
   };
@@ -123,7 +157,7 @@ export const useAuthStore = defineStore('auth', () => {
           'Content-Type': 'application/json',
         },
         // API field is still "email" but accepts username or email.
-        body: JSON.stringify({ email: usernameOrEmail, password }),
+        body: JSON.stringify({ username: usernameOrEmail, email: usernameOrEmail, password }),
       });
 
       if (!response.ok) {
@@ -247,7 +281,7 @@ export const useAuthStore = defineStore('auth', () => {
       const optionsResponse = await fetch(`${API_URL}/login/passkey/options`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: usernameOrEmail }),
+        body: JSON.stringify({ username: usernameOrEmail, email: usernameOrEmail }),
       });
       if (!optionsResponse.ok) {
         throw new Error('Unable to start passkey login');
@@ -494,7 +528,17 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function updatePreferences(preferences: { defaultModule: string }) {
+  function applyUserPayload(data: Partial<User>): User {
+    const hydrated = normalizeUser(data);
+    user.value = hydrated;
+    if (token.value) {
+      setAuthCookies(token.value, JSON.stringify(hydrated));
+    }
+
+    return hydrated;
+  }
+
+  async function updatePreferences(preferences: Partial<UserPreferences>) {
     if (!token.value) {
       throw new Error('Not authenticated');
     }
@@ -515,13 +559,59 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const data = await response.json();
-    const hydrated = normalizeUser(data);
-    user.value = hydrated;
-    if (token.value) {
-      setAuthCookies(token.value, JSON.stringify(hydrated));
+    return applyUserPayload(data);
+  }
+
+  async function updatePicture(file: File) {
+    if (!token.value) {
+      throw new Error('Not authenticated');
     }
 
-    return hydrated;
+    const body = new FormData();
+    body.append('picture', file);
+
+    const response = await fetch(`${API_URL}/user/picture`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token.value}`,
+      },
+      body,
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        message?: string;
+        errors?: { picture?: string[] };
+      };
+      const firstError = payload.errors?.picture?.[0];
+      throw new Error(firstError || payload.message || 'Failed to update profile picture');
+    }
+
+    const data = await response.json();
+    return applyUserPayload(data);
+  }
+
+  async function removePicture() {
+    if (!token.value) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_URL}/user/picture`, {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token.value}`,
+      },
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { message?: string };
+      throw new Error(payload.message || 'Failed to remove profile picture');
+    }
+
+    const data = await response.json();
+    return applyUserPayload(data);
   }
 
   return {
@@ -540,6 +630,8 @@ export const useAuthStore = defineStore('auth', () => {
     ensureHydratedPermissions,
     validateSession,
     updatePreferences,
+    updatePicture,
+    removePicture,
     handleUnauthorized,
     handleSessionTimeout,
     setUnauthorizedHandler,

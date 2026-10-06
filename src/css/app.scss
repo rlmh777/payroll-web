@@ -64,13 +64,19 @@ body {
 }
 
 .login-layout {
+  position: relative;
   height: 100vh;
   max-height: 100vh;
   overflow: hidden;
 }
 
 .login-page-container {
-  padding: 16px;
+  padding: 0;
+  height: 100vh;
+}
+
+.login-page-container > .q-page {
+  min-height: 100vh;
 }
 
 .q-dialog__backdrop,

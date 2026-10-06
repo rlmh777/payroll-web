@@ -1,5 +1,5 @@
 <template>
-  <div class="employee-list-container">
+  <div class="employee-list-container" data-onboarding="employees-list">
     <div class="row q-gutter-md">
       <div v-for="employee in employees" :key="employee.id" class="col-12">
         <q-card

@@ -6,6 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 export interface User {
   id: string;
   name: string;
+  username?: string | null;
   email: string;
   email_verified_at?: string | null;
   created_at?: string;
@@ -30,6 +31,7 @@ export interface User {
 
 export interface CreateUserPayload {
   name: string;
+  username?: string;
   email: string;
   password: string;
   password_confirmation: string;

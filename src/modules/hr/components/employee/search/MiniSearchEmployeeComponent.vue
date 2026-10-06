@@ -1,5 +1,5 @@
 <template>
-  <div class="q-my-md employee-search-filters">
+  <div class="q-my-md employee-search-filters" data-onboarding="employees-search">
     <q-input
       v-model="searchName"
       outlined

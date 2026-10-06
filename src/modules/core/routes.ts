@@ -1,11 +1,27 @@
 import type { RouteRecordRaw } from 'vue-router';
-import { MODULE_ROUTES } from '@core/config/module-routes';
+import { MODULE_ROUTES, hrSettingsPath } from '@core/config/module-routes';
 
 export const coreRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
     component: () => import('layouts/LoginLayout.vue'),
     children: [{ path: '', component: () => import('@core/pages/LoginPage.vue') }],
+  },
+  {
+    path: '/careers',
+    component: () => import('layouts/PublicLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'public-careers',
+        component: () => import('@hr/pages/PublicCareersPage.vue'),
+      },
+      {
+        path: ':id',
+        name: 'public-career-detail',
+        component: () => import('@hr/pages/PublicCareerDetailPage.vue'),
+      },
+    ],
   },
   {
     path: '/',
@@ -39,22 +55,19 @@ export const coreRoutes: RouteRecordRaw[] = [
       { path: '/payroll/settings/modules', redirect: '/admin/settings/modules' },
       {
         path: '/payroll/settings/country',
-        component: () => import('@core/settings/country/ManageCountry.vue'),
-        props: { title: 'Setting Country' },
+        redirect: hrSettingsPath('country'),
       },
-      { path: '/payroll/settings/general/country', redirect: '/payroll/settings/country' },
+      { path: '/payroll/settings/general/country', redirect: hrSettingsPath('country') },
       {
         path: '/payroll/settings/institution',
-        component: () => import('@core/settings/institution/ManageInstitution.vue'),
-        props: { title: 'Setting Institution' },
+        redirect: hrSettingsPath('institution'),
       },
-      { path: '/payroll/settings/general/institution', redirect: '/payroll/settings/institution' },
+      { path: '/payroll/settings/general/institution', redirect: hrSettingsPath('institution') },
       {
         path: '/payroll/settings/relationship',
-        component: () => import('@core/settings/relationship/ManageRelationship.vue'),
-        props: { title: 'Setting Relationship' },
+        redirect: hrSettingsPath('relationship'),
       },
-      { path: '/payroll/settings/general/relationship', redirect: '/payroll/settings/relationship' },
+      { path: '/payroll/settings/general/relationship', redirect: hrSettingsPath('relationship') },
       {
         path: '/payroll/settings/document-tags',
         component: () => import('@core/settings/document-tag/ManageDocumentTags.vue'),
@@ -63,28 +76,24 @@ export const coreRoutes: RouteRecordRaw[] = [
       { path: '/payroll/settings/general/document-tags', redirect: '/payroll/settings/document-tags' },
       {
         path: '/payroll/settings/degree',
-        component: () => import('@core/settings/degree/ManageDegree.vue'),
-        props: { title: 'Setting Degree' },
+        redirect: hrSettingsPath('degree'),
       },
-      { path: '/payroll/settings/general/degree', redirect: '/payroll/settings/degree' },
+      { path: '/payroll/settings/general/degree', redirect: hrSettingsPath('degree') },
       {
         path: '/payroll/settings/job-titles',
-        component: () => import('@core/settings/job-title/ManageJobTitle.vue'),
-        props: { title: 'Job Titles' },
+        redirect: hrSettingsPath('job-titles'),
       },
-      { path: '/payroll/settings/general/job-titles', redirect: '/payroll/settings/job-titles' },
+      { path: '/payroll/settings/general/job-titles', redirect: hrSettingsPath('job-titles') },
       {
         path: '/payroll/settings/district',
-        component: () => import('@core/settings/district/ManageDistrict.vue'),
-        props: { title: 'Setting Degree' },
+        redirect: hrSettingsPath('district'),
       },
-      { path: '/payroll/settings/general/district', redirect: '/payroll/settings/district' },
+      { path: '/payroll/settings/general/district', redirect: hrSettingsPath('district') },
       {
         path: '/payroll/settings/locality',
-        component: () => import('@core/settings/locality/ManageLocality.vue'),
-        props: { title: 'Setting Degree' },
+        redirect: hrSettingsPath('locality'),
       },
-      { path: '/payroll/settings/general/locality', redirect: '/payroll/settings/locality' },
+      { path: '/payroll/settings/general/locality', redirect: hrSettingsPath('locality') },
       {
         path: '/payroll/settings/bank-account-type',
         component: () => import('@core/settings/bank-account-type/ManageBankAccountType.vue'),
@@ -98,6 +107,7 @@ export const coreRoutes: RouteRecordRaw[] = [
       { path: '/payroll/settings/users', redirect: '/admin/settings/users' },
       { path: '/payroll/settings/database-backup', redirect: '/admin/settings/database-backup' },
       { path: '/payroll/settings/file-storage', redirect: '/admin/settings/file-storage' },
+      { path: '/payroll/settings/login-page', redirect: '/admin/settings/login-page' },
       { path: '/payroll/settings/pay-period', redirect: '/payroll/pay-period' },
     ],
   },

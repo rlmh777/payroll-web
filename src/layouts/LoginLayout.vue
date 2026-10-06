@@ -3,7 +3,7 @@
     <q-page-container class="login-page-container">
       <q-banner
         v-if="showSessionExpiredBanner"
-        class="bg-warning text-dark q-mb-md"
+        class="login-session-banner bg-warning text-dark"
         rounded
         dense
       >
@@ -21,4 +21,16 @@ import { useRoute } from 'vue-router';
 const route = useRoute();
 
 const showSessionExpiredBanner = computed(() => route.query.reason === 'session-expired');
-</script> 
+</script>
+
+<style scoped>
+.login-session-banner {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 20;
+  width: calc(100% - 32px);
+  max-width: 480px;
+  transform: translateX(-50%);
+}
+</style>

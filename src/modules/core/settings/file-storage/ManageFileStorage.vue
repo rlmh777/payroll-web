@@ -2,11 +2,13 @@
   <q-page class="q-pa-md">
     <q-card flat bordered class="file-storage-card">
       <q-card-section>
-        <div class="text-h6">File Storage</div>
+        <div class="text-h6" data-onboarding="admin-settings">File Storage</div>
         <div class="text-body2 text-grey-7 q-mt-xs">
-          Choose where uploaded documents, logos, and attachments are stored. Local keeps files on
-          this app server. Azure Blob and S3 send new uploads to the container or bucket you
-          configure. Existing files stay on the previous disk until they are re-uploaded.
+          Choose where uploaded documents, logos, attachments, and database backups
+          are stored. Local keeps files on this app server (backups stay on the
+          private disk). Azure Blob and S3 send new files to the container or bucket
+          you configure. Existing files stay on the previous disk until they are
+          re-uploaded.
         </div>
       </q-card-section>
 

@@ -3,7 +3,7 @@
     <q-card flat>
       <q-card-section class="row items-center q-gutter-sm">
         <div class="col">
-          <div class="text-h6">Pipeline templates</div>
+          <div class="text-h6" data-onboarding="admin-settings">Pipeline templates</div>
           <div class="text-body2 text-grey-7">
             Configure approval workflows used across leave, timesheets, and future modules.
           </div>

@@ -50,6 +50,30 @@ export const workflowRoutes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: adminSettingsPath('login'),
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('@core/settings/login/ManageLoginSettings.vue'),
+        props: { title: 'Login' },
+      },
+    ],
+  },
+  {
+    path: adminSettingsPath('login-page'),
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('@core/settings/login-page/ManageLoginPage.vue'),
+        props: { title: 'Login Page' },
+      },
+    ],
+  },
+  {
     path: adminSettingsPath('menu'),
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },

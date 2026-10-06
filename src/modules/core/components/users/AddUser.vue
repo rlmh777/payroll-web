@@ -23,6 +23,15 @@
           />
 
           <q-input
+            v-model="form.username"
+            label="Username"
+            hint="Leave blank to generate from the name using Admin Settings → Login rules."
+            outlined
+            dense
+            :disable="isSaving"
+          />
+
+          <q-input
             v-model="form.email"
             label="Email *"
             type="email"
@@ -127,6 +136,7 @@ const isOpen = computed({
 
 const form = ref({
   name: '',
+  username: '',
   email: '',
   password: '',
   passwordConfirmation: '',
@@ -143,6 +153,7 @@ const roleOptions = computed(() =>
 const resetForm = () => {
   form.value = {
     name: '',
+    username: '',
     email: '',
     password: '',
     passwordConfirmation: '',
@@ -173,6 +184,7 @@ const onSubmit = async () => {
       email: form.value.email.trim(),
       password: form.value.password,
       password_confirmation: form.value.passwordConfirmation,
+      ...(form.value.username.trim() ? { username: form.value.username.trim() } : {}),
       ...(form.value.roles.length > 0 ? { roles: form.value.roles } : {}),
     };
 

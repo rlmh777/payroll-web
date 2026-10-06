@@ -2,9 +2,12 @@
   <q-page class="q-pa-md">
     <q-card flat bordered class="q-mb-md">
       <q-card-section>
-        <div class="text-h6">Database Backup</div>
+        <div class="text-h6" data-onboarding="admin-settings">Database Backup</div>
         <div class="text-body2 text-grey-7">
-          Create, download, and restore PostgreSQL backups. Scheduled backups run
+          Create, download, and restore PostgreSQL backups. Files are stored using
+          Admin → Settings → File Storage
+          <span v-if="storageSummary"> ({{ storageSummary }})</span>.
+          Scheduled backups run
           {{ scheduleSummary }} and cycle automatically (keep
           {{ settings?.retentionDays ?? 30 }} days / max
           {{ settings?.maxBackups ?? 120 }} files).
@@ -156,6 +159,18 @@ const scheduleSummary = computed(() => {
   const times = settings.value?.scheduleTimes ?? [];
   if (times.length === 0) return 'on a custom schedule';
   return `${times.length}× daily (${times.join(', ')})`;
+});
+const storageSummary = computed(() => {
+  const current = settings.value;
+  if (!current?.storageDriver) {
+    return '';
+  }
+  const directory = current.storageDirectory || 'database-backups';
+  if (current.storageDriver === 'local') {
+    return `local private disk / ${directory}`;
+  }
+  const container = current.storageContainer ? ` / ${current.storageContainer}` : '';
+  return `${current.storageDriver}${container} / ${directory}`;
 });
 
 const columns: QTableProps['columns'] = [

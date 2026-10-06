@@ -1,5 +1,5 @@
 <template>
-  <div class="timesheet-topbar">
+  <div class="timesheet-topbar" data-onboarding="timesheet-review">
     <div class="row items-center q-gutter-sm">
       <div class="text-h6">Timesheet</div>
       <q-btn outline label="Today" class="q-ml-md" @click="emit('today')" />

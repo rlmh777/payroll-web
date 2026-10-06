@@ -8,6 +8,9 @@ export const MODULE_ROUTES = {
   overview: '/payroll/overview',
   timesheet: '/payroll/timesheet',
   employees: '/hr/employees',
+  vacancies: '/hr/vacancies',
+  candidates: '/hr/candidates',
+  hrSettings: '/hr/settings',
   payrollEmployees: '/payroll/employees',
   scheduler: '/payroll/scheduler',
   leaves: '/payroll/leaves',
@@ -48,6 +51,10 @@ export function settingsPath(segment?: string): string {
 
 export function adminSettingsPath(segment?: string): string {
   return segment ? `${MODULE_ROUTES.adminSettings}/${segment}` : MODULE_ROUTES.adminSettings;
+}
+
+export function hrSettingsPath(segment?: string): string {
+  return segment ? `${MODULE_ROUTES.hrSettings}/${segment}` : MODULE_ROUTES.hrSettings;
 }
 
 /** Match current or legacy unprefixed / payroll-prefixed paths during transition. */

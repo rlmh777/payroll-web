@@ -63,6 +63,23 @@ export function findTopMenuForPath(path: string, tree: MenuItem[]): MenuItem | n
   return bestMatch;
 }
 
+export function findMenuBySystemKey(tree: MenuItem[], systemKey: string): MenuItem | null {
+  for (const item of tree) {
+    if (item.system_key === systemKey) {
+      return item;
+    }
+
+    if (item.children?.length) {
+      const nested = findMenuBySystemKey(item.children, systemKey);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
+  return null;
+}
+
 export function findSettingsMenu(tree: MenuItem[]): MenuItem | null {
   return (
     tree.find(

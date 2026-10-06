@@ -2,7 +2,7 @@
   <q-page class="q-pa-md">
     <q-card flat bordered class="q-mb-md">
       <q-card-section>
-        <div class="text-h6">Modules</div>
+        <div class="text-h6" data-onboarding="admin-settings">Modules</div>
         <div class="text-body2 text-grey-7">
           Enable or disable application modules for this deployment. Menus are hidden when their
           assigned module is disabled (when multi-module navigation is enabled).

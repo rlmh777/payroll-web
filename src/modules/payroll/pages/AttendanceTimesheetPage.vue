@@ -6,7 +6,7 @@
           <q-icon name="work_history" size="16px" />
           <span>Payroll run</span>
         </div>
-        <div class="text-h4 text-weight-bold">Payroll Run</div>
+        <div class="text-h4 text-weight-bold" data-onboarding="payroll-run">Payroll Run</div>
         <div class="text-body2 text-grey-7 q-mt-xs">
           Review payroll timesheets · Resolve exceptions first, then approve clean employee timesheets.
         </div>

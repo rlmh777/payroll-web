@@ -22,6 +22,18 @@
           {{ user.name }}
         </div>
 
+        <div v-if="user.username" class="user-card__email copyable" :title="user.username">
+          <span class="user-card__email-text">{{ user.username }}</span>
+          <q-icon
+            name="content_copy"
+            size="12px"
+            class="user-card__copy"
+            @click.stop="copyToClipboard(user.username ?? '', 'Username')"
+          >
+            <q-tooltip>Copy username</q-tooltip>
+          </q-icon>
+        </div>
+
         <div class="user-card__email copyable" :title="user.email">
           <span class="user-card__email-text">{{ user.email }}</span>
           <q-icon

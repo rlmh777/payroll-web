@@ -1,5 +1,5 @@
 <template>
-  <q-btn flat dense round icon="notifications" aria-label="Notifications">
+  <q-btn flat dense round icon="notifications" aria-label="Notifications" data-onboarding="notifications">
     <q-badge v-if="notificationStore.unreadCount > 0" color="red" floating rounded>
       {{ notificationStore.unreadCount > 9 ? '9+' : notificationStore.unreadCount }}
     </q-badge>

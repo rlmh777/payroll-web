@@ -1,5 +1,5 @@
 <template>
-  <div class="left-pane-container">
+  <div class="left-pane-container" data-onboarding="scheduler-who">
     <div class="left-pane-search">
       <SchedulerMiniSearch />
     </div>

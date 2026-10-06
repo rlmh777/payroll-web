@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="q-pa-md" data-onboarding="admin-settings">
     <q-card flat>
       <SearchMenus />
       <q-card-section class="q-pa-none">
