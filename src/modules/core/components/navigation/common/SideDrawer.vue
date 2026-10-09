@@ -1,5 +1,5 @@
 <template>
-  <q-drawer v-if="hasSideMenu" v-model="drawerOpen" show-if-above bordered side="left">
+  <q-drawer v-if="hasSideMenu" v-model="drawerOpen" show-if-above bordered side="left" :width="256">
     <q-scroll-area class="drawer-scroll">
       <EmployeeLeftPane v-if="isEmployeeRoute" />
       <SchedulerLeftPane v-else-if="isSchedulerRoute" />

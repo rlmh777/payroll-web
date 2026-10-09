@@ -83,7 +83,7 @@
       </q-card-section>
     </q-card>
 
-    <q-dialog v-model="dialogOpen" persistent>
+    <q-dialog v-model="dialogOpen">
       <q-card style="min-width: 360px">
         <q-card-section class="text-h6">
           {{ editing ? 'Edit stage' : 'New stage' }}

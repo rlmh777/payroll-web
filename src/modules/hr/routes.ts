@@ -195,6 +195,21 @@ export const hrRoutes: RouteRecordRaw[] = [
         props: { title: 'Public Holidays' },
       },
       {
+        path: 'birthdays',
+        component: () => import('@hr/components/settings/birthdays/ManageBirthdaySettings.vue'),
+        props: { title: 'Birthdays' },
+      },
+      {
+        path: 'letter-templates',
+        component: () => import('@hr/components/settings/templates/ManageHrTemplates.vue'),
+        props: { title: 'Letter templates', channel: 'letter' },
+      },
+      {
+        path: 'email-templates',
+        component: () => import('@hr/components/settings/templates/ManageHrTemplates.vue'),
+        props: { title: 'Email templates', channel: 'email' },
+      },
+      {
         path: 'relationship',
         component: () => import('@core/settings/relationship/ManageRelationship.vue'),
         props: { title: 'Setting Relationship' },

@@ -3,6 +3,21 @@ import { MODULE_ROUTES, reportPath } from '@core/config/module-routes';
 
 export const payrollRoutes: RouteRecordRaw[] = [
   {
+    path: '/',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('@payroll/pages/DashboardPage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/dashboard',
+    redirect: '/',
+  },
+  {
     path: MODULE_ROUTES.payroll,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },

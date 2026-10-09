@@ -68,7 +68,9 @@ async function retryConnection() {
 
 <style scoped>
 .app-shell {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .network-banner {

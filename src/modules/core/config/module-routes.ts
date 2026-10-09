@@ -3,6 +3,7 @@ export const MODULE_ROUTES = {
   dashboard: '/',
   core: '/core',
   hr: '/hr',
+  employee: '/employee',
   admin: '/admin',
   payroll: '/payroll',
   overview: '/payroll/overview',
@@ -62,6 +63,7 @@ export function pathInModule(path: string, moduleSegment: string): boolean {
   return (
     path.startsWith(`/payroll/${moduleSegment}`) ||
     path.startsWith(`/hr/${moduleSegment}`) ||
+    path.startsWith(`/employee/${moduleSegment}`) ||
     path.startsWith(`/core/${moduleSegment}`) ||
     path.startsWith(`/admin/${moduleSegment}`) ||
     path.startsWith(`/${moduleSegment}`)

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { Notify } from 'quasar';
+import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
 import {
   clearAuthCookies,
   getAuthTokenFromCookie,
@@ -37,6 +38,14 @@ export type PasswordLoginResult =
   | { type: 'two_factor'; challengeKey: string }
   | { type: 'two_factor_setup'; challengeKey: string }
   | { type: 'error' };
+
+export type PasskeyLoginResult = 'success' | 'cancelled' | 'no_passkey' | 'failed';
+
+export interface PasskeyCeremony {
+  options: PublicKeyCredentialRequestOptionsJSON;
+  challengeKey: string;
+  hasPasskeys: boolean;
+}
 
 export interface TwoFactorSetupOptions {
   secret: string;
@@ -109,6 +118,31 @@ function payloadHasPasskeys(data: {
   user?: { hasPasskeys?: boolean; has_passkeys?: boolean };
 }): boolean {
   return Boolean(data.has_passkeys ?? data.user?.hasPasskeys ?? data.user?.has_passkeys);
+}
+
+function isWebAuthnCancelled(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const name = 'name' in error ? String((error as { name?: unknown }).name) : '';
+  const message = error instanceof Error ? error.message : '';
+  return name === 'NotAllowedError' || /not allowed|abort|cancel/i.test(message);
+}
+
+type StartAuthentication = (args: {
+  optionsJSON: PublicKeyCredentialRequestOptionsJSON;
+  useBrowserAutofill?: boolean;
+  verifyBrowserAutofillInput?: boolean;
+}) => Promise<unknown>;
+
+let startAuthenticationFn: StartAuthentication | null = null;
+let webauthnLoad: Promise<void> | null = null;
+
+async function preloadPasskeyLibrary(): Promise<void> {
+  webauthnLoad ??= import('@simplewebauthn/browser').then((mod) => {
+    startAuthenticationFn = mod.startAuthentication;
+  });
+  await webauthnLoad;
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -274,26 +308,46 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function loginWithPasskey(usernameOrEmail: string) {
+  async function fetchPasskeyOptions(usernameOrEmail: string): Promise<PasskeyCeremony> {
+    const optionsResponse = await fetch(`${API_URL}/login/passkey/options`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: usernameOrEmail, email: usernameOrEmail }),
+    });
+    if (!optionsResponse.ok) {
+      throw new Error('Unable to start passkey login');
+    }
+    const payload = await optionsResponse.json() as {
+      options?: PublicKeyCredentialRequestOptionsJSON;
+      challenge_key?: string;
+      has_passkeys?: boolean;
+    };
+    const publicKeyOptions = payload.options;
+    if (!publicKeyOptions) {
+      throw new Error('Unable to start passkey login');
+    }
+    const allowCredentials = publicKeyOptions.allowCredentials;
+    const hasAllowList = Array.isArray(allowCredentials) && allowCredentials.length > 0;
+    return {
+      options: publicKeyOptions,
+      challengeKey: payload.challenge_key ?? '',
+      hasPasskeys: payload.has_passkeys === true || hasAllowList,
+    };
+  }
+
+  async function completePasskeyLogin(
+    publicKeyOptions: PublicKeyCredentialRequestOptionsJSON,
+    challengeKey: string,
+    notifyOptions: { quiet?: boolean } = {},
+  ): Promise<PasskeyLoginResult> {
     try {
-      const { startAuthentication } = await import('@simplewebauthn/browser');
-
-      const optionsResponse = await fetch(`${API_URL}/login/passkey/options`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: usernameOrEmail, email: usernameOrEmail }),
-      });
-      if (!optionsResponse.ok) {
-        throw new Error('Unable to start passkey login');
+      if (!startAuthenticationFn) {
+        await preloadPasskeyLibrary();
       }
-      const { options, challenge_key: challengeKey, has_passkeys: hasPasskeys } = await optionsResponse.json();
-      if (hasPasskeys === false) {
-        throw new Error(
-          'No passkey is registered for this account. Sign in with your password, then create a passkey for this device.',
-        );
+      if (!startAuthenticationFn) {
+        throw new Error('Passkey login is not available in this browser.');
       }
-
-      const credential = await startAuthentication({ optionsJSON: options });
+      const credential = await startAuthenticationFn({ optionsJSON: publicKeyOptions });
 
       const verifyResponse = await fetch(`${API_URL}/login/passkey`, {
         method: 'POST',
@@ -312,15 +366,54 @@ export const useAuthStore = defineStore('auth', () => {
       if (!applyLoginPayload(data)) {
         throw new Error('Passkey login response missing session');
       }
-      return true;
+      return 'success';
     } catch (error) {
+      if (isWebAuthnCancelled(error)) {
+        return 'cancelled';
+      }
       console.error('Passkey login error:', error);
-      Notify.create({
-        type: 'negative',
-        message: error instanceof Error ? error.message : 'Passkey login failed.',
-        position: 'top',
-      });
-      return false;
+      if (!notifyOptions.quiet) {
+        Notify.create({
+          type: 'negative',
+          message: error instanceof Error ? error.message : 'Passkey login failed.',
+          position: 'top',
+        });
+      }
+      return 'failed';
+    }
+  }
+
+  async function loginWithPasskey(
+    usernameOrEmail: string,
+    notifyOptions: { quiet?: boolean } = {},
+  ): Promise<PasskeyLoginResult> {
+    try {
+      const ceremony = await fetchPasskeyOptions(usernameOrEmail);
+      if (!ceremony.hasPasskeys) {
+        if (!notifyOptions.quiet) {
+          Notify.create({
+            type: 'warning',
+            message:
+              'No passkey is registered for this account. Sign in with your password, then create a passkey for this device.',
+            position: 'top',
+          });
+        }
+        return 'no_passkey';
+      }
+      return completePasskeyLogin(ceremony.options, ceremony.challengeKey, notifyOptions);
+    } catch (error) {
+      if (isWebAuthnCancelled(error)) {
+        return 'cancelled';
+      }
+      console.error('Passkey login error:', error);
+      if (!notifyOptions.quiet) {
+        Notify.create({
+          type: 'negative',
+          message: error instanceof Error ? error.message : 'Passkey login failed.',
+          position: 'top',
+        });
+      }
+      return 'failed';
     }
   }
 
@@ -364,6 +457,10 @@ export const useAuthStore = defineStore('auth', () => {
       if (!registerResponse.ok) {
         const err = await registerResponse.json().catch(() => ({}));
         throw new Error(err.message || 'Passkey registration failed');
+      }
+      if (user.value && token.value) {
+        user.value = { ...user.value, hasPasskeys: true };
+        setAuthCookies(token.value, JSON.stringify(user.value));
       }
       Notify.create({
         type: 'positive',
@@ -623,6 +720,9 @@ export const useAuthStore = defineStore('auth', () => {
     beginTwoFactorSetup,
     confirmTwoFactorSetup,
     loginWithPasskey,
+    fetchPasskeyOptions,
+    completePasskeyLogin,
+    preloadPasskeyLibrary,
     registerCurrentDevicePasskey,
     logout,
     checkAuth,

@@ -100,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { usePermissions } from '@core/composables/usePermissions';
@@ -126,7 +126,7 @@ const draggingFromStageId = ref<number | null>(null);
 const overStageId = ref<number | null>(null);
 const skipClick = ref(false);
 
-const filters = reactive<RecruitmentFiltersValue>({
+const filters = ref<RecruitmentFiltersValue>({
   search: '',
   vacancy_id: typeof route.query.vacancy_id === 'string' ? route.query.vacancy_id : null,
   job_title_id: null,
@@ -135,13 +135,15 @@ const filters = reactive<RecruitmentFiltersValue>({
   hiring_manager_id: null,
   advertising: null,
   source: null,
+  published_from: null,
+  published_to: null,
 });
 
 const addVacancy = computed(() => {
-  if (!filters.vacancy_id) {
+  if (!filters.value.vacancy_id) {
     return store.vacancyOptions[0] ?? null;
   }
-  return store.vacancyOptions.find((item) => item.id === filters.vacancy_id) ?? null;
+  return store.vacancyOptions.find((item) => item.id === filters.value.vacancy_id) ?? null;
 });
 
 function vacancyStub(application: VacancyApplication): Vacancy {
@@ -160,9 +162,12 @@ function vacancyStub(application: VacancyApplication): Vacancy {
   };
 }
 
-async function loadBoard() {
+async function loadBoard(value?: RecruitmentFiltersValue) {
+  if (value) {
+    filters.value = { ...value };
+  }
   try {
-    await store.fetchCandidateBoard({ ...filters });
+    await store.fetchCandidateBoard({ ...filters.value });
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -254,7 +259,10 @@ async function onDrop(stageId: number, index: number) {
 watch(
   () => route.query.vacancy_id,
   (value) => {
-    filters.vacancy_id = typeof value === 'string' ? value : null;
+    filters.value = {
+      ...filters.value,
+      vacancy_id: typeof value === 'string' ? value : null,
+    };
     void loadBoard();
   },
 );
@@ -293,7 +301,7 @@ onMounted(async () => {
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  min-height: 420px;
+  min-height: 0;
   border-top: 4px solid var(--stage-color, #64748b);
 }
 

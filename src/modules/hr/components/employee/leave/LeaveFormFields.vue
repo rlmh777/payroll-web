@@ -3,9 +3,10 @@
     <LeaveTypeSelect
       v-model="form.leaveTypeId"
       :rules="[(val: number | null | undefined) => !!val || 'Leave type is required']"
-      :disable="isDisabled"
-      :showAddNew="true"
-      :showEdit="true"
+      :disable="isDisabled || Boolean(props.lockLeaveType)"
+      :readonly="Boolean(props.lockLeaveType)"
+      :showAddNew="props.showLeaveTypeActions !== false && !props.lockLeaveType"
+      :showEdit="props.showLeaveTypeActions !== false && !props.lockLeaveType"
       @change="emit('leaveTypeChange', $event)"
     />
 
@@ -30,13 +31,15 @@
     />
 
     <LeaveDurationSelect
-      v-if="areDatesValid"
       v-model="form.duration"
       :start-date="form.startDate"
       :end-date="form.endDate"
-      :disable="isDisabled"
+      :disable="isDisabled || !areDatesValid"
       @change="emit('durationChange', $event)"
     />
+    <div class="text-caption text-grey-7 leave-duration-hint">
+      Morning, afternoon, or custom hours apply to each working day in the range — for example, every morning in a week.
+    </div>
 
     <q-input
       v-if="form.duration === 'Custom'"
@@ -44,6 +47,7 @@
       label="From Time *"
       type="time"
       outlined
+      dense
       :rules="[(val) => !!val || 'From time is required']"
       :disable="isDisabled"
     />
@@ -54,8 +58,18 @@
       label="To Time *"
       type="time"
       outlined
+      dense
       :rules="[(val) => !!val || 'To time is required']"
       :disable="isDisabled"
+    />
+
+    <q-input
+      :model-value="totalDaysLabel"
+      label="Total days"
+      outlined
+      dense
+      readonly
+      hint="Calculated from the date range and duration"
     />
 
     <q-input
@@ -149,6 +163,7 @@ import DateField from '@core/components/common/DateField.vue';
 import LeaveTypeSelect from '../common/LeaveTypeSelect.vue';
 import LeaveDurationSelect from '../common/LeaveDurationSelect.vue';
 import { EMPLOYEE_DOCUMENT_ACCEPT } from '@hr/components/employee/document/employee-document-form';
+import { formatLeaveDays } from '@hr/components/settings/leave/leave-type-form';
 
 export type LeaveFormModel = {
   leaveTypeId: number | null;
@@ -173,6 +188,8 @@ const props = withDefaults(
     submitLabel?: string;
     cancelLabel?: string;
     accruedHours?: number | null;
+    lockLeaveType?: boolean;
+    showLeaveTypeActions?: boolean;
   }>(),
   {
     loading: false,
@@ -181,6 +198,8 @@ const props = withDefaults(
     submitLabel: 'Save',
     cancelLabel: 'Cancel',
     accruedHours: null,
+    lockLeaveType: false,
+    showLeaveTypeActions: true,
   },
 );
 
@@ -195,4 +214,17 @@ const emit = defineEmits<{
 }>();
 
 const isDisabled = computed(() => props.loading || props.disabled);
+
+const totalDaysLabel = computed(() => {
+  if (form.value.totalDays == null) {
+    return '—';
+  }
+  return formatLeaveDays(form.value.totalDays);
+});
 </script>
+
+<style scoped>
+.leave-duration-hint {
+  margin-top: -8px;
+}
+</style>

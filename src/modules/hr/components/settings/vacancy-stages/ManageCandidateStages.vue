@@ -84,7 +84,7 @@
       </q-card-section>
     </q-card>
 
-    <q-dialog v-model="dialogOpen" persistent>
+    <q-dialog v-model="dialogOpen">
       <AppDialogCard modal>
         <AppDialogHeader>
           <div class="text-h6">{{ editing ? 'Edit stage' : 'New stage' }}</div>

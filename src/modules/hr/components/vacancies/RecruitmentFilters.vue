@@ -95,6 +95,20 @@
             :options="advertisingOptions"
           />
         </div>
+        <div v-if="includePublishedRange" class="col-12 col-sm-6 col-md-3">
+          <DateField
+            v-model="draft.published_from"
+            label="Published from"
+            clearable
+          />
+        </div>
+        <div v-if="includePublishedRange" class="col-12 col-sm-6 col-md-3">
+          <DateField
+            v-model="draft.published_to"
+            label="Published to"
+            clearable
+          />
+        </div>
         <div v-if="includeSource" class="col-12 col-sm-6 col-md-3">
           <q-select
             v-model="draft.source"
@@ -124,6 +138,7 @@ import { useJobTitleStore } from '@core/stores/job-title-store';
 import { useDepartmentStore } from '@hr/stores/department-store';
 import { useWorksiteStore } from '@hr/stores/worksite-store';
 import { useVacancyStore, type Vacancy } from '@hr/stores/vacancy-store';
+import DateField from '@core/components/common/DateField.vue';
 import type { Employee } from '@core/types/models';
 
 export interface RecruitmentFiltersValue {
@@ -135,6 +150,8 @@ export interface RecruitmentFiltersValue {
   hiring_manager_id: string | null;
   advertising: 'internal' | 'public' | null;
   source: string | null;
+  published_from: string | null;
+  published_to: string | null;
 }
 
 const emptyFilters = (): RecruitmentFiltersValue => ({
@@ -146,6 +163,8 @@ const emptyFilters = (): RecruitmentFiltersValue => ({
   hiring_manager_id: null,
   advertising: null,
   source: null,
+  published_from: null,
+  published_to: null,
 });
 
 const props = withDefaults(defineProps<{
@@ -153,12 +172,14 @@ const props = withDefaults(defineProps<{
   includeVacancy?: boolean;
   includeSource?: boolean;
   includeAdvertising?: boolean;
+  includePublishedRange?: boolean;
   loading?: boolean;
   vacancies?: Vacancy[];
 }>(), {
   includeVacancy: false,
   includeSource: false,
   includeAdvertising: false,
+  includePublishedRange: false,
   loading: false,
   vacancies: () => [],
 });
@@ -166,7 +187,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: RecruitmentFiltersValue];
   search: [value: RecruitmentFiltersValue];
-  reset: [];
+  reset: [value: RecruitmentFiltersValue];
 }>();
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
@@ -209,6 +230,8 @@ function copyFrom(value: RecruitmentFiltersValue) {
   draft.hiring_manager_id = value.hiring_manager_id;
   draft.advertising = value.advertising;
   draft.source = value.source;
+  draft.published_from = value.published_from;
+  draft.published_to = value.published_to;
 }
 
 function snapshot(): RecruitmentFiltersValue {
@@ -221,6 +244,8 @@ function snapshot(): RecruitmentFiltersValue {
     hiring_manager_id: draft.hiring_manager_id,
     advertising: draft.advertising,
     source: draft.source,
+    published_from: draft.published_from,
+    published_to: draft.published_to,
   };
 }
 
@@ -232,8 +257,9 @@ function apply() {
 
 function reset() {
   copyFrom(emptyFilters());
-  emit('update:modelValue', snapshot());
-  emit('reset');
+  const value = snapshot();
+  emit('update:modelValue', value);
+  emit('reset', value);
 }
 
 function employeeLabel(employee: Employee): string {

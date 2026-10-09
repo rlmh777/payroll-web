@@ -1,4 +1,6 @@
 export * from './attendance-setting-store';
+export * from './hr-setting-store';
+export * from './hr-template-store';
 export * from './calendar-store';
 export * from './contract-type-store';
 export * from './department-head-store';

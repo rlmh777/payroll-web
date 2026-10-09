@@ -78,6 +78,7 @@ export default defineConfig((ctx) => {
             '@core/*': ['src/modules/core/*'],
             '@hr/*': ['src/modules/hr/*'],
             '@payroll/*': ['src/modules/payroll/*'],
+            '@employee/*': ['src/modules/employee/*'],
             '@workflow/*': ['src/modules/workflow/*'],
           };
         },
@@ -109,6 +110,7 @@ export default defineConfig((ctx) => {
           '@': fileURLToPath(new URL('./src', import.meta.url)),
           '@hr': fileURLToPath(new URL('./src/modules/hr', import.meta.url)),
           '@payroll': fileURLToPath(new URL('./src/modules/payroll', import.meta.url)),
+          '@employee': fileURLToPath(new URL('./src/modules/employee', import.meta.url)),
           '@core': fileURLToPath(new URL('./src/modules/core', import.meta.url)),
           '@workflow': fileURLToPath(new URL('./src/modules/workflow', import.meta.url)),
         };

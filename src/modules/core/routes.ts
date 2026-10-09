@@ -24,17 +24,6 @@ export const coreRoutes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/',
-    component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true },
-    children: [
-      {
-        path: '',
-        component: () => import('@core/pages/DashboardPage.vue'),
-      },
-    ],
-  },
-  {
     path: MODULE_ROUTES.settings,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
@@ -107,13 +96,10 @@ export const coreRoutes: RouteRecordRaw[] = [
       { path: '/payroll/settings/users', redirect: '/admin/settings/users' },
       { path: '/payroll/settings/database-backup', redirect: '/admin/settings/database-backup' },
       { path: '/payroll/settings/file-storage', redirect: '/admin/settings/file-storage' },
+      { path: '/payroll/settings/email', redirect: '/admin/settings/email' },
       { path: '/payroll/settings/login-page', redirect: '/admin/settings/login-page' },
       { path: '/payroll/settings/pay-period', redirect: '/payroll/pay-period' },
     ],
-  },
-  {
-    path: '/dashboard',
-    redirect: '/',
   },
   {
     path: '/:catchAll(.*)*',

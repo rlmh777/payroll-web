@@ -104,11 +104,12 @@
       >
         <template #append>
           <q-icon name="event" class="cursor-pointer">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+            <q-popup-proxy v-model="dateRangePickerOpen" cover transition-show="scale" transition-hide="scale">
               <q-date
                 :model-value="dateRangeModel"
                 range
                 mask="YYYY-MM-DD"
+                @click.stop
                 @update:model-value="handleDateRangeChange"
               />
             </q-popup-proxy>
@@ -129,11 +130,12 @@
       >
         <template #append>
           <q-icon name="event" class="cursor-pointer">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+            <q-popup-proxy v-model="startDatePickerOpen" cover transition-show="scale" transition-hide="scale">
               <q-date
                 :model-value="startDate"
                 mask="YYYY-MM-DD"
-                @update:model-value="emit('update:startDate', String($event ?? ''))"
+                @click.stop
+                @update:model-value="onStartDatePicked($event)"
               />
             </q-popup-proxy>
           </q-icon>
@@ -175,11 +177,12 @@
       >
         <template #append>
           <q-icon name="event" class="cursor-pointer">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+            <q-popup-proxy v-model="endDatePickerOpen" cover transition-show="scale" transition-hide="scale">
               <q-date
                 :model-value="endDate"
                 mask="YYYY-MM-DD"
-                @update:model-value="emit('update:endDate', String($event ?? ''))"
+                @click.stop
+                @update:model-value="onEndDatePicked($event)"
               />
             </q-popup-proxy>
           </q-icon>
@@ -212,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import DepartmentSelect from '@hr/components/department/DepartmentSelect.vue';
 import WorksiteSelect from '@hr/components/worksite/WorksiteSelect.vue';
 import IncludeLunchHourFields from '@core/components/common/IncludeLunchHourFields.vue';
@@ -319,6 +322,20 @@ const dateRangeLabel = computed(() => {
   return `${formatCalendarDisplayDate(props.startDate)} – ${formatCalendarDisplayDate(props.endDate)}`;
 });
 
+const dateRangePickerOpen = ref(false);
+const startDatePickerOpen = ref(false);
+const endDatePickerOpen = ref(false);
+
+function onStartDatePicked(value: string | null | undefined) {
+  emit('update:startDate', String(value ?? ''));
+  startDatePickerOpen.value = false;
+}
+
+function onEndDatePicked(value: string | null | undefined) {
+  emit('update:endDate', String(value ?? ''));
+  endDatePickerOpen.value = false;
+}
+
 function handleDateRangeChange(value: string | { from: string; to: string } | null) {
   if (!value) {
     return;
@@ -327,11 +344,15 @@ function handleDateRangeChange(value: string | { from: string; to: string } | nu
   if (typeof value === 'string') {
     emit('update:startDate', value);
     emit('update:endDate', value);
+    dateRangePickerOpen.value = false;
     return;
   }
 
   emit('update:startDate', value.from);
   emit('update:endDate', value.to);
+  if (value.from && value.to) {
+    dateRangePickerOpen.value = false;
+  }
 }
 
 function handleEmployeeChange(employeeId: string | null) {

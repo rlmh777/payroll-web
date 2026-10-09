@@ -24,11 +24,13 @@
             >
               <template #append>
                 <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-popup-proxy v-model="workDatePickerOpen" cover transition-show="scale" transition-hide="scale">
                     <q-date
                       v-model="form.date"
                       mask="YYYY-MM-DD"
                       :options="workDateOptions"
+                      @click.stop
+                      @update:model-value="closeWorkDatePicker"
                     >
                       <div class="row items-center justify-end">
                         <q-btn v-close-popup label="Close" color="primary" flat />
@@ -112,8 +114,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { date } from 'quasar';
-import { useQuasar } from 'quasar';
+import { date, useQuasar } from 'quasar';
 import { useAttendanceStore } from '@payroll/stores/attendance-store';
 import { useTimesheetStore } from '@hr/stores/timesheet-store';
 import type { TimesheetEmployeeGroup } from '@hr/stores/timesheet-store';
@@ -138,6 +139,11 @@ const emit = defineEmits<{
 const $q = useQuasar();
 const attendanceStore = useAttendanceStore();
 const timesheetStore = useTimesheetStore();
+const workDatePickerOpen = ref(false);
+
+function closeWorkDatePicker() {
+  workDatePickerOpen.value = false;
+}
 
 const isSaving = ref(false);
 

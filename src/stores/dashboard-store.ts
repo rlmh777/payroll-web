@@ -1,1 +1,1 @@
-export * from '../modules/core/stores/dashboard-store';
+export * from '../modules/payroll/stores/dashboard-store';

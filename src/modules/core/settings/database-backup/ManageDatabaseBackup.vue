@@ -261,7 +261,6 @@ function onRestore(row: DatabaseBackup) {
     },
     cancel: true,
     ok: { label: 'Restore', color: 'warning' },
-    persistent: true,
   }).onOk((value: string) => {
     if (value !== 'RESTORE') {
       $q.notify({
@@ -345,7 +344,6 @@ function onFileSelected(event: Event) {
     },
     cancel: true,
     ok: { label: 'Restore', color: 'warning' },
-    persistent: true,
   }).onOk((value: string) => {
     if (value !== 'RESTORE') {
       $q.notify({

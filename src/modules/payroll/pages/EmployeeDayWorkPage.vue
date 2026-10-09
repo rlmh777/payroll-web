@@ -280,7 +280,6 @@ const confirmDelete = (row: EmployeeDayWork) => {
     title: 'Delete day / trip work',
     message: 'Remove this work entry? It will no longer be included in payroll.',
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
       try {

@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="isOpen" position="right" persistent>
+  <q-dialog v-model="isOpen" position="right">
     <AppDialogCard>
       <AppDialogHeader>
         <div class="text-h6">{{ record ? 'Edit event' : 'Add event' }}</div>
@@ -43,10 +43,12 @@
             >
               <template #append>
                 <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-popup-proxy v-model="startDatePickerOpen" cover transition-show="scale" transition-hide="scale">
                     <q-date
                       v-model="form.start_date"
                       mask="YYYY-MM-DD"
+                      @click.stop
+                      @update:model-value="startDatePickerOpen = false"
                     >
                       <div class="row items-center justify-end">
                         <q-btn v-close-popup label="Close" color="primary" flat />
@@ -72,11 +74,13 @@
             >
               <template #append>
                 <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-popup-proxy v-model="endDatePickerOpen" cover transition-show="scale" transition-hide="scale">
                     <q-date
                       v-model="form.end_date"
                       mask="YYYY-MM-DD"
                       :options="endDateOptions"
+                      @click.stop
+                      @update:model-value="endDatePickerOpen = false"
                     >
                       <div class="row items-center justify-end">
                         <q-btn v-close-popup label="Close" color="primary" flat />
@@ -190,6 +194,8 @@ const emit = defineEmits<{
 const $q = useQuasar();
 const store = useSchedulerNoticeStore();
 const saving = ref(false);
+const startDatePickerOpen = ref(false);
+const endDatePickerOpen = ref(false);
 const filteredEmployeeOptions = ref<Array<{ label: string; value: string }>>([]);
 
 const isOpen = computed({
@@ -328,7 +334,6 @@ function confirmDelete() {
     title: 'Delete event',
     message: `Delete “${props.record.title}”?`,
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
       if (!props.record) {

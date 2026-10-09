@@ -4,6 +4,12 @@ import { useAuthStore } from '@core/stores/auth';
 export type LoginBlockType = 'form' | 'heading' | 'message' | 'image';
 export type LoginBackgroundMode = 'color' | 'image' | 'carousel';
 export type LoginTextAlign = 'left' | 'center' | 'right';
+export type LoginHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
+export const LOGIN_GRID_MIN = 2;
+export const LOGIN_GRID_MAX = 24;
+export const DEFAULT_GRID_COLUMNS = 24;
+export const DEFAULT_GRID_ROWS = 24;
 
 export interface LoginPageImage {
   id: string;
@@ -18,6 +24,10 @@ export interface LoginPageBlock {
   y: number;
   width: number;
   height: number;
+  col: number;
+  row: number;
+  colSpan: number;
+  rowSpan: number;
   zIndex: number;
   text: string;
   fontSize: number;
@@ -25,12 +35,20 @@ export interface LoginPageBlock {
   align: LoginTextAlign;
   imageId: string | null;
   maxWidth: number;
+  headingLevel: LoginHeadingLevel;
+  cardBackground: string;
+  cardBorderColor: string;
+  cardBorderWidth: number;
+  cardRadius: number;
+  cardShadow: number;
 }
 
 export interface LoginPageLayout {
   backgroundMode: LoginBackgroundMode;
   backgroundColor: string;
   carouselIntervalMs: number;
+  gridColumns: number;
+  gridRows: number;
   images: LoginPageImage[];
   backgroundImageIds: string[];
   blocks: LoginPageBlock[];
@@ -50,51 +68,158 @@ function newId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+export function clampGridSize(value: number, fallback: number): number {
+  const next = Number(value);
+  if (!Number.isFinite(next)) {
+    return fallback;
+  }
+
+  return Math.round(clamp(next, LOGIN_GRID_MIN, LOGIN_GRID_MAX));
+}
+
+export function headingFontSize(level: number): number {
+  const sizes: Record<number, number> = { 1: 40, 2: 32, 3: 26, 4: 22, 5: 18, 6: 16 };
+  return sizes[clamp(Math.round(level), 1, 6)] ?? 32;
+}
+
+export function normalizeHeadingLevel(value: unknown): LoginHeadingLevel {
+  const level = Math.round(Number(value ?? 1));
+  if (level >= 1 && level <= 6) {
+    return level as LoginHeadingLevel;
+  }
+
+  return 1;
+}
+
+export function defaultFormChrome(): Pick<
+  LoginPageBlock,
+  'cardBackground' | 'cardBorderColor' | 'cardBorderWidth' | 'cardRadius' | 'cardShadow'
+> {
+  return {
+    cardBackground: '#ffffff',
+    cardBorderColor: '#e2e8f0',
+    cardBorderWidth: 0,
+    cardRadius: 12,
+    cardShadow: 2,
+  };
+}
+
+export function formCardShadow(level: number): string {
+  const shadows = [
+    'none',
+    '0 4px 14px rgba(15, 23, 42, 0.10)',
+    '0 12px 32px rgba(15, 23, 42, 0.18)',
+    '0 22px 48px rgba(15, 23, 42, 0.28)',
+  ];
+  const fallback = '0 12px 32px rgba(15, 23, 42, 0.18)';
+
+  return shadows[clamp(Math.round(level), 0, 3)] ?? fallback;
+}
+
+export function defaultBlockSpan(type: LoginBlockType): { colSpan: number; rowSpan: number } {
+  if (type === 'form') {
+    return { colSpan: 6, rowSpan: 5 };
+  }
+  if (type === 'image') {
+    return { colSpan: 4, rowSpan: 4 };
+  }
+  if (type === 'heading') {
+    return { colSpan: 6, rowSpan: 1 };
+  }
+
+  return { colSpan: 6, rowSpan: 1 };
+}
+
+export function placementFromGrid(
+  col: number,
+  row: number,
+  colSpan: number,
+  rowSpan: number,
+  columns = DEFAULT_GRID_COLUMNS,
+  rows = DEFAULT_GRID_ROWS,
+): Pick<LoginPageBlock, 'col' | 'row' | 'colSpan' | 'rowSpan' | 'x' | 'y' | 'width' | 'height'> {
+  const gridColumns = clampGridSize(columns, DEFAULT_GRID_COLUMNS);
+  const gridRows = clampGridSize(rows, DEFAULT_GRID_ROWS);
+  const nextColSpan = clamp(Math.round(colSpan), 1, gridColumns);
+  const nextRowSpan = clamp(Math.round(rowSpan), 1, gridRows);
+  const nextCol = clamp(Math.round(col), 0, gridColumns - nextColSpan);
+  const nextRow = clamp(Math.round(row), 0, gridRows - nextRowSpan);
+  const spanCols = clamp(nextColSpan, 1, gridColumns - nextCol);
+  const spanRows = clamp(nextRowSpan, 1, gridRows - nextRow);
+
+  return {
+    col: nextCol,
+    row: nextRow,
+    colSpan: spanCols,
+    rowSpan: spanRows,
+    x: (nextCol / gridColumns) * 100,
+    y: (nextRow / gridRows) * 100,
+    width: (spanCols / gridColumns) * 100,
+    height: (spanRows / gridRows) * 100,
+  };
+}
+
+export function snapRectToGrid(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  columns = DEFAULT_GRID_COLUMNS,
+  rows = DEFAULT_GRID_ROWS,
+): ReturnType<typeof placementFromGrid> {
+  const gridColumns = clampGridSize(columns, DEFAULT_GRID_COLUMNS);
+  const gridRows = clampGridSize(rows, DEFAULT_GRID_ROWS);
+  const colSpan = clamp(Math.round((Number(width) / 100) * gridColumns) || 1, 1, gridColumns);
+  const rowSpan = clamp(Math.round((Number(height) / 100) * gridRows) || 1, 1, gridRows);
+  const col = clamp(Math.round((Number(x) / 100) * gridColumns), 0, gridColumns - colSpan);
+  const row = clamp(Math.round((Number(y) / 100) * gridRows), 0, gridRows - rowSpan);
+
+  return placementFromGrid(col, row, colSpan, rowSpan, gridColumns, gridRows);
+}
+
+export function cellFromPoint(
+  x: number,
+  y: number,
+  columns = DEFAULT_GRID_COLUMNS,
+  rows = DEFAULT_GRID_ROWS,
+): { col: number; row: number } {
+  const gridColumns = clampGridSize(columns, DEFAULT_GRID_COLUMNS);
+  const gridRows = clampGridSize(rows, DEFAULT_GRID_ROWS);
+
+  return {
+    col: clamp(Math.floor((Number(x) / 100) * gridColumns), 0, gridColumns - 1),
+    row: clamp(Math.floor((Number(y) / 100) * gridRows), 0, gridRows - 1),
+  };
+}
+
 export function emptyLayout(): LoginPageLayout {
   return {
     backgroundMode: 'color',
     backgroundColor: '#0f172a',
     carouselIntervalMs: 7000,
+    gridColumns: DEFAULT_GRID_COLUMNS,
+    gridRows: DEFAULT_GRID_ROWS,
     images: [],
     backgroundImageIds: [],
     blocks: [
       {
         id: 'heading-default',
         type: 'heading',
-        x: 32,
-        y: 8,
-        width: 36,
-        height: 10,
+        ...placementFromGrid(6, 0, 12, 3),
         zIndex: 2,
         text: 'Sign in',
-        fontSize: 32,
+        fontSize: headingFontSize(1),
         color: '#ffffff',
         align: 'center',
         imageId: null,
         maxWidth: 0,
-      },
-      {
-        id: 'message-default',
-        type: 'message',
-        x: 32,
-        y: 18,
-        width: 36,
-        height: 8,
-        zIndex: 2,
-        text: 'Use your username or email to continue.',
-        fontSize: 14,
-        color: '#cbd5e1',
-        align: 'center',
-        imageId: null,
-        maxWidth: 0,
+        headingLevel: 1,
+        ...defaultFormChrome(),
       },
       {
         id: 'form-default',
         type: 'form',
-        x: 5,
-        y: 28,
-        width: 90,
-        height: 62,
+        ...placementFromGrid(6, 6, 12, 15),
         zIndex: 3,
         text: '',
         fontSize: 16,
@@ -102,12 +227,19 @@ export function emptyLayout(): LoginPageLayout {
         align: 'center',
         imageId: null,
         maxWidth: 400,
+        headingLevel: 1,
+        ...defaultFormChrome(),
       },
     ],
   };
 }
 
-function normalizeBlock(block: Partial<LoginPageBlock>, fallbackType: LoginBlockType = 'heading'): LoginPageBlock {
+function normalizeBlock(
+  block: Partial<LoginPageBlock>,
+  fallbackType: LoginBlockType = 'heading',
+  columns = DEFAULT_GRID_COLUMNS,
+  rows = DEFAULT_GRID_ROWS,
+): LoginPageBlock {
   const type = (['form', 'heading', 'message', 'image'] as LoginBlockType[]).includes(block.type as LoginBlockType)
     ? (block.type as LoginBlockType)
     : fallbackType;
@@ -115,8 +247,10 @@ function normalizeBlock(block: Partial<LoginPageBlock>, fallbackType: LoginBlock
     ? (block.align as LoginTextAlign)
     : 'center';
 
-  let x = clamp(Number(block.x ?? 10), 0, 95);
-  let width = clamp(Number(block.width ?? 30), 8, 100);
+  let x = clamp(Number(block.x ?? 10), 0, 99);
+  let width = clamp(Number(block.width ?? 30), 1, 100);
+  const y = clamp(Number(block.y ?? 10), 0, 99);
+  const height = clamp(Number(block.height ?? 12), 1, 100);
   let maxWidth = 0;
   if (type === 'form') {
     const hasExplicitMax = block.maxWidth != null && Number.isFinite(Number(block.maxWidth));
@@ -127,20 +261,40 @@ function normalizeBlock(block: Partial<LoginPageBlock>, fallbackType: LoginBlock
     }
   }
 
+  const hasGrid = [block.col, block.row, block.colSpan, block.rowSpan].some(
+    (value) => value != null && Number.isFinite(Number(value)),
+  );
+  const placement = hasGrid
+    ? placementFromGrid(
+        Number(block.col ?? 0),
+        Number(block.row ?? 0),
+        Number(block.colSpan ?? defaultBlockSpan(type).colSpan),
+        Number(block.rowSpan ?? defaultBlockSpan(type).rowSpan),
+        columns,
+        rows,
+      )
+    : snapRectToGrid(x, y, width, height, columns, rows);
+
+  const chrome = defaultFormChrome();
+  const headingLevel = type === 'heading' ? normalizeHeadingLevel(block.headingLevel) : 1;
+
   return {
     id: block.id || newId(type),
     type,
-    x,
-    y: clamp(Number(block.y ?? 10), 0, 95),
-    width,
-    height: clamp(Number(block.height ?? 12), 6, 100),
+    ...placement,
     zIndex: Math.max(1, Number(block.zIndex ?? 1)),
     text: String(block.text ?? ''),
-    fontSize: clamp(Number(block.fontSize ?? 16), 10, 72),
-    color: String(block.color ?? '#ffffff'),
+    fontSize: clamp(Number(block.fontSize ?? (type === 'heading' ? headingFontSize(headingLevel) : 16)), 10, 72),
+    color: String(block.color ?? (type === 'form' ? '#0f172a' : '#ffffff')),
     align,
     imageId: type === 'image' ? (block.imageId ?? null) : null,
     maxWidth,
+    headingLevel,
+    cardBackground: String(block.cardBackground ?? chrome.cardBackground),
+    cardBorderColor: String(block.cardBorderColor ?? chrome.cardBorderColor),
+    cardBorderWidth: clamp(Number(block.cardBorderWidth ?? chrome.cardBorderWidth), 0, 12),
+    cardRadius: clamp(Number(block.cardRadius ?? chrome.cardRadius), 0, 48),
+    cardShadow: clamp(Number(block.cardShadow ?? chrome.cardShadow), 0, 3),
   };
 }
 
@@ -148,6 +302,8 @@ export function normalizeLayout(data: Partial<LoginPageLayout> | null | undefine
   const fallback = emptyLayout();
   const mode = data?.backgroundMode;
   const backgroundMode: LoginBackgroundMode = mode === 'image' || mode === 'carousel' ? mode : 'color';
+  const gridColumns = clampGridSize(Number(data?.gridColumns ?? fallback.gridColumns), fallback.gridColumns);
+  const gridRows = clampGridSize(Number(data?.gridRows ?? fallback.gridRows), fallback.gridRows);
   const images = (data?.images ?? []).filter((image): image is LoginPageImage => Boolean(image?.id && image?.path));
   const imageIds = new Set(images.map((image) => image.id));
   const backgroundImageIds = (data?.backgroundImageIds ?? []).filter((id) => imageIds.has(id));
@@ -155,7 +311,7 @@ export function normalizeLayout(data: Partial<LoginPageLayout> | null | undefine
   let hasForm = false;
 
   for (const block of data?.blocks ?? []) {
-    const next = normalizeBlock(block);
+    const next = normalizeBlock(block, 'heading', gridColumns, gridRows);
     if (next.type === 'form') {
       if (hasForm) {
         continue;
@@ -168,7 +324,7 @@ export function normalizeLayout(data: Partial<LoginPageLayout> | null | undefine
   if (!hasForm) {
     const form = fallback.blocks.find((block) => block.type === 'form');
     if (form) {
-      blocks.push(form);
+      blocks.push(normalizeBlock(form, 'form', gridColumns, gridRows));
     }
   }
 
@@ -176,32 +332,50 @@ export function normalizeLayout(data: Partial<LoginPageLayout> | null | undefine
     backgroundMode,
     backgroundColor: data?.backgroundColor || fallback.backgroundColor,
     carouselIntervalMs: clamp(Number(data?.carouselIntervalMs ?? fallback.carouselIntervalMs), 2000, 30000),
+    gridColumns,
+    gridRows,
     images,
     backgroundImageIds,
     blocks,
   };
 }
 
-export function createBlock(type: LoginBlockType, x = 12, y = 12): LoginPageBlock {
+export function createBlock(
+  type: LoginBlockType,
+  x = 12,
+  y = 12,
+  columns = DEFAULT_GRID_COLUMNS,
+  rows = DEFAULT_GRID_ROWS,
+  extras: Partial<LoginPageBlock> = {},
+): LoginPageBlock {
+  const cell = cellFromPoint(x, y, columns, rows);
+  const span = defaultBlockSpan(type);
+  const headingLevel = normalizeHeadingLevel(extras.headingLevel);
   const defaults: Record<LoginBlockType, Partial<LoginPageBlock>> = {
-    form: { width: 90, height: 62, zIndex: 5, color: '#0f172a', maxWidth: 400, align: 'center' },
-    heading: { width: 36, height: 10, text: 'Welcome', fontSize: 32, color: '#ffffff' },
+    form: { zIndex: 5, color: '#0f172a', maxWidth: 400, align: 'center', ...defaultFormChrome() },
+    heading: {
+      text: extras.text || 'Welcome',
+      fontSize: headingFontSize(headingLevel),
+      color: '#ffffff',
+      headingLevel,
+    },
     message: {
-      width: 36,
-      height: 10,
       text: 'Add a short message for people signing in.',
       fontSize: 14,
       color: '#e2e8f0',
     },
-    image: { width: 28, height: 28, color: '#ffffff' },
+    image: { color: '#ffffff' },
   };
 
   return normalizeBlock({
     ...defaults[type],
+    ...extras,
     type,
-    x,
-    y,
-  }, type);
+    col: cell.col,
+    row: cell.row,
+    colSpan: span.colSpan,
+    rowSpan: span.rowSpan,
+  }, type, columns, rows);
 }
 
 export const useLoginPageStore = defineStore('loginPage', {
@@ -311,8 +485,12 @@ export const useLoginPageStore = defineStore('loginPage', {
         if (!response.ok) {
           throw new Error(payload.message || 'Failed to upload image');
         }
-        this.layout = normalizeLayout(payload.layout ?? payload);
-        return payload.image as LoginPageImage;
+        const incoming = normalizeLayout(payload.layout ?? payload);
+        this.layout = {
+          ...this.layout,
+          images: incoming.images,
+        };
+        return (payload.image ?? incoming.images.at(-1)) as LoginPageImage;
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Failed to upload image';
         throw error;
@@ -337,7 +515,15 @@ export const useLoginPageStore = defineStore('loginPage', {
         if (!response.ok) {
           throw new Error(body.message || 'Failed to remove image');
         }
-        this.layout = normalizeLayout(body);
+        const incoming = normalizeLayout(body);
+        this.layout = {
+          ...this.layout,
+          images: incoming.images,
+          backgroundImageIds: this.layout.backgroundImageIds.filter((id) => id !== imageId),
+          blocks: this.layout.blocks.map((block) => (
+            block.imageId === imageId ? { ...block, imageId: null } : block
+          )),
+        };
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Failed to remove image';
         throw error;

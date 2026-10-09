@@ -2033,7 +2033,7 @@ onMounted(async () => {
 
 <style scoped>
 .attendance-page {
-  min-height: calc(100vh - 130px);
+  min-height: 0;
   max-width: 100%;
   border-radius: 16px;
   background: #f6f8fb;

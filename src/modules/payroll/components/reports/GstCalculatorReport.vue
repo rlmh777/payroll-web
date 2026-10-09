@@ -301,6 +301,21 @@
         </q-tab-panel>
 
         <q-tab-panel name="results" class="gst-results-panel">
+          <div class="gst-results-panel__toolbar row items-center no-wrap q-mb-md">
+            <div class="col">
+              <div class="text-subtitle1 text-weight-bold">Results</div>
+              <div class="text-caption text-grey-7">{{ monthLabel(month) }} {{ year }}</div>
+            </div>
+            <q-btn
+              outline
+              no-caps
+              color="primary"
+              icon="table_view"
+              label="Export Excel"
+              :disable="!workspace"
+              @click="handleExportExcel"
+            />
+          </div>
           <q-card flat bordered class="q-mb-lg">
             <q-card-section>
               <div class="text-subtitle1 text-weight-bold">Partial Exemption Method Calculations: GST</div>
@@ -558,6 +573,7 @@ import {
 import GstSheetTable from './GstSheetTable.vue';
 import PurchaseLedgerPanel from './PurchaseLedgerPanel.vue';
 import SalesLedgerPanel from './SalesLedgerPanel.vue';
+import { exportGstCalculatorResultsExcel } from '@payroll/utils/gst-calculator-results-export';
 
 const $q = useQuasar();
 const store = useTaxCalculatorStore();
@@ -817,6 +833,21 @@ function monthLabel(value: number) {
   return monthOptions.find((option) => option.value === value)?.label ?? String(value);
 }
 
+function handleExportExcel() {
+  if (!workspace.value) {
+    return;
+  }
+  exportGstCalculatorResultsExcel({
+    periodLabel: `${monthLabel(month.value)} ${year.value}`,
+    year: year.value,
+    month: month.value,
+    partialExemption: partialExemption.value,
+    results: results.value,
+    rateName: labelFor,
+  });
+  $q.notify({ type: 'positive', message: 'GST calculator results exported to Excel.' });
+}
+
 function money(value: number | null | undefined) {
   return new Intl.NumberFormat('en-BZ', { style: 'currency', currency: 'BZD' }).format(Number(value ?? 0));
 }
@@ -1024,7 +1055,6 @@ function showImportError(error: unknown, fallback: string) {
     $q.dialog({
       title: 'Upload not processed',
       message,
-      persistent: true,
       ok: { unelevated: true, label: 'OK', color: 'primary', noCaps: true },
     });
     return;
@@ -1095,7 +1125,6 @@ function confirmClearAll() {
     message: `This removes the saved filing, workbook import, purchase ledger, and entered totals for ${monthLabel(month.value)} ${year.value}. This cannot be undone.`,
     cancel: { flat: true, label: 'Cancel', color: 'grey-8' },
     ok: { unelevated: true, label: 'Clear all', color: 'negative' },
-    persistent: true,
   }).onOk(() => {
     void clearAll();
   });
@@ -1263,6 +1292,14 @@ watch(newPeriodYear, () => {
 .gst-results-panel {
   overflow: auto;
   overscroll-behavior: contain;
+}
+
+.gst-results-panel__toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  padding-bottom: 4px;
 }
 
 .q-drawer-card {

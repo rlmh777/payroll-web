@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { MODULE_ROUTES, pathInModule } from '../config/module-routes';
+import { shouldShowApplicationsLauncher } from '../utils/module-navigation';
 import { useAuthStore } from './auth';
+import { useMenuStore } from './menus';
 
 export interface OnboardingStep {
   id: string;
@@ -18,7 +20,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'applications',
     title: 'Applications',
-    body: 'Switch between Payroll, HR, Core, and Administration. Each application has its own menus.',
+    body: 'Switch between Payroll, Employee, HR, and Administration. Each application has its own menus.',
     target: 'applications',
     placement: 'bottom',
   },
@@ -223,7 +225,11 @@ export const useOnboardingStore = defineStore('onboarding', () => {
 
   const steps = computed(() => {
     if (tourKey.value === 'header') {
-      return ONBOARDING_STEPS;
+      if (shouldShowApplicationsLauncher(useMenuStore().launcher)) {
+        return ONBOARDING_STEPS;
+      }
+
+      return ONBOARDING_STEPS.filter((step) => step.id !== 'applications');
     }
 
     return PAGE_TOURS.find((tour) => tour.key === tourKey.value)?.steps ?? [];

@@ -3,6 +3,19 @@ import { useAuthStore } from '@core/stores/auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 
+function appendApplicationPayload(body: FormData, payload: VacancyApplicationPayload) {
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') {
+      return;
+    }
+    if (value instanceof File) {
+      body.append(key, value);
+      return;
+    }
+    body.append(key, String(value));
+  });
+}
+
 export interface VacancyStage {
   id: number;
   name: string;
@@ -33,6 +46,14 @@ export interface VacancyPerson {
   email?: string | null;
 }
 
+export interface VacancyAttachment {
+  id: string;
+  file_name: string;
+  mime_type?: string | null;
+  file_size?: number | null;
+  file_url?: string | null;
+}
+
 export interface Vacancy {
   id: string;
   title: string;
@@ -47,12 +68,14 @@ export interface Vacancy {
   positions: number;
   require_resume: boolean;
   description?: string | null;
+  attachments?: VacancyAttachment[];
   advertise_internal: boolean;
   advertise_public: boolean;
   vacancy_stage_id: number;
   stage?: VacancyStage | null;
   sort_order: number;
   applications_count?: number;
+  published_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -93,8 +116,16 @@ export interface VacancyApplication {
   candidate_stage_id?: number | null;
   candidate_stage?: CandidateStage | null;
   cover_letter?: string | null;
+  cover_letter_name?: string | null;
+  cover_letter_url?: string | null;
   resume_name?: string | null;
   resume_url?: string | null;
+  social_security_name?: string | null;
+  social_security_url?: string | null;
+  passport_name?: string | null;
+  passport_url?: string | null;
+  police_record_name?: string | null;
+  police_record_url?: string | null;
   source: string;
   status: string;
   sort_order?: number;
@@ -115,9 +146,12 @@ export interface VacancyApplicationPayload {
   birthdate?: string | null;
   gender_id?: number | null;
   social_security_number?: string | null;
-  cover_letter?: string | null;
+  cover_letter?: string | File | null;
   notes?: string | null;
   resume?: File | null;
+  social_security?: File | null;
+  passport?: File | null;
+  police_record?: File | null;
 }
 
 export interface ConvertApplicantPayload {
@@ -148,6 +182,7 @@ export interface VacancyPayload {
   advertise_internal?: boolean;
   advertise_public?: boolean;
   vacancy_stage_id?: number | null;
+  remove_attachment_ids?: string[];
 }
 
 export interface VacancyStagePayload {
@@ -178,6 +213,8 @@ export interface RecruitmentBoardFilters {
   advertising?: 'internal' | 'public' | null;
   source?: string | null;
   status?: string | null;
+  published_from?: string | null;
+  published_to?: string | null;
 }
 
 function toQuery(filters?: RecruitmentBoardFilters | null): string {
@@ -381,16 +418,7 @@ export const useVacancyStore = defineStore('vacancy', {
 
     async submitPublicApplication(vacancyId: string, payload: VacancyApplicationPayload) {
       const body = new FormData();
-      Object.entries(payload).forEach(([key, value]) => {
-        if (value === undefined || value === null || value === '') {
-          return;
-        }
-        if (value instanceof File) {
-          body.append('resume', value);
-          return;
-        }
-        body.append(key, String(value));
-      });
+      appendApplicationPayload(body, payload);
 
       const response = await fetch(`${API_URL}/careers/vacancies/${vacancyId}/applications`, {
         method: 'POST',
@@ -429,16 +457,7 @@ export const useVacancyStore = defineStore('vacancy', {
       this.error = null;
       try {
         const body = new FormData();
-        Object.entries(payload).forEach(([key, value]) => {
-          if (value === undefined || value === null || value === '') {
-            return;
-          }
-          if (value instanceof File) {
-            body.append('resume', value);
-            return;
-          }
-          body.append(key, String(value));
-        });
+        appendApplicationPayload(body, payload);
         const response = await fetch(`${API_URL}/vacancies/${vacancyId}/applications`, {
           method: 'POST',
           headers: this.buildHeaders(false),
@@ -491,21 +510,64 @@ export const useVacancyStore = defineStore('vacancy', {
       }
     },
 
-    async createVacancy(payload: VacancyPayload): Promise<Vacancy> {
+    buildVacancyRequest(
+      payload: VacancyPayload | Partial<VacancyPayload>,
+      attachments: File[] = [],
+    ): { body: BodyInit; headers: HeadersInit; useMultipart: boolean } {
+      const removeIds = payload.remove_attachment_ids ?? [];
+      if (attachments.length === 0 && removeIds.length === 0) {
+        return {
+          body: JSON.stringify(payload),
+          headers: this.buildHeaders(),
+          useMultipart: false,
+        };
+      }
+
+      const formData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value === undefined || key === 'remove_attachment_ids') {
+          return;
+        }
+        if (value === null) {
+          formData.append(key, '');
+          return;
+        }
+        if (typeof value === 'boolean') {
+          formData.append(key, value ? '1' : '0');
+          return;
+        }
+        formData.append(key, String(value));
+      });
+      removeIds.forEach((id) => {
+        formData.append('remove_attachment_ids[]', id);
+      });
+      attachments.forEach((file) => {
+        formData.append('attachments[]', file);
+      });
+
+      return {
+        body: formData,
+        headers: this.buildHeaders(false),
+        useMultipart: true,
+      };
+    },
+
+    async createVacancy(payload: VacancyPayload, attachments: File[] = []): Promise<Vacancy> {
       this.isSaving = true;
       this.error = null;
       try {
+        const { body, headers } = this.buildVacancyRequest(payload, attachments);
         const response = await fetch(`${API_URL}/vacancies`, {
           method: 'POST',
-          headers: this.buildHeaders(),
-          body: JSON.stringify(payload),
+          headers,
+          body,
         });
-        const body = await response.json().catch(() => ({}));
+        const result = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(extractErrorMessage(body));
+          throw new Error(extractErrorMessage(result));
         }
         await this.fetchBoard();
-        return body.data as Vacancy;
+        return result.data as Vacancy;
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Failed to create vacancy.';
         throw error;
@@ -514,21 +576,26 @@ export const useVacancyStore = defineStore('vacancy', {
       }
     },
 
-    async updateVacancy(id: string, payload: Partial<VacancyPayload>): Promise<Vacancy> {
+    async updateVacancy(
+      id: string,
+      payload: Partial<VacancyPayload>,
+      attachments: File[] = [],
+    ): Promise<Vacancy> {
       this.isSaving = true;
       this.error = null;
       try {
+        const { body, headers, useMultipart } = this.buildVacancyRequest(payload, attachments);
         const response = await fetch(`${API_URL}/vacancies/${id}`, {
-          method: 'PUT',
-          headers: this.buildHeaders(),
-          body: JSON.stringify(payload),
+          method: useMultipart ? 'POST' : 'PUT',
+          headers,
+          body,
         });
-        const body = await response.json().catch(() => ({}));
+        const result = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(extractErrorMessage(body));
+          throw new Error(extractErrorMessage(result));
         }
         await this.fetchBoard();
-        return body.data as Vacancy;
+        return result.data as Vacancy;
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Failed to update vacancy.';
         throw error;

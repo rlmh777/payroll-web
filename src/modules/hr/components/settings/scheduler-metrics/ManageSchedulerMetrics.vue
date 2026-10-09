@@ -154,7 +154,6 @@ function confirmDelete(row: SchedulerMetricDefinition) {
     title: 'Delete metric',
     message: `Delete “${row.name}”? Existing daily values for this metric will also be removed.`,
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
       try {

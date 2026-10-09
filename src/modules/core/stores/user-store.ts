@@ -334,6 +334,8 @@ export const useUserStore = defineStore('user', {
     },
 
     async linkUserToEmployee(userId: string, employeeId: string | null): Promise<boolean> {
+      this.error = null;
+
       try {
         const response = await fetch(`${API_URL}/users/${userId}/employee`, {
           method: 'PUT',
@@ -342,7 +344,11 @@ export const useUserStore = defineStore('user', {
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to link user to employee: ${response.statusText}`);
+          this.error = await parseApiError(
+            response,
+            `Failed to link user to employee: ${response.statusText}`,
+          );
+          return false;
         }
 
         await this.fetchUserById(userId);

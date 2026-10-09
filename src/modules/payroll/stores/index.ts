@@ -1,3 +1,4 @@
+export * from './dashboard-store';
 export * from './account-store';
 export * from './account-type-store';
 export * from './allowance-store';

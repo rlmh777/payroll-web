@@ -6,28 +6,27 @@
     :maximized="false"
     @hide="onClose"
   >
-    <q-card class="add-employee-leave-card">
-      <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">Add Employee Leave</div>
-        <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
-      </q-card-section>
-
-      <q-card-section>
-    <LeaveFormFields
-      v-model="form"
-      :loading="employeeLeaveStore.isLoading"
-      :are-dates-valid="areDatesValid"
-      :accrued-hours="accruedHours"
-      submit-label="Save"
-      @leave-type-change="onLeaveTypeChange"
-      @duration-change="onDurationChange"
-      @date-change="onDateChange"
-      @submit="onSubmit"
-      @cancel="onClose"
-    />
-      </q-card-section>
-    </q-card>
+    <AppDialogCard>
+      <AppDialogHeader>
+        <div class="text-h6">{{ dialogTitle }}</div>
+      </AppDialogHeader>
+      <AppDialogBody>
+        <LeaveFormFields
+          v-model="form"
+          :loading="employeeLeaveStore.isLoading"
+          :are-dates-valid="areDatesValid"
+          :accrued-hours="accruedHours"
+          :submit-label="props.submitLabel ?? 'Save'"
+          :lock-leave-type="Boolean(props.lockLeaveType)"
+          :show-leave-type-actions="props.showLeaveTypeActions !== false"
+          @leave-type-change="onLeaveTypeChange"
+          @duration-change="onDurationChange"
+          @date-change="onDateChange"
+          @submit="onSubmit"
+          @cancel="onClose"
+        />
+      </AppDialogBody>
+    </AppDialogCard>
   </q-dialog>
 
   <div v-else class="add-employee-leave-embedded">
@@ -39,11 +38,13 @@
       :accrued-hours="accruedHours"
       :submit-label="props.submitLabel ?? 'Assign leave'"
       :cancel-label="props.cancelLabel ?? 'Reset'"
+      :lock-leave-type="Boolean(props.lockLeaveType)"
+      :show-leave-type-actions="props.showLeaveTypeActions !== false"
       @leave-type-change="onLeaveTypeChange"
       @duration-change="onDurationChange"
       @date-change="onDateChange"
       @submit="onSubmit"
-      @cancel="resetForm"
+      @cancel="onEmbeddedCancel"
     />
   </div>
 </template>
@@ -56,6 +57,9 @@ import { useEmployeeStore } from '@/stores/employee-store';
 import LeaveFormFields from './LeaveFormFields.vue';
 import { leavePayMultiplierFromType } from '@hr/utils/leave-pay-utils';
 import { useEmployeePoolStore } from '@payroll/stores/employee-pool-store';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 
 const $q = useQuasar();
 
@@ -65,6 +69,10 @@ interface Props {
   disabled?: boolean;
   submitLabel?: string;
   cancelLabel?: string;
+  title?: string;
+  initialLeaveTypeId?: number | null;
+  lockLeaveType?: boolean;
+  showLeaveTypeActions?: boolean;
   /** When true, leave goes to accounts payment confirmation (skip supervisor/HR). */
   assigned?: boolean;
 }
@@ -74,11 +82,15 @@ const props = withDefaults(defineProps<Props>(), {
   embedded: false,
   disabled: false,
   assigned: false,
+  initialLeaveTypeId: null,
+  lockLeaveType: false,
+  showLeaveTypeActions: true,
 });
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   saved: [employeeLeaveId: string];
+  cancel: [];
 }>();
 
 const employeeLeaveStore = useEmployeeLeaveStore();
@@ -90,6 +102,8 @@ const isOpen = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value),
 });
+
+const dialogTitle = computed(() => props.title || 'Add Employee Leave');
 
 type LeaveFormState = {
   leaveTypeId: number | null;
@@ -309,6 +323,11 @@ function resetForm() {
   form.value = emptyForm();
 }
 
+function onEmbeddedCancel() {
+  resetForm();
+  emit('cancel');
+}
+
 const onClose = () => {
   resetForm();
   isOpen.value = false;
@@ -332,6 +351,9 @@ watch(isOpen, async (newValue) => {
   if (!props.embedded && newValue) {
     resetForm();
     await Promise.all([employeeStore.fetchLeaveTypes(), loadAccruedHours()]);
+    if (props.initialLeaveTypeId) {
+      onLeaveTypeChange(props.initialLeaveTypeId);
+    }
   }
 });
 
@@ -348,26 +370,29 @@ watch([() => form.value.fromTime, () => form.value.toTime], () => {
   }
 });
 
+watch(
+  () => props.initialLeaveTypeId,
+  (id) => {
+    if (!id) {
+      return;
+    }
+    if (props.embedded || isOpen.value) {
+      onLeaveTypeChange(id);
+    }
+  },
+);
+
 onMounted(async () => {
   if (props.embedded) {
     await Promise.all([employeeStore.fetchLeaveTypes(), loadAccruedHours()]);
+    if (props.initialLeaveTypeId) {
+      onLeaveTypeChange(props.initialLeaveTypeId);
+    }
   }
 });
 </script>
 
 <style scoped>
-.add-employee-leave-card {
-  width: 30vw;
-  height: 100vh;
-  max-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.add-employee-leave-card :deep(.q-card__section) {
-  overflow-y: auto;
-}
-
 .add-employee-leave-embedded {
   width: 100%;
 }

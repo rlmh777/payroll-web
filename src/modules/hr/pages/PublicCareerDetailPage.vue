@@ -25,10 +25,28 @@
         <q-separator />
         <q-card-section>
           <div class="text-subtitle2 q-mb-sm">Job description</div>
-          <div class="job-description">{{ job.description || 'No description provided.' }}</div>
+          <div
+            class="job-description"
+            :class="{ 'job-description--plain': isPlainDescription }"
+            v-html="job.description || 'No description provided.'"
+          />
+          <div v-if="job.attachments?.length" class="q-mt-md q-gutter-xs">
+            <div class="text-caption text-grey-7">Attachments</div>
+            <div v-for="file in job.attachments" :key="file.id">
+              <a
+                v-if="file.file_url"
+                :href="file.file_url"
+                target="_blank"
+                rel="noopener"
+              >
+                {{ file.file_name }}
+              </a>
+              <span v-else>{{ file.file_name }}</span>
+            </div>
+          </div>
           <div v-if="job.job_title?.jobDescriptionUrl" class="q-mt-md">
             <a :href="job.job_title.jobDescriptionUrl" target="_blank" rel="noopener">
-              Download job description
+              Download job title description
             </a>
           </div>
         </q-card-section>
@@ -52,21 +70,75 @@
           <q-form class="q-gutter-md" @submit.prevent="apply">
             <div class="row q-col-gutter-md">
               <div class="col-12 col-sm-6">
-                <q-input v-model="form.first_name" outlined dense label="First name" :rules="[required]" />
+                <q-input
+                  v-model="form.first_name"
+                  outlined
+                  dense
+                  label="First name"
+                  :rules="[required]"
+                >
+                  <template #prepend>
+                    <q-icon name="person" />
+                  </template>
+                </q-input>
               </div>
               <div class="col-12 col-sm-6">
-                <q-input v-model="form.last_name" outlined dense label="Last name" :rules="[required]" />
+                <q-input
+                  v-model="form.last_name"
+                  outlined
+                  dense
+                  label="Last name"
+                  :rules="[required]"
+                >
+                  <template #prepend>
+                    <q-icon name="badge" />
+                  </template>
+                </q-input>
               </div>
               <div class="col-12 col-sm-6">
-                <q-input v-model="form.email" outlined dense type="email" label="Email" :rules="[required]" />
+                <q-input
+                  v-model="form.email"
+                  outlined
+                  dense
+                  type="email"
+                  label="Email"
+                  :rules="[required]"
+                >
+                  <template #prepend>
+                    <q-icon name="email" />
+                  </template>
+                </q-input>
               </div>
               <div class="col-12 col-sm-6">
-                <q-input v-model="form.phone" outlined dense label="Phone" />
+                <q-input v-model="form.phone" outlined dense label="Phone">
+                  <template #prepend>
+                    <q-icon name="phone" />
+                  </template>
+                </q-input>
               </div>
-              <div class="col-12">
-                <q-input v-model="form.cover_letter" outlined type="textarea" autogrow label="Cover letter" />
+            </div>
+
+            <div class="text-subtitle2 q-mt-sm">Documents</div>
+            <div class="text-caption text-grey-7">
+              Upload a cover letter (PDF or Word). Identity documents can be PDF or image files.
+            </div>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
+                <q-file
+                  v-model="form.cover_letter"
+                  outlined
+                  dense
+                  clearable
+                  label="Cover letter"
+                  accept=".pdf,.doc,.docx"
+                  :rules="[requiredFile('A cover letter is required')]"
+                >
+                  <template #prepend>
+                    <q-icon name="article" />
+                  </template>
+                </q-file>
               </div>
-              <div class="col-12">
+              <div class="col-12 col-sm-6">
                 <q-file
                   v-model="form.resume"
                   outlined
@@ -74,12 +146,58 @@
                   clearable
                   label="Resume"
                   accept=".pdf,.doc,.docx"
-                  :rules="job.require_resume ? [requiredFile] : []"
-                />
+                  :rules="job.require_resume ? [requiredFile('A resume is required')] : []"
+                >
+                  <template #prepend>
+                    <q-icon name="description" />
+                  </template>
+                </q-file>
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-file
+                  v-model="form.social_security"
+                  outlined
+                  dense
+                  clearable
+                  label="Social security card"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                >
+                  <template #prepend>
+                    <q-icon name="verified_user" />
+                  </template>
+                </q-file>
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-file
+                  v-model="form.passport"
+                  outlined
+                  dense
+                  clearable
+                  label="Passport"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                >
+                  <template #prepend>
+                    <q-icon name="flight" />
+                  </template>
+                </q-file>
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-file
+                  v-model="form.police_record"
+                  outlined
+                  dense
+                  clearable
+                  label="Police record"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                >
+                  <template #prepend>
+                    <q-icon name="gavel" />
+                  </template>
+                </q-file>
               </div>
             </div>
             <div class="row justify-end">
-              <q-btn type="submit" color="primary" :loading="submitting" label="Submit application" />
+              <q-btn type="submit" color="primary" icon="send" :loading="submitting" label="Submit application" />
             </div>
           </q-form>
         </q-card-section>
@@ -100,18 +218,25 @@ const $q = useQuasar();
 const job = computed(() => store.selectedPublicVacancy);
 const submitting = ref(false);
 const submitted = ref(false);
+const isPlainDescription = computed(() => {
+  const text = job.value?.description ?? '';
+  return text !== '' && !/<[a-z][\s\S]*>/i.test(text);
+});
 
 const form = reactive({
   first_name: '',
   last_name: '',
   email: '',
   phone: '',
-  cover_letter: '',
+  cover_letter: null as File | null,
   resume: null as File | null,
+  social_security: null as File | null,
+  passport: null as File | null,
+  police_record: null as File | null,
 });
 
 const required = (value: string) => !!value?.trim() || 'Required';
-const requiredFile = (value: File | null) => !!value || 'A resume is required';
+const requiredFile = (message: string) => (value: File | File[] | null) => !!value || message;
 
 async function load() {
   submitted.value = false;
@@ -137,8 +262,11 @@ async function apply() {
       last_name: form.last_name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim() || null,
-      cover_letter: form.cover_letter.trim() || null,
+      cover_letter: form.cover_letter,
       resume: form.resume,
+      social_security: form.social_security,
+      passport: form.passport,
+      police_record: form.police_record,
     });
     submitted.value = true;
     $q.notify({ type: 'positive', message: 'Application submitted.' });
@@ -167,7 +295,17 @@ watch(() => route.params.id, () => {
   margin: 0 auto;
 }
 .job-description {
-  white-space: pre-wrap;
   line-height: 1.5;
+}
+.job-description--plain {
+  white-space: pre-wrap;
+}
+.job-description :deep(p) {
+  margin: 0 0 0.75em;
+}
+.job-description :deep(ul),
+.job-description :deep(ol) {
+  padding-left: 1.25em;
+  margin: 0 0 0.75em;
 }
 </style>

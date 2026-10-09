@@ -1,5 +1,13 @@
 <template>
-  <q-btn flat round dense icon="apps" aria-label="Modules" data-onboarding="applications">
+  <q-btn
+    v-if="showLauncher"
+    flat
+    round
+    dense
+    icon="apps"
+    aria-label="Modules"
+    data-onboarding="applications"
+  >
     <q-menu
       class="module-launcher-menu"
       transition-show="jump-down"
@@ -30,12 +38,17 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMenuStore } from '../../../stores/menus';
-import type { AppModule } from '../../../utils/module-navigation';
+import {
+  shouldShowApplicationsLauncher,
+  type AppModule,
+} from '../../../utils/module-navigation';
 
 const menuStore = useMenuStore();
 const router = useRouter();
+const showLauncher = computed(() => shouldShowApplicationsLauncher(menuStore.launcher));
 
 function selectModule(module: AppModule) {
   menuStore.setActiveModule(module.code);

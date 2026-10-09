@@ -125,7 +125,6 @@ function confirmDelete(group: EmployeeGroup) {
     title: 'Delete group',
     message: `Delete "${group.name}"? Members will be removed from this group.`,
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
       try {

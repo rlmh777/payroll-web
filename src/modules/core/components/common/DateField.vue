@@ -13,8 +13,8 @@
   >
     <template #append>
       <q-icon name="event" class="cursor-pointer">
-        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-          <q-date :model-value="quasarDate" @update:model-value="onDateUpdate">
+        <q-popup-proxy v-model="datePickerOpen" cover transition-show="scale" transition-hide="scale">
+          <q-date :model-value="quasarDate" @click.stop @update:model-value="onDateUpdate">
             <div class="row items-center justify-end">
               <q-btn v-close-popup label="Close" color="primary" flat />
             </div>
@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import type { ValidationRule } from 'quasar';
 
 /** Custom rules receive API format (YYYY-MM-DD), not Quasar slash format. */
@@ -51,6 +51,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: string | null];
 }>();
+
+const datePickerOpen = ref(false);
 
 const quasarDate = computed(() => toQuasarDate(props.modelValue));
 
@@ -86,5 +88,8 @@ function onInputUpdate(value: string | null | number) {
 
 function onDateUpdate(value: string | null) {
   emit('update:modelValue', toApiDate(value));
+  void nextTick(() => {
+    datePickerOpen.value = false;
+  });
 }
 </script>

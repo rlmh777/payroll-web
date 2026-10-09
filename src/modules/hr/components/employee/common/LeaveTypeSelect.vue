@@ -5,16 +5,17 @@
       :options="options"
       option-value="id"
       option-label="name"
-      use-input
-      fill-input
-      hide-selected
+      :use-input="!readonly"
+      :fill-input="!readonly"
+      :hide-selected="!readonly"
       emit-value
       map-options
-      clearable
+      :clearable="!readonly"
       outlined
       dense
       input-debounce="0"
       :readonly="readonly"
+      :disable="disable"
       label="Leave Type"
       :loading="employeeStore.isLoadingLeaveTypes"
       @filter="filterLeaveTypes"
@@ -87,6 +88,7 @@ import type { LeaveType } from '@core/types/models';
 interface Props {
   modelValue?: number | null;
   readonly?: boolean;
+  disable?: boolean;
   employeeLeaveType?: number | null;
   showAddNew?: boolean;
   showEdit?: boolean;
@@ -95,6 +97,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   readonly: false,
+  disable: false,
   employeeLeaveType: null as number | null,
   showAddNew: false,
   showEdit: false,

@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="isOpen" position="right" persistent>
+  <q-dialog v-model="isOpen" position="right">
     <AppDialogCard>
       <AppDialogHeader>
         <div class="text-h6">{{ record ? 'Edit shift template' : 'New shift template' }}</div>

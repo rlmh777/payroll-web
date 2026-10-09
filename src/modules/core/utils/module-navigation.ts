@@ -37,7 +37,19 @@ export function clearStoredActiveModule(): void {
 export function resolveModuleForPath(
   path: string,
   menuTree: MenuItem[],
+  options?: {
+    preferredModule?: string | null | undefined;
+    moduleMenus?: Record<string, MenuItem[]> | undefined;
+  },
 ): string | null {
+  const preferred = options?.preferredModule;
+  const moduleMenus = options?.moduleMenus;
+  if (preferred && moduleMenus?.[preferred]?.length) {
+    if (findTopMenuForPath(path, moduleMenus[preferred])) {
+      return preferred;
+    }
+  }
+
   const topMatch = findTopMenuForPath(path, menuTree);
   if (topMatch?.module_code) {
     return topMatch.module_code;
@@ -45,6 +57,10 @@ export function resolveModuleForPath(
 
   if (path === '/' || path.startsWith('/payroll')) {
     return 'payroll';
+  }
+
+  if (path.startsWith('/employee')) {
+    return 'employee';
   }
 
   if (path.startsWith('/hr/')) {
@@ -56,7 +72,7 @@ export function resolveModuleForPath(
   }
 
   if (path.startsWith('/core/')) {
-    return 'core';
+    return 'payroll';
   }
 
   return null;
@@ -67,12 +83,16 @@ export function pickDefaultActiveModule(
   path: string,
   menuTree: MenuItem[],
   preferredModule?: string | null,
+  moduleMenus?: Record<string, MenuItem[]>,
 ): string {
   const isEnabled = (code: string | null | undefined) =>
     !!code && modules.some((module) => module.code === code && module.enabled);
 
-  // Deep links win so shared URLs open the correct application.
-  const fromPath = resolveModuleForPath(path, menuTree);
+  const stored = getStoredActiveModule();
+  const fromPath = resolveModuleForPath(path, menuTree, {
+    preferredModule: stored ?? preferredModule,
+    moduleMenus,
+  });
   if (path !== '/' && isEnabled(fromPath)) {
     return fromPath!;
   }
@@ -81,7 +101,6 @@ export function pickDefaultActiveModule(
     return preferredModule!;
   }
 
-  const stored = getStoredActiveModule();
   if (isEnabled(stored)) {
     return stored!;
   }
@@ -91,4 +110,8 @@ export function pickDefaultActiveModule(
   }
 
   return modules.find((module) => module.enabled)?.code ?? 'payroll';
+}
+
+export function shouldShowApplicationsLauncher(launcher: AppModule[]): boolean {
+  return launcher.length > 1;
 }

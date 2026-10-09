@@ -1,5 +1,5 @@
 <template>
-  <q-dialog :model-value="modelValue" persistent @update:model-value="onToggle">
+  <q-dialog :model-value="modelValue" @update:model-value="onToggle">
     <AppDialogCard modal>
       <AppDialogHeader>
         <div>
@@ -43,15 +43,13 @@
               <div class="text-caption text-grey-7">Address</div>
               <div>{{ address(selected.applicant) }}</div>
             </div>
-            <div class="col-12">
+            <div v-if="selected.cover_letter && !selected.cover_letter_url" class="col-12">
               <div class="text-caption text-grey-7">Cover letter</div>
-              <div class="cover-letter">{{ selected.cover_letter || 'None' }}</div>
+              <div class="cover-letter">{{ selected.cover_letter }}</div>
             </div>
-            <div class="col-12">
-              <div class="text-caption text-grey-7">Resume</div>
-              <a v-if="selected.resume_url" :href="selected.resume_url" target="_blank" rel="noopener">
-                {{ selected.resume_name || 'Download resume' }}
-              </a>
+            <div v-for="doc in applicationDocuments(selected)" :key="doc.label" class="col-12 col-sm-6">
+              <div class="text-caption text-grey-7">{{ doc.label }}</div>
+              <a v-if="doc.url" :href="doc.url" target="_blank" rel="noopener">{{ doc.name }}</a>
               <span v-else>—</span>
             </div>
           </AppDialogForm>
@@ -144,22 +142,102 @@
           />
           <AppDialogForm>
             <div class="col-12 col-sm-6">
-              <q-input v-model="addForm.first_name" outlined dense label="First name" :rules="[required]" />
+              <q-input v-model="addForm.first_name" outlined dense label="First name" :rules="[required]">
+                <template #prepend>
+                  <q-icon name="person" />
+                </template>
+              </q-input>
             </div>
             <div class="col-12 col-sm-6">
-              <q-input v-model="addForm.last_name" outlined dense label="Last name" :rules="[required]" />
+              <q-input v-model="addForm.last_name" outlined dense label="Last name" :rules="[required]">
+                <template #prepend>
+                  <q-icon name="badge" />
+                </template>
+              </q-input>
             </div>
             <div class="col-12 col-sm-6">
-              <q-input v-model="addForm.email" outlined dense label="Email" :rules="[required]" />
+              <q-input v-model="addForm.email" outlined dense label="Email" :rules="[required]">
+                <template #prepend>
+                  <q-icon name="email" />
+                </template>
+              </q-input>
             </div>
             <div class="col-12 col-sm-6">
-              <q-input v-model="addForm.phone" outlined dense label="Phone" />
+              <q-input v-model="addForm.phone" outlined dense label="Phone">
+                <template #prepend>
+                  <q-icon name="phone" />
+                </template>
+              </q-input>
             </div>
-            <div class="col-12">
-              <q-input v-model="addForm.cover_letter" outlined type="textarea" autogrow label="Cover letter" />
+            <div class="col-12 col-sm-6">
+              <q-file
+                v-model="addForm.cover_letter"
+                outlined
+                dense
+                clearable
+                label="Cover letter"
+                accept=".pdf,.doc,.docx"
+              >
+                <template #prepend>
+                  <q-icon name="article" />
+                </template>
+              </q-file>
             </div>
-            <div class="col-12">
-              <q-file v-model="addForm.resume" outlined dense clearable label="Resume" accept=".pdf,.doc,.docx" />
+            <div class="col-12 col-sm-6">
+              <q-file
+                v-model="addForm.resume"
+                outlined
+                dense
+                clearable
+                label="Resume"
+                accept=".pdf,.doc,.docx"
+              >
+                <template #prepend>
+                  <q-icon name="description" />
+                </template>
+              </q-file>
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-file
+                v-model="addForm.social_security"
+                outlined
+                dense
+                clearable
+                label="Social security card"
+                accept=".pdf,.jpg,.jpeg,.png"
+              >
+                <template #prepend>
+                  <q-icon name="verified_user" />
+                </template>
+              </q-file>
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-file
+                v-model="addForm.passport"
+                outlined
+                dense
+                clearable
+                label="Passport"
+                accept=".pdf,.jpg,.jpeg,.png"
+              >
+                <template #prepend>
+                  <q-icon name="flight" />
+                </template>
+              </q-file>
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-file
+                v-model="addForm.police_record"
+                outlined
+                dense
+                clearable
+                label="Police record"
+                accept=".pdf,.jpg,.jpeg,.png"
+              >
+                <template #prepend>
+                  <q-icon name="gavel" />
+                </template>
+              </q-file>
             </div>
           </AppDialogForm>
         </div>
@@ -260,8 +338,11 @@ const addForm = reactive({
   last_name: '',
   email: '',
   phone: '',
-  cover_letter: '',
+  cover_letter: null as File | null,
   resume: null as File | null,
+  social_security: null as File | null,
+  passport: null as File | null,
+  police_record: null as File | null,
 });
 
 const convertForm = reactive({
@@ -308,8 +389,21 @@ function resetAddForm() {
   addForm.last_name = '';
   addForm.email = '';
   addForm.phone = '';
-  addForm.cover_letter = '';
+  addForm.cover_letter = null;
   addForm.resume = null;
+  addForm.social_security = null;
+  addForm.passport = null;
+  addForm.police_record = null;
+}
+
+function applicationDocuments(application: VacancyApplication) {
+  return [
+    { label: 'Cover letter', url: application.cover_letter_url, name: application.cover_letter_name || 'Download cover letter' },
+    { label: 'Resume', url: application.resume_url, name: application.resume_name || 'Download resume' },
+    { label: 'Social security card', url: application.social_security_url, name: application.social_security_name || 'Download social security' },
+    { label: 'Passport', url: application.passport_url, name: application.passport_name || 'Download passport' },
+    { label: 'Police record', url: application.police_record_url, name: application.police_record_name || 'Download police record' },
+  ];
 }
 
 function fillConvertForm(application: VacancyApplication) {
@@ -354,8 +448,11 @@ async function saveApplication() {
       last_name: addForm.last_name.trim(),
       email: addForm.email.trim(),
       phone: addForm.phone.trim() || null,
-      cover_letter: addForm.cover_letter.trim() || null,
+      cover_letter: addForm.cover_letter,
       resume: addForm.resume,
+      social_security: addForm.social_security,
+      passport: addForm.passport,
+      police_record: addForm.police_record,
     });
     isAdding.value = false;
     resetAddForm();

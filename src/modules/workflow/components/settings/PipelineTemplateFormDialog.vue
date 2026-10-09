@@ -1,5 +1,5 @@
 <template>
-  <q-dialog :model-value="modelValue" persistent @update:model-value="$emit('update:modelValue', $event)">
+  <q-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)">
     <AppDialogCard modal>
       <AppDialogHeader>
         <div class="text-h6">{{ template?.id ? 'Edit pipeline template' : 'New pipeline template' }}</div>

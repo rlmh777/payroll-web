@@ -381,7 +381,6 @@ const confirmDelete = (row: HistoricalEmployeeAllowance) => {
     title: 'Delete other payment',
     message: 'Remove this other payment from the upcoming payroll run?',
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
       try {

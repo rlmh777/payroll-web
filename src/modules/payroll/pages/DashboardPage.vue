@@ -287,7 +287,8 @@ onMounted(() => {
 
 <style scoped>
 .dashboard-page {
-  height: calc(100vh - 64px);
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 

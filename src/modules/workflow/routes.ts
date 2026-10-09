@@ -50,6 +50,18 @@ export const workflowRoutes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: adminSettingsPath('email'),
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('@core/settings/email/ManageEmailSettings.vue'),
+        props: { title: 'Email' },
+      },
+    ],
+  },
+  {
     path: adminSettingsPath('login'),
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },

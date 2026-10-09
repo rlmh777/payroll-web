@@ -82,11 +82,16 @@ export const useMenuStore = defineStore('menus', () => {
         normalizeMenuTree(items),
       ]),
     );
-    modules.value = data.modules ?? [];
-    launcher.value =
+    const withoutCore = (list: AppModule[]) => list.filter((module) => module.code !== 'core');
+    modules.value = withoutCore(data.modules ?? []);
+    const rawLauncher = withoutCore(
       data.launcher?.length
         ? data.launcher
-        : (data.modules ?? []).filter((module) => module.enabled);
+        : (data.modules ?? []).filter((module) => module.enabled),
+    );
+    launcher.value = rawLauncher.filter(
+      (module) => (moduleMenus.value[module.code]?.length ?? 0) > 0,
+    );
 
     const preferredModule = authStore.user?.preferences?.defaultModule ?? 'payroll';
     const nextActive = pickDefaultActiveModule(
@@ -94,6 +99,7 @@ export const useMenuStore = defineStore('menus', () => {
       typeof window !== 'undefined' ? window.location.pathname : '/',
       menuTree.value,
       preferredModule,
+      moduleMenus.value,
     );
     activeModule.value = nextActive;
     storeActiveModule(nextActive);
@@ -109,7 +115,10 @@ export const useMenuStore = defineStore('menus', () => {
       return;
     }
 
-    const resolved = resolveModuleForPath(path, menuTree.value);
+    const resolved = resolveModuleForPath(path, menuTree.value, {
+      preferredModule: activeModule.value,
+      moduleMenus: moduleMenus.value,
+    });
     if (resolved && modules.value.some((module) => module.code === resolved && module.enabled)) {
       setActiveModule(resolved);
     }

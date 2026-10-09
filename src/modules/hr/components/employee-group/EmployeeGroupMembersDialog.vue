@@ -2,7 +2,6 @@
   <q-dialog
     :model-value="modelValue"
     position="right"
-    persistent
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <AppDialogCard>

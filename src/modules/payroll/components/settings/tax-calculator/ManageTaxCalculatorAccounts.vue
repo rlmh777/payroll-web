@@ -291,7 +291,6 @@ function onDeleteLine(row: TaxCalculatorAccount) {
     title: 'Remove line',
     message: 'Remove this line from the GST calculator?',
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
       try {
@@ -313,7 +312,6 @@ function onDeleteRate(rate: TaxCalculatorRate) {
     title: 'Delete rate',
     message: `Delete ${rate.name}? Lines using this type will need remapping.`,
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
       try {

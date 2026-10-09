@@ -129,7 +129,6 @@ function confirmDelete(template: ShiftTemplate) {
     title: 'Delete shift template',
     message: `Delete “${shiftTemplateDisplayLabel(template)}”?`,
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
       const ok = await shiftTemplateStore.deleteTemplate(template.id);

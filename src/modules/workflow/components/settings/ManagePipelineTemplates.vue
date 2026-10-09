@@ -122,7 +122,6 @@ function confirmDelete(template: PipelineTemplate) {
     title: 'Delete pipeline template',
     message: `Delete "${template.name}"? Templates with existing instances cannot be deleted.`,
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     void (async () => {
       try {

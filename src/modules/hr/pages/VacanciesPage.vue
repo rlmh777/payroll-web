@@ -39,6 +39,7 @@
       <RecruitmentFilters
         v-model="filters"
         include-advertising
+        include-published-range
         :loading="store.isLoadingBoard"
         @search="loadBoard"
         @reset="loadBoard"
@@ -113,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { usePermissions } from '@core/composables/usePermissions';
@@ -137,7 +138,7 @@ const draggingFromStageId = ref<number | null>(null);
 const overStageId = ref<number | null>(null);
 const skipClick = ref(false);
 
-const filters = reactive<RecruitmentFiltersValue>({
+const filters = ref<RecruitmentFiltersValue>({
   search: '',
   vacancy_id: null,
   job_title_id: null,
@@ -146,6 +147,8 @@ const filters = reactive<RecruitmentFiltersValue>({
   hiring_manager_id: null,
   advertising: null,
   source: null,
+  published_from: null,
+  published_to: null,
 });
 
 function openCreate() {
@@ -153,9 +156,12 @@ function openCreate() {
   formOpen.value = true;
 }
 
-async function loadBoard() {
+async function loadBoard(value?: RecruitmentFiltersValue) {
+  if (value) {
+    filters.value = { ...value };
+  }
   try {
-    await store.fetchBoard({ ...filters });
+    await store.fetchBoard({ ...filters.value });
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -251,8 +257,17 @@ onMounted(async () => {
   gap: 12px;
   overflow-x: auto;
   align-items: stretch;
+  justify-content: safe center;
   min-height: 0;
   flex: 1;
+}
+
+.kanban-column:first-child {
+  margin-left: auto;
+}
+
+.kanban-column:last-child {
+  margin-right: auto;
 }
 
 .kanban-column {
@@ -261,7 +276,7 @@ onMounted(async () => {
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  min-height: 420px;
+  min-height: 0;
   border-top: 4px solid var(--stage-color, #64748b);
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <q-dialog :model-value="modelValue" persistent @update:model-value="emit('update:modelValue', $event)">
+  <q-dialog :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)">
     <q-card style="min-width: 420px; max-width: 520px">
       <q-card-section>
         <div class="text-h6">{{ record ? 'Edit metric' : 'Add metric' }}</div>
