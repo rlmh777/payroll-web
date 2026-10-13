@@ -21,6 +21,7 @@ export interface LeaveTypeRecord {
   isPaid: boolean;
   affectsBalance: boolean;
   requiresCertification: boolean;
+  uncertifiedDaysAllowed: number;
   isActive: boolean;
   sortOrder: number;
   policy?: LeaveTypePolicy | null;
@@ -32,6 +33,7 @@ export interface LeaveTypeFormModel {
   isPaid: boolean;
   affectsBalance: boolean;
   requiresCertification: boolean;
+  uncertifiedDaysAllowed: number;
   isActive: boolean;
   sortOrder: number;
   annualEntitlementDays: number;
@@ -46,6 +48,9 @@ export interface LeaveBalanceRow {
   isPaid: boolean;
   affectsBalance: boolean;
   requiresCertification: boolean;
+  uncertifiedDaysAllowed: number;
+  uncertifiedDaysUsed: number;
+  uncertifiedDaysRemaining: number;
   annualEntitlementDays: number;
   accrualMethod: LeaveAccrualMethod;
   accruedDays: number;
@@ -80,6 +85,7 @@ export function createDefaultLeaveTypeForm(): LeaveTypeFormModel {
     isPaid: true,
     affectsBalance: true,
     requiresCertification: false,
+    uncertifiedDaysAllowed: 2,
     isActive: true,
     sortOrder: 0,
     annualEntitlementDays: 0,
@@ -95,6 +101,7 @@ export function mapLeaveTypeToForm(record: LeaveTypeRecord): LeaveTypeFormModel 
     isPaid: record.isPaid,
     affectsBalance: record.affectsBalance,
     requiresCertification: record.requiresCertification,
+    uncertifiedDaysAllowed: Number(record.uncertifiedDaysAllowed ?? 0),
     isActive: record.isActive,
     sortOrder: record.sortOrder,
     annualEntitlementDays: Number(record.policy?.annualEntitlementDays ?? 0),
@@ -110,4 +117,27 @@ export function formatAccrualMethod(value?: string | null): string {
 
 export function formatLeaveDays(value: number): string {
   return Number(value).toFixed(2);
+}
+
+export function leaveProofRequired(options: {
+  requiresCertification?: boolean | null;
+  uncertifiedDaysAllowed?: number | null;
+  uncertifiedDaysUsed?: number | null;
+  requestedDays?: number | null;
+}): boolean {
+  if (!options.requiresCertification) {
+    return false;
+  }
+
+  const requested = Number(options.requestedDays ?? 0);
+  if (requested <= 0) {
+    return false;
+  }
+
+  const remaining = Math.max(
+    0,
+    Number(options.uncertifiedDaysAllowed ?? 0) - Number(options.uncertifiedDaysUsed ?? 0),
+  );
+
+  return requested > remaining + 0.001;
 }

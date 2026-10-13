@@ -208,6 +208,70 @@
       <div v-if="passkeysSupported" class="text-caption text-grey-7 text-center">
         Create a passkey after you sign in with your password.
       </div>
+      <q-btn
+        flat
+        no-caps
+        label="Have an invite code?"
+        color="primary"
+        class="full-width"
+        :disable="busy"
+        @click="openInvite"
+      />
+    </div>
+  </q-form>
+
+  <q-form
+    v-else-if="step === 'invite'"
+    @submit="onInviteSubmit"
+    class="q-gutter-md"
+    style="width: 100%"
+  >
+    <div class="text-h6">Interview panel</div>
+    <div class="text-caption text-grey-7">
+      Enter the email and code from your invitation.
+    </div>
+    <q-input
+      outlined
+      rounded
+      v-model="inviteEmail"
+      label="Email"
+      type="email"
+      autocomplete="username"
+      :rules="[(val) => !!val?.trim() || 'Email is required']"
+    >
+      <template v-slot:prepend>
+        <q-icon name="email" />
+      </template>
+    </q-input>
+    <q-input
+      outlined
+      rounded
+      v-model="inviteCode"
+      label="Invite code"
+      autocomplete="one-time-code"
+      :rules="[(val) => !!val?.trim() || 'Invite code is required']"
+    >
+      <template v-slot:prepend>
+        <q-icon name="pin" />
+      </template>
+    </q-input>
+    <div class="column q-gutter-sm">
+      <q-btn
+        outlined
+        label="Continue"
+        type="submit"
+        color="primary"
+        class="full-width"
+        :loading="loading"
+      />
+      <q-btn
+        flat
+        label="Back to login"
+        color="primary"
+        class="full-width"
+        :disable="busy"
+        @click="showChooserOrCredentials"
+      />
     </div>
   </q-form>
 
@@ -302,11 +366,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useAuthStore, type PasskeyCeremony } from '@core/stores/auth';
 import { useMenuStore } from '@core/stores/menus';
+import { resolvePreferredLandingPath } from '@core/utils/menu-navigation';
 import { useOrganizationStore } from 'src/stores/organization-store';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { Dialog, Notify } from 'quasar';
 import {
   accountInitials,
@@ -318,7 +383,7 @@ import {
   type RememberedAccount,
 } from '@core/utils/remembered-accounts';
 
-type LoginStep = 'accounts' | 'credentials' | 'password' | 'verify' | 'setup' | 'recovery';
+type LoginStep = 'accounts' | 'credentials' | 'password' | 'invite' | 'verify' | 'setup' | 'recovery';
 
 interface LoginTwoFactorSetup {
   secret: string;
@@ -328,6 +393,8 @@ interface LoginTwoFactorSetup {
 
 const username = ref('');
 const password = ref('');
+const inviteEmail = ref('');
+const inviteCode = ref('');
 const loading = ref(false);
 const passkeyLoading = ref(false);
 const isPwd = ref(true);
@@ -347,6 +414,7 @@ const authStore = useAuthStore();
 const menuStore = useMenuStore();
 const organizationStore = useOrganizationStore();
 const router = useRouter();
+const route = useRoute();
 
 const passkeysSupported = computed(
   () => typeof window !== 'undefined' && typeof window.PublicKeyCredential !== 'undefined',
@@ -358,9 +426,20 @@ const passwordRules = computed(() => [
   (val: string) => !!val || 'Password is required',
 ]);
 
+function applyInviteQuery() {
+  const invite = route.query.invite === '1' || route.query.invite === 'true';
+  const emailFromQuery = typeof route.query.email === 'string' ? route.query.email : '';
+  if (!invite && !emailFromQuery) {
+    return false;
+  }
+  inviteEmail.value = emailFromQuery || inviteEmail.value;
+  step.value = 'invite';
+  return true;
+}
+
 onMounted(() => {
   refreshAccounts();
-  if (accounts.value.length > 0) {
+  if (!applyInviteQuery() && accounts.value.length > 0) {
     step.value = 'accounts';
   }
   if (passkeysSupported.value) {
@@ -368,6 +447,15 @@ onMounted(() => {
     prefetchAccountPasskeys();
   }
 });
+
+watch(
+  () => [route.query.invite, route.query.email],
+  () => {
+    if (!applyInviteQuery() && step.value === 'invite') {
+      showChooserOrCredentials();
+    }
+  },
+);
 
 function refreshAccounts() {
   accounts.value = listRememberedAccounts();
@@ -510,10 +598,56 @@ async function afterLoginSuccess(options: { offerPasskey?: boolean } = {}) {
   await organizationStore.fetchOrganizations();
   await menuStore.fetchMenus();
 
+  const { useFormAssignmentStore } = await import('@hr/stores/form-assignment-store');
+  const formInbox = useFormAssignmentStore();
+  await formInbox.fetchPending({ force: true });
+  if (formInbox.nextRequired) {
+    void router.push(`/forms/${formInbox.nextRequired.id}`);
+    return;
+  }
+
+  const redirect = route.query.redirect;
+  if (typeof redirect === 'string' && redirect.startsWith('/')) {
+    void router.push(redirect);
+    return;
+  }
+
+  const permissions = authStore.user?.permissions ?? [];
+  if (permissions.includes('score-vacancies') && !permissions.includes('view-vacancies')) {
+    menuStore.setActiveModule('hr');
+    void router.push('/hr/panel');
+    return;
+  }
+
   const preferred = authStore.user?.preferences?.defaultModule ?? 'payroll';
   menuStore.setActiveModule(preferred);
-  const target = menuStore.enabledModules.find((module) => module.code === preferred);
-  void router.push(target?.default_route || '/');
+  void router.push(
+    resolvePreferredLandingPath(
+      preferred,
+      authStore.user?.preferences?.defaultMenu ?? null,
+      menuStore.enabledModules,
+      menuStore.moduleMenus,
+    ),
+  );
+}
+
+function openInvite() {
+  inviteEmail.value = username.value.includes('@') ? username.value : inviteEmail.value;
+  inviteCode.value = '';
+  step.value = 'invite';
+}
+
+async function onInviteSubmit() {
+  loading.value = true;
+  try {
+    const result = await authStore.loginWithInviteCode(inviteEmail.value.trim(), inviteCode.value.trim());
+    if (result.type === 'success') {
+      pendingOfferPasskey.value = false;
+      await afterLoginSuccess({ offerPasskey: false });
+    }
+  } finally {
+    loading.value = false;
+  }
 }
 
 async function startForcedSetup(key: string) {

@@ -96,6 +96,7 @@ export interface LeaveType {
   isPaid?: boolean;
   affectsBalance?: boolean;
   requiresCertification?: boolean;
+  uncertifiedDaysAllowed?: number;
   isActive?: boolean;
   sortOrder?: number;
   policy?: {
@@ -302,6 +303,20 @@ export interface Employee {
   user?: { id: string; name?: string; email?: string } | null;
   employmentDetails?: EmploymentDetail[];
   employeeCompensations?: EmployeeCompensation[];
+  pendingProfileChange?: {
+    id: string;
+    status: string;
+    can_cancel?: boolean;
+    pipeline?: { currentStep?: { label?: string } | null } | null;
+    changes?: Array<{
+      field: string;
+      label: string;
+      current: string | null;
+      proposed: string | null;
+      currentLabel?: string | null;
+      proposedLabel?: string | null;
+    }>;
+  } | null;
 }
 
 export interface Institution {

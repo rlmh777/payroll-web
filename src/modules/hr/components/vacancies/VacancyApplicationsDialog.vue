@@ -65,6 +65,13 @@
             Converted to an employee.
           </q-banner>
 
+          <ApplicationScorePanel
+            v-if="selected && vacancy"
+            :key="selected.id"
+            :vacancy-id="vacancy.id"
+            :application-id="selected.id"
+          />
+
           <div v-if="showConvertForm" class="q-mt-md">
             <div class="text-subtitle2 q-mb-sm">Employee details</div>
             <AppDialogForm>
@@ -298,6 +305,7 @@ import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
 import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
 import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
 import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
+import ApplicationScorePanel from '@hr/components/vacancies/ApplicationScorePanel.vue';
 import { usePermissions } from '@core/composables/usePermissions';
 import { employeePath } from '@core/config/module-routes';
 import { useEmployeeStore } from '@hr/stores/employee-store';

@@ -160,11 +160,14 @@ import EditEmployeeLeave from './EditEmployeeLeave.vue';
 import type { EmployeeLeave } from '@core/types/models';
 import {
   formatLeaveStatus,
+  formatLeavePaymentTreatment,
   leaveAllowsApprovalAction,
   leaveAllowsCancellation,
   leaveRequiresPaymentConfirmation,
   leaveStatusColor,
+  DEFAULT_VACATION_PAYMENT_TREATMENT,
   LEAVE_PAYMENT_TREATMENT_OPTIONS,
+  VACATION_PAYMENT_DIALOG_MESSAGE,
   type LeavePaymentTreatment,
 } from '@hr/utils/leave-status';
 
@@ -271,6 +274,12 @@ const columns = [
     sortable: true,
   },
   {
+    name: 'paymentTreatment',
+    label: 'Payroll',
+    field: (row: EmployeeLeave) => formatLeavePaymentTreatment(row.paymentTreatment),
+    align: 'left' as const,
+  },
+  {
     name: 'notes',
     label: 'Notes',
     field: 'notes',
@@ -330,11 +339,11 @@ function handleStatusAction(
     row.leave_type?.name,
   )) {
     const defaultTreatment: LeavePaymentTreatment =
-      row.leave_type?.isPaid === false ? 'unpaid' : 'paid_with_payroll';
+      row.leave_type?.isPaid === false ? 'unpaid' : DEFAULT_VACATION_PAYMENT_TREATMENT;
 
     $q.dialog({
-      title: 'Confirm leave payment',
-      message: 'How should leave pay be handled?\n\n• Already paid in advance — salary for those days is excluded on payroll (avoids double pay)\n• Pay with this payroll — keep normal salary for those days\n• Unpaid — exclude those days from pay',
+      title: 'Confirm vacation payment',
+      message: VACATION_PAYMENT_DIALOG_MESSAGE,
       options: {
         type: 'radio',
         model: defaultTreatment,

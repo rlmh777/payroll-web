@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="row items-center q-mb-md q-gutter-sm">
+    <div v-if="!readonly" class="row items-center q-mb-md q-gutter-sm">
       <q-btn color="primary" icon="add" label="Add bank account" dense @click="store.openCreateDialog()" />
     </div>
 
@@ -33,7 +33,7 @@
           </div>
         </q-td>
       </template>
-      <template #body-cell-actions="props">
+      <template v-if="!readonly" #body-cell-actions="props">
         <q-td :props="props" class="text-right">
           <q-btn flat round dense icon="edit" color="primary" size="sm" @click="store.setRecordToEdit(props.row)" />
           <q-btn flat round dense icon="delete" color="negative" size="sm" @click="onDelete(props.row)" />
@@ -41,14 +41,15 @@
       </template>
     </q-table>
 
-    <AddEmployeeBank :employee-id="employeeId" @saved="refresh" />
-    <EditEmployeeBank @saved="refresh" />
+    <AddEmployeeBank v-if="!readonly" :employee-id="employeeId" @saved="refresh" />
+    <EditEmployeeBank v-if="!readonly" @saved="refresh" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useQuasar, type QTableProps } from 'quasar';
+import { useEmployeeFormAccess } from '@core/composables/useEmployeeFormAccess';
 import { useEmployeeBankStore } from '@payroll/stores/employee-bank-store';
 import type { EmployeeBank } from '@core/types/models';
 import AddEmployeeBank from './AddEmployeeBank.vue';
@@ -57,15 +58,22 @@ import EditEmployeeBank from './EditEmployeeBank.vue';
 const props = defineProps<{ employeeId: string }>();
 
 const store = useEmployeeBankStore();
+const { isTabEditable } = useEmployeeFormAccess();
+const readonly = computed(() => !isTabEditable('payment_details'));
 const $q = useQuasar();
 
-const columns: QTableProps['columns'] = [
-  { name: 'bank', label: 'Bank', field: 'bank', align: 'left' },
-  { name: 'accountNumber', label: 'Account number', field: 'accountNumber', align: 'left' },
-  { name: 'isPrimary', label: 'Primary', field: 'isPrimary', align: 'center' },
-  { name: 'notes', label: 'Notes', field: 'notes', align: 'left' },
-  { name: 'actions', label: '', field: 'actions', align: 'right' },
-];
+const columns = computed<QTableProps['columns']>(() => {
+  const cols: QTableProps['columns'] = [
+    { name: 'bank', label: 'Bank', field: 'bank', align: 'left' },
+    { name: 'accountNumber', label: 'Account number', field: 'accountNumber', align: 'left' },
+    { name: 'isPrimary', label: 'Primary', field: 'isPrimary', align: 'center' },
+    { name: 'notes', label: 'Notes', field: 'notes', align: 'left' },
+  ];
+  if (!readonly.value) {
+    cols.push({ name: 'actions', label: '', field: 'actions', align: 'right' });
+  }
+  return cols;
+});
 
 async function refresh() {
   await store.fetchByEmployee(props.employeeId);

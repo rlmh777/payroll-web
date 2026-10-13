@@ -27,11 +27,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useNetworkStore } from 'src/stores/network-store';
 import { useAuthStore } from 'src/stores/auth';
 import { useNetworkStatus } from 'src/composables/useNetworkStatus';
 import { useSessionGuard } from 'src/composables/useSessionGuard';
+import { applyTextSize, DEFAULT_TEXT_SIZE } from '@core/utils/text-size';
+import { useMotd } from '@core/composables/useMotd';
 
 const networkStore = useNetworkStore();
 const authStore = useAuthStore();
@@ -39,8 +41,17 @@ const isRetrying = ref(false);
 
 useNetworkStatus();
 useSessionGuard();
+useMotd();
 
 const showNetworkBanner = computed(() => !networkStore.isOnline);
+
+watch(
+  () => authStore.user?.preferences?.textSize ?? DEFAULT_TEXT_SIZE,
+  (size) => {
+    applyTextSize(size);
+  },
+  { immediate: true },
+);
 
 async function retryConnection() {
   isRetrying.value = true;

@@ -10,10 +10,14 @@ import {
   setAuthCookies,
 } from '@core/utils/auth-cookies';
 import { clearStoredActiveModule } from '@core/utils/module-navigation';
+import { markMotdFreshLogin, resetMotdSession } from '@core/utils/motd-session';
+import { DEFAULT_TEXT_SIZE, normalizeTextSize, type TextSize } from '@core/utils/text-size';
 import type { EmployeeFormAccess } from '@core/types/employee-form-access';
 
 export interface UserPreferences {
   defaultModule: string;
+  defaultMenu: string | null;
+  textSize: TextSize;
   onboardingEnabled: boolean;
   onboardingCompleted: boolean;
   onboardingSeen: Record<string, boolean>;
@@ -72,6 +76,10 @@ function normalizeOnboardingSeen(value: unknown): Record<string, boolean> {
 function normalizeUser(data: Partial<User> & {
   preferences?: {
     defaultModule?: string;
+    defaultMenu?: string | null;
+    default_menu?: string | null;
+    textSize?: string | null;
+    text_size?: string | null;
     onboardingEnabled?: boolean;
     onboardingCompleted?: boolean;
     onboardingSeen?: Record<string, boolean>;
@@ -95,6 +103,10 @@ function normalizeUser(data: Partial<User> & {
     permissions: data.permissions ?? [],
     preferences: {
       defaultModule: data.preferences?.defaultModule ?? 'payroll',
+      defaultMenu: data.preferences?.defaultMenu ?? data.preferences?.default_menu ?? null,
+      textSize: normalizeTextSize(
+        data.preferences?.textSize ?? data.preferences?.text_size ?? DEFAULT_TEXT_SIZE,
+      ),
       onboardingEnabled: data.preferences?.onboardingEnabled ?? data.preferences?.onboarding_enabled !== false,
       onboardingCompleted: Boolean(
         data.preferences?.onboardingCompleted ?? data.preferences?.onboarding_completed,
@@ -173,6 +185,7 @@ export const useAuthStore = defineStore('auth', () => {
     lastValidatedAt.value = 0;
     clearAuthCookies();
     clearStoredActiveModule();
+    resetMotdSession();
   }
 
   function applyLoginPayload(data: { token?: string; user?: User }): boolean {
@@ -180,6 +193,7 @@ export const useAuthStore = defineStore('auth', () => {
       return false;
     }
     setSession(data.token, data.user);
+    markMotdFreshLogin();
     return true;
   }
 
@@ -218,6 +232,31 @@ export const useAuthStore = defineStore('auth', () => {
       Notify.create({
         type: 'negative',
         message: 'Invalid username/email or password.',
+        position: 'top',
+      });
+      return { type: 'error' };
+    }
+  }
+
+  async function loginWithInviteCode(email: string, code: string): Promise<PasswordLoginResult> {
+    try {
+      const response = await fetch(`${API_URL}/login/invite-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || 'Invalid email or invite code.');
+      }
+      if (!applyLoginPayload(data)) {
+        throw new Error('Login response missing session');
+      }
+      return { type: 'success', hasPasskeys: payloadHasPasskeys(data) };
+    } catch (error) {
+      Notify.create({
+        type: 'negative',
+        message: error instanceof Error ? error.message : 'Invalid email or invite code.',
         position: 'top',
       });
       return { type: 'error' };
@@ -716,6 +755,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isAuthenticated,
     login,
+    loginWithInviteCode,
     verifyTwoFactor,
     beginTwoFactorSetup,
     confirmTwoFactorSetup,

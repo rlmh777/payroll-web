@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="row items-center q-mb-md q-gutter-sm">
+    <div v-if="!readonly" class="row items-center q-mb-md q-gutter-sm">
       <q-btn color="primary" icon="add" label="Add skill" dense @click="openCreate" />
     </div>
 
@@ -32,7 +32,7 @@
           <span v-else>—</span>
         </q-td>
       </template>
-      <template #body-cell-actions="props">
+      <template v-if="!readonly" #body-cell-actions="props">
         <q-td :props="props" class="text-right">
           <q-btn flat round dense icon="edit" color="primary" size="sm" @click="openEdit(props.row)" />
           <q-btn flat round dense icon="delete" color="negative" size="sm" @click="onDelete(props.row)" />
@@ -50,8 +50,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useQuasar, type QTableProps } from 'quasar';
+import { useEmployeeFormAccess } from '@core/composables/useEmployeeFormAccess';
 import SkillFormDialog from './SkillFormDialog.vue';
 import {
   educationAttachmentDisplayName,
@@ -62,18 +63,25 @@ import { useEmployeeSkillStore, type EmployeeSkill } from 'src/stores/employee-s
 const props = defineProps<{ employeeId: string }>();
 
 const store = useEmployeeSkillStore();
+const { isTabEditable } = useEmployeeFormAccess();
+const readonly = computed(() => !isTabEditable('education'));
 const $q = useQuasar();
 const dialogOpen = ref(false);
 const selectedRecord = ref<EmployeeSkill | null>(null);
 
-const columns: QTableProps['columns'] = [
-  { name: 'name', label: 'Skill', field: 'name', align: 'left' },
-  { name: 'proficiencyLevel', label: 'Proficiency', field: (r) => r.proficiencyLevel ?? '—', align: 'left' },
-  { name: 'yearsExperience', label: 'Years', field: (r) => r.yearsExperience ?? '—', align: 'right' },
-  { name: 'notes', label: 'Notes', field: (r) => r.notes ?? '—', align: 'left' },
-  { name: 'file', label: 'File', field: 'fileName', align: 'left' },
-  { name: 'actions', label: '', field: 'actions', align: 'right' },
-];
+const columns = computed<QTableProps['columns']>(() => {
+  const cols: QTableProps['columns'] = [
+    { name: 'name', label: 'Skill', field: 'name', align: 'left' },
+    { name: 'proficiencyLevel', label: 'Proficiency', field: (r) => r.proficiencyLevel ?? '—', align: 'left' },
+    { name: 'yearsExperience', label: 'Years', field: (r) => r.yearsExperience ?? '—', align: 'right' },
+    { name: 'notes', label: 'Notes', field: (r) => r.notes ?? '—', align: 'left' },
+    { name: 'file', label: 'File', field: 'fileName', align: 'left' },
+  ];
+  if (!readonly.value) {
+    cols.push({ name: 'actions', label: '', field: 'actions', align: 'right' });
+  }
+  return cols;
+});
 
 function fileLabel(row: EmployeeSkill) {
   return educationAttachmentDisplayName(row.fileName, row.filePath) || 'Download';

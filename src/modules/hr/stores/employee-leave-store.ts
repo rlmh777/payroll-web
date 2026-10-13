@@ -530,19 +530,18 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
       totalDays?: number,
       notes?: string | null,
       multiplier?: number,
-      departmentId?: number | null
+      departmentId?: number | null,
+      attachments: File[] = [],
     ): Promise<EmployeeLeave | null> {
       this.isLoading = true;
       this.error = null;
 
       try {
         const authStore = useAuthStore();
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-        };
+        const headers: HeadersInit = {};
 
         if (authStore.token) {
-          headers['Authorization'] = `Bearer ${authStore.token}`;
+          headers.Authorization = `Bearer ${authStore.token}`;
         }
 
         const body: UpdateEmployeeLeaveBody = {};
@@ -581,10 +580,32 @@ export const useEmployeeLeaveStore = defineStore('employeeLeave', {
           body.departmentId = departmentId;
         }
 
+        const hasAttachments = attachments.length > 0;
+        let requestBody: BodyInit;
+        let method: 'PUT' | 'POST' = 'PUT';
+
+        if (hasAttachments) {
+          const formData = new FormData();
+          Object.entries(body).forEach(([key, value]) => {
+            if (value === undefined || value === null) {
+              return;
+            }
+            formData.append(key, String(value));
+          });
+          attachments.forEach((file) => {
+            formData.append('attachments[]', file);
+          });
+          requestBody = formData;
+          method = 'POST';
+        } else {
+          headers['Content-Type'] = 'application/json';
+          requestBody = JSON.stringify(body);
+        }
+
         const response = await fetch(`${API_URL}/employee-leaves/${id}`, {
-          method: 'PUT',
+          method,
           headers,
-          body: JSON.stringify(body),
+          body: requestBody,
         });
 
         if (!response.ok) {

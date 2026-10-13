@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="row items-center q-mb-md q-gutter-sm">
+    <div v-if="!readonly" class="row items-center q-mb-md q-gutter-sm">
       <q-btn color="primary" icon="add" label="Add certification" dense @click="openCreate" />
     </div>
 
@@ -32,7 +32,7 @@
           <span v-else>—</span>
         </q-td>
       </template>
-      <template #body-cell-actions="props">
+      <template v-if="!readonly" #body-cell-actions="props">
         <q-td :props="props" class="text-right">
           <q-btn flat round dense icon="edit" color="primary" size="sm" @click="openEdit(props.row)" />
           <q-btn flat round dense icon="delete" color="negative" size="sm" @click="onDelete(props.row)" />
@@ -50,8 +50,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useQuasar, type QTableProps } from 'quasar';
+import { useEmployeeFormAccess } from '@core/composables/useEmployeeFormAccess';
 import CertificationFormDialog from './CertificationFormDialog.vue';
 import {
   educationAttachmentDisplayName,
@@ -65,19 +66,26 @@ import {
 const props = defineProps<{ employeeId: string }>();
 
 const store = useEmployeeCertificationStore();
+const { isTabEditable } = useEmployeeFormAccess();
+const readonly = computed(() => !isTabEditable('education'));
 const $q = useQuasar();
 const dialogOpen = ref(false);
 const selectedRecord = ref<EmployeeCertification | null>(null);
 
-const columns: QTableProps['columns'] = [
-  { name: 'name', label: 'Certification', field: 'name', align: 'left' },
-  { name: 'issuingOrganization', label: 'Issuer', field: (r) => r.issuingOrganization ?? '—', align: 'left' },
-  { name: 'credentialId', label: 'Credential ID', field: (r) => r.credentialId ?? '—', align: 'left' },
-  { name: 'issuedOn', label: 'Issued', field: (r) => r.issuedOn ?? '—', align: 'left' },
-  { name: 'expiresOn', label: 'Expires', field: (r) => r.expiresOn ?? '—', align: 'left' },
-  { name: 'file', label: 'File', field: 'fileName', align: 'left' },
-  { name: 'actions', label: '', field: 'actions', align: 'right' },
-];
+const columns = computed<QTableProps['columns']>(() => {
+  const cols: QTableProps['columns'] = [
+    { name: 'name', label: 'Certification', field: 'name', align: 'left' },
+    { name: 'issuingOrganization', label: 'Issuer', field: (r) => r.issuingOrganization ?? '—', align: 'left' },
+    { name: 'credentialId', label: 'Credential ID', field: (r) => r.credentialId ?? '—', align: 'left' },
+    { name: 'issuedOn', label: 'Issued', field: (r) => r.issuedOn ?? '—', align: 'left' },
+    { name: 'expiresOn', label: 'Expires', field: (r) => r.expiresOn ?? '—', align: 'left' },
+    { name: 'file', label: 'File', field: 'fileName', align: 'left' },
+  ];
+  if (!readonly.value) {
+    cols.push({ name: 'actions', label: '', field: 'actions', align: 'right' });
+  }
+  return cols;
+});
 
 function fileLabel(row: EmployeeCertification) {
   return educationAttachmentDisplayName(row.fileName, row.filePath) || 'Download';

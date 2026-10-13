@@ -198,3 +198,44 @@ body.platform-android:not(.native-mobile) .q-dialog__inner--minimized.q-dialog__
 .q-notification.app-toast {
   margin-top: 0;
 }
+
+.q-notification.motd-toast {
+  max-width: min(520px, calc(100vw - 24px));
+  min-width: min(360px, calc(100vw - 24px));
+}
+
+html[data-text-size='sm'] {
+  --app-font-size: 11px;
+  font-size: 13px;
+}
+
+html[data-text-size='md'] {
+  --app-font-size: 12.5px;
+  font-size: 14.5px;
+}
+
+html[data-text-size='lg'] {
+  --app-font-size: 14px;
+  font-size: 16px;
+}
+
+html[data-text-size] body,
+html[data-text-size] .q-item,
+html[data-text-size] .q-btn,
+html[data-text-size] .q-field__native,
+html[data-text-size] .q-field__prefix,
+html[data-text-size] .q-field__suffix,
+html[data-text-size] .q-field__label,
+html[data-text-size] .q-table tbody td,
+html[data-text-size] .q-table thead th,
+html[data-text-size] .q-tab,
+html[data-text-size] .q-chip,
+html[data-text-size] .q-banner,
+html[data-text-size] .q-item__label,
+html[data-text-size] .text-body1,
+html[data-text-size] .text-body2,
+html[data-text-size] .text-subtitle1,
+html[data-text-size] .text-subtitle2,
+html[data-text-size] .text-caption {
+  font-size: var(--app-font-size);
+}

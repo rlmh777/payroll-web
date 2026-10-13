@@ -208,6 +208,72 @@
 
         <q-separator v-if="canManageUsers" class="q-my-md" />
 
+        <div v-if="canManageUsers" class="q-mb-md">
+          <div class="text-subtitle1 q-mb-sm">API tokens</div>
+          <div class="text-body2 text-grey-7 q-mb-sm">
+            Issue a named token for this user so a third-party app can call the API
+            without a password. The token uses this user's roles and permissions, expires
+            in one year by default, and the plaintext value is shown only once.
+          </div>
+          <div class="row no-wrap items-center q-col-gutter-sm q-mb-sm token-create-row">
+            <div class="col">
+              <q-input
+                v-model="tokenName"
+                label="Token name"
+                outlined
+                dense
+                hide-bottom-space
+                :disable="isManagingTokens"
+                @keyup.enter="void onCreateToken()"
+              />
+            </div>
+            <div class="col-auto token-expiry-col">
+              <DateField
+                :model-value="tokenExpiryDate"
+                label="Expires"
+                hide-bottom-space
+                :disable="isManagingTokens"
+                @update:model-value="onTokenExpiryChange"
+              />
+            </div>
+            <div class="col-auto">
+              <q-btn
+                label="Create token"
+                color="primary"
+                no-wrap
+                :disable="!tokenName.trim() || !tokenExpiryDate"
+                :loading="isManagingTokens"
+                @click="() => void onCreateToken()"
+              />
+            </div>
+          </div>
+          <q-list v-if="apiTokens.length" bordered dense class="rounded-borders">
+            <q-item v-for="token in apiTokens" :key="token.id">
+              <q-item-section>
+                <q-item-label>{{ token.name }}</q-item-label>
+                <q-item-label caption>
+                  Created {{ formatDate(token.createdAt || '') }}
+                  <span v-if="token.lastUsedAt"> · Last used {{ formatDate(token.lastUsedAt) }}</span>
+                  <span> · Expires {{ formatExpiryDate(token.expiresAt) }}</span>
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn
+                  flat
+                  dense
+                  color="negative"
+                  label="Revoke"
+                  :disable="isManagingTokens"
+                  @click="onRevokeToken(token)"
+                />
+              </q-item-section>
+            </q-item>
+          </q-list>
+          <div v-else class="text-body2 text-grey-6">No API tokens for this user.</div>
+        </div>
+
+        <q-separator v-if="canManageUsers" class="q-my-md" />
+
         <!-- Send Password Reset Email Section -->
         <div class="q-mb-md">
           <div class="text-subtitle1 q-mb-sm">Password Reset Email</div>
@@ -341,6 +407,27 @@
         </div>
       </q-card-section>
     </q-card>
+
+    <q-dialog v-model="tokenDialogOpen">
+      <q-card style="min-width: 380px; max-width: 520px">
+        <q-card-section>
+          <div class="text-h6">API token</div>
+          <div class="text-body2 text-grey-7 q-mt-xs">
+            Copy this now. It will not be shown again.
+          </div>
+        </q-card-section>
+        <q-card-section>
+          <q-input :model-value="issuedToken" readonly outlined dense>
+            <template #append>
+              <q-btn flat dense icon="content_copy" aria-label="Copy token" @click="copyToken" />
+            </template>
+          </q-input>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat no-caps label="Done" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
   <div v-else class="user-details-container">
     <q-card>
@@ -358,10 +445,11 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { usePermissions } from '@core/composables/usePermissions';
-import { useUserStore, type User } from '../../stores/user-store';
+import { useUserStore, type User, type UserApiToken } from '../../stores/user-store';
 import { useRoleStore } from '../../stores/role-store';
 import { useAuthStore } from '@core/stores/auth';
 import EmployeeSelect from '@hr/components/shared/EmployeeSelect.vue';
+import DateField from '@core/components/common/DateField.vue';
 import { getUserAvatarColor, getUserInitials } from './user-avatar';
 
 const props = defineProps<{
@@ -378,6 +466,15 @@ const $q = useQuasar();
 const { can } = usePermissions();
 
 const canManageUsers = computed(() => can('manager-users'));
+
+function oneYearFromToday(): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + 1);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 const passwordForm = ref({
   newPassword: '',
@@ -398,6 +495,12 @@ const selfTwoFactorCode = ref('');
 const selfRecoveryCodes = ref<string[]>([]);
 const twoFactorRequiredOverride = ref<boolean | null>(null);
 const authStore = useAuthStore();
+const apiTokens = ref<UserApiToken[]>([]);
+const tokenName = ref('');
+const tokenExpiryDate = ref(oneYearFromToday());
+const isManagingTokens = ref(false);
+const tokenDialogOpen = ref(false);
+const issuedToken = ref('');
 
 const twoFactorOverrideOptions = [
   { label: 'Inherit company policy', value: null },
@@ -431,20 +534,113 @@ watch(() => props.user, (newUser) => {
   if (newUser) {
     selectedEmployeeId.value = newUser.employee?.id || null;
     twoFactorRequiredOverride.value = newUser.security?.two_factor_required ?? null;
+    void loadTokens(newUser.id);
   } else {
     selectedEmployeeId.value = null;
     twoFactorRequiredOverride.value = null;
+    apiTokens.value = [];
   }
   roleToAdd.value = null;
+  tokenName.value = '';
+  tokenExpiryDate.value = oneYearFromToday();
   passwordForm.value = {
     newPassword: '',
     confirmPassword: '',
   };
-});
+}, { immediate: true });
 
 const formatDate = (dateString: string): string => {
+  if (!dateString) return '—';
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+};
+
+const formatExpiryDate = (dateString: string | null): string => {
+  if (!dateString) return 'never';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString();
+};
+
+const loadTokens = async (userId: string) => {
+  if (!canManageUsers.value) {
+    apiTokens.value = [];
+    return;
+  }
+  try {
+    apiTokens.value = await userStore.fetchUserTokens(userId);
+  } catch {
+    apiTokens.value = [];
+  }
+};
+
+const onTokenExpiryChange = (value: string | null) => {
+  tokenExpiryDate.value = value || oneYearFromToday();
+};
+
+const onCreateToken = async () => {
+  if (!props.user || !tokenName.value.trim() || !tokenExpiryDate.value) return;
+  isManagingTokens.value = true;
+  try {
+    const created = await userStore.createUserToken(
+      props.user.id,
+      tokenName.value.trim(),
+      tokenExpiryDate.value,
+    );
+    tokenName.value = '';
+    tokenExpiryDate.value = oneYearFromToday();
+    issuedToken.value = created.token;
+    tokenDialogOpen.value = true;
+    await loadTokens(props.user.id);
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error instanceof Error ? error.message : 'Failed to create API token',
+      position: 'top',
+    });
+  } finally {
+    isManagingTokens.value = false;
+  }
+};
+
+const revokeToken = async (token: UserApiToken) => {
+  if (!props.user) return;
+  isManagingTokens.value = true;
+  try {
+    await userStore.revokeUserToken(props.user.id, token.id);
+    await loadTokens(props.user.id);
+    $q.notify({ type: 'positive', message: 'API token revoked.', position: 'top' });
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error instanceof Error ? error.message : 'Failed to revoke API token',
+      position: 'top',
+    });
+  } finally {
+    isManagingTokens.value = false;
+  }
+};
+
+const onRevokeToken = (token: UserApiToken) => {
+  if (!props.user) return;
+  $q.dialog({
+    title: 'Revoke API token',
+    message: `Revoke “${token.name}”? Integrations using this token will stop working.`,
+    cancel: true,
+    persistent: true,
+  }).onOk(() => {
+    void revokeToken(token);
+  });
+};
+
+const copyToken = async () => {
+  try {
+    await navigator.clipboard.writeText(issuedToken.value);
+    $q.notify({ type: 'positive', message: 'Copied.', position: 'top' });
+  } catch {
+    $q.notify({ type: 'negative', message: 'Unable to copy.', position: 'top' });
+  }
 };
 
 const refreshUser = async (userId: string) => {
@@ -880,6 +1076,15 @@ const onUnlinkEmployee = () => {
   flex: 1;
   padding: 16px;
   overflow-y: auto;
+}
+
+.token-create-row :deep(.q-field__bottom) {
+  display: none;
+}
+
+.token-expiry-col {
+  width: 168px;
+  max-width: 168px;
 }
 </style>
 

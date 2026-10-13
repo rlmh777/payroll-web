@@ -83,6 +83,10 @@
             <div class="row q-gutter-xs q-mt-sm">
               <q-badge color="grey-7" outline>{{ card.source }}</q-badge>
               <q-badge v-if="card.status === 'converted'" color="positive">Hired</q-badge>
+              <q-badge v-if="card.scores_count" color="deep-purple" outline>
+                {{ card.scores_count }} score{{ card.scores_count === 1 ? '' : 's' }}
+                <span v-if="card.average_score != null"> · {{ card.average_score }}</span>
+              </q-badge>
             </div>
           </article>
         </div>

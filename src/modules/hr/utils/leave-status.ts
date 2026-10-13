@@ -43,11 +43,19 @@ const STATUS_COLORS: Record<LeaveStatusCode, string> = {
   REJECTED: 'negative',
 };
 
+export const DEFAULT_VACATION_PAYMENT_TREATMENT: LeavePaymentTreatment = 'paid_with_payroll';
+
 export const LEAVE_PAYMENT_TREATMENT_OPTIONS: Array<{ label: string; value: LeavePaymentTreatment }> = [
-  { label: 'Already paid in advance (do not double-pay)', value: 'already_paid' },
-  { label: 'Pay with this payroll', value: 'paid_with_payroll' },
+  { label: 'Include in next payroll (default)', value: 'paid_with_payroll' },
+  { label: 'Already paid as an advance — record on next payroll, do not pay again', value: 'already_paid' },
   { label: 'Unpaid (do not pay)', value: 'unpaid' },
 ];
+
+export const VACATION_PAYMENT_DIALOG_MESSAGE =
+  'Vacation pay is not extra money — it is salary for those days, or an advance if it was already paid.\n\n'
+  + '• Include in next payroll (default) — those days are paid with that payroll\n'
+  + '• Already paid as an advance — next payroll records the advance and does not pay those days again\n'
+  + '• Unpaid — no salary for these days';
 
 export function normalizeLeaveStatusCode(value?: string | null): LeaveStatusCode | null {
   const normalized = value?.toUpperCase() ?? '';
@@ -113,9 +121,9 @@ export function formatLeavePaymentTreatment(value?: string | null): string {
     case 'unpaid':
       return 'Unpaid';
     case 'paid_with_payroll':
-      return 'Pay with payroll';
+      return 'Include in next payroll';
     case 'already_paid':
-      return 'Already paid';
+      return 'Already paid (advance)';
     default:
       return '—';
   }

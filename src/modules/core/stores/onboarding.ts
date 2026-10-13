@@ -41,7 +41,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'account',
     title: 'Your account',
-    body: 'Open this menu to update your photo, choose the default application, or turn this tour on or off.',
+    body: 'Open this menu to update your photo, choose the default application and menu, or turn this tour on or off.',
     target: 'account',
     placement: 'left',
   },
@@ -336,11 +336,13 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     try {
       const payload: {
         defaultModule: string;
+        defaultMenu: string | null;
         onboardingEnabled: boolean;
         onboardingCompleted: boolean;
         onboardingSeen?: Record<string, boolean>;
       } = {
         defaultModule: authStore.user?.preferences?.defaultModule ?? 'payroll',
+        defaultMenu: authStore.user?.preferences?.defaultMenu ?? null,
         onboardingEnabled: partial.onboardingEnabled
           ?? authStore.user?.preferences?.onboardingEnabled
           ?? true,

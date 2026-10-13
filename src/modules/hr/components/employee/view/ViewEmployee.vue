@@ -77,7 +77,7 @@
       </q-step>
     </q-stepper>
 
-    <div class="row justify-end q-mt-md q-gutter-sm">
+    <div v-if="canSaveEmployee" class="row justify-end q-mt-md q-gutter-sm">
       <q-btn
         v-if="isCreating"
         flat
@@ -115,10 +115,12 @@ import EmployeePaymentDetailsInfo from '@payroll/components/employee/payment-det
 import EmployeeContactInfo from '../contact/EmployeeContactInfo.vue';
 import EmployeeDetails from './EmployeeDetails.vue';
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   mode?: 'create' | 'edit';
+  readonly?: boolean;
 }>(), {
   mode: 'edit',
+  readonly: false,
 });
 
 const $q = useQuasar();
@@ -127,6 +129,7 @@ const router = useRouter();
 const employeeStore = useEmployeeStore();
 const {
   isTabVisible,
+  isTabEditable,
   isFieldVisible,
   canWriteField,
   visibleStepperTabs,
@@ -135,7 +138,17 @@ const {
 const step = ref<EmployeeFormTabKey>('personal');
 const isSaving = ref(false);
 
-const isCreating = computed(() => !employeeStore.selectedEmployee?.id);
+const isCreating = computed(() => !props.readonly && !employeeStore.selectedEmployee?.id);
+
+const canSaveEmployee = computed(() => {
+  if (props.readonly) {
+    return false;
+  }
+  if (isCreating.value) {
+    return true;
+  }
+  return visibleStepperTabs.value.some((tab) => isTabEditable(tab));
+});
 
 watch(visibleStepperTabs, (tabs) => {
   if (tabs.length > 0 && !tabs.includes(step.value)) {

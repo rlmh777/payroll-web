@@ -22,6 +22,14 @@
         v-if="canEdit"
         flat
         color="primary"
+        icon="dynamic_form"
+        label="Score sheets"
+        :to="hrSettingsPath('form-templates')"
+      />
+      <q-btn
+        v-if="canEdit"
+        flat
+        color="primary"
         icon="tune"
         label="Stages"
         :to="hrSettingsPath('vacancy-stages')"
@@ -101,6 +109,15 @@
               >
                 {{ card.applications_count ?? 0 }} application{{ (card.applications_count ?? 0) === 1 ? '' : 's' }}
               </q-badge>
+              <q-badge
+                v-if="canEdit"
+                color="indigo"
+                :outline="!(card.panel_members_count)"
+                class="applications-badge"
+                @click.stop="openPanel(card)"
+              >
+                {{ card.panel_members_count ?? 0 }} panel
+              </q-badge>
               <q-badge v-if="card.advertise_internal" color="primary" outline>Internal</q-badge>
               <q-badge v-if="card.advertise_public" color="positive" outline>Public</q-badge>
             </div>
@@ -110,6 +127,7 @@
     </div>
 
     <VacancyFormDialog v-model="formOpen" :vacancy="editing" />
+    <VacancyPanelDialog v-model="panelOpen" :vacancy="panelVacancy" />
   </q-page>
 </template>
 
@@ -124,6 +142,7 @@ import RecruitmentFilters, {
   type RecruitmentFiltersValue,
 } from '@hr/components/vacancies/RecruitmentFilters.vue';
 import VacancyFormDialog from '@hr/components/vacancies/VacancyFormDialog.vue';
+import VacancyPanelDialog from '@hr/components/vacancies/VacancyPanelDialog.vue';
 
 const store = useVacancyStore();
 const { can } = usePermissions();
@@ -133,6 +152,8 @@ const router = useRouter();
 const canEdit = computed(() => can('vacancies-crud'));
 const formOpen = ref(false);
 const editing = ref<Vacancy | null>(null);
+const panelOpen = ref(false);
+const panelVacancy = ref<Vacancy | null>(null);
 const draggingId = ref<string | null>(null);
 const draggingFromStageId = ref<number | null>(null);
 const overStageId = ref<number | null>(null);
@@ -178,6 +199,14 @@ function openApplications(vacancy: Vacancy) {
     path: MODULE_ROUTES.candidates,
     query: { vacancy_id: vacancy.id },
   });
+}
+
+function openPanel(vacancy: Vacancy) {
+  if (skipClick.value || draggingId.value) {
+    return;
+  }
+  panelVacancy.value = vacancy;
+  panelOpen.value = true;
 }
 
 function openEdit(vacancy: Vacancy) {

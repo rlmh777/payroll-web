@@ -2,35 +2,46 @@
   <q-page class="q-pa-md">
     <div class="text-h6 q-mb-md">Assign Leave</div>
 
-    <q-card flat bordered class="q-pa-md" style="max-width: 640px">
+    <q-card flat bordered class="q-pa-md assign-leave-card">
       <div class="text-subtitle2 q-mb-sm">Employee</div>
-      <q-select
-        v-model="selectedEmployeeId"
-        class="q-mb-lg"
-        :options="employeeOptions"
-        option-value="id"
-        option-label="label"
-        emit-value
-        map-options
-        use-input
-        input-debounce="300"
-        outlined
-        dense
-        clearable
-        label="Employee *"
-        :loading="employeeStore.isLoading"
-        :rules="[(val: string | null) => !!val || 'Employee is required']"
-        @filter="filterEmployees"
-        @update:model-value="onEmployeeSelected"
-      />
+      <div class="row q-col-gutter-md q-mb-lg">
+        <div class="col-12 col-sm-8 col-md-6">
+          <q-select
+            v-model="selectedEmployeeId"
+            :options="employeeOptions"
+            option-value="id"
+            option-label="label"
+            emit-value
+            map-options
+            use-input
+            input-debounce="300"
+            outlined
+            dense
+            clearable
+            label="Employee *"
+            :loading="employeeStore.isLoading"
+            :rules="[(val: string | null) => !!val || 'Employee is required']"
+            @filter="filterEmployees"
+            @update:model-value="onEmployeeSelected"
+          />
+        </div>
+      </div>
 
-      <div class="text-subtitle2 q-mb-sm">Leave details</div>
-      <AddEmployeeLeave
-        embedded
-        assigned
-        :disabled="!selectedEmployeeId"
-        @saved="onLeaveSaved"
-      />
+      <template v-if="selectedEmployeeId">
+        <div class="text-subtitle2 q-mb-sm">Leave details</div>
+        <AddEmployeeLeave
+          :key="selectedEmployeeId"
+          embedded
+          assigned
+          wide
+          leave-type-picker="cards"
+          :show-leave-type-actions="false"
+          @saved="onLeaveSaved"
+        />
+      </template>
+      <q-banner v-else rounded class="bg-grey-2 text-grey-8">
+        Select an employee to choose a leave type and enter leave details.
+      </q-banner>
     </q-card>
   </q-page>
 </template>
@@ -81,3 +92,9 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.assign-leave-card {
+  max-width: 1100px;
+}
+</style>

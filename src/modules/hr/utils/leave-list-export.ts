@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { formatLeaveStatus } from '@hr/utils/leave-status';
+import { formatLeavePaymentTreatment, formatLeaveStatus } from '@hr/utils/leave-status';
 import type { TeamLeaveRow } from '@hr/stores/employee-leave-store';
 
 function formatDays(value: number | null | undefined): string {
@@ -23,6 +23,7 @@ export function exportTeamLeavesToExcel(rows: TeamLeaveRow[]): void {
       'Net leave balance (days)',
       'Requested days',
       'Status',
+      'Payroll',
       'Request notes',
       'Decision comment',
     ],
@@ -38,6 +39,7 @@ export function exportTeamLeavesToExcel(rows: TeamLeaveRow[]): void {
       formatDays(row.netLeaveBalance),
       formatDays(row.requestedDays),
       formatLeaveStatus(row.statusCode, row.statusName),
+      formatLeavePaymentTreatment(row.paymentTreatment),
       row.notes ?? '',
       row.statusNote ?? '',
     ]),

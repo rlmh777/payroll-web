@@ -13,6 +13,9 @@ export interface HrSettings {
   birthdayVisibility: BirthdayVisibility;
   contractExpiryEnabled: boolean;
   contractExpiryOffsets: ContractExpiryOffset[];
+  appraisalReminderEnabled: boolean;
+  appraisalReminderIntervalValue: number;
+  appraisalReminderIntervalUnit: 'days' | 'weeks';
 }
 
 const DEFAULT_OFFSETS: ContractExpiryOffset[] = [
@@ -41,10 +44,17 @@ function normalizeSettings(data: Partial<HrSettings> | Record<string, unknown> |
         .filter((item): item is ContractExpiryOffset => item !== null)
     : [];
 
+  const intervalValue = Number(data?.appraisalReminderIntervalValue);
+  const rawUnit = data?.appraisalReminderIntervalUnit;
+  const intervalUnit = typeof rawUnit === 'string' ? rawUnit : 'days';
+
   return {
     birthdayVisibility: (data?.birthdayVisibility as BirthdayVisibility) || 'company',
     contractExpiryEnabled: data?.contractExpiryEnabled !== false,
     contractExpiryOffsets: offsets.length > 0 ? offsets : DEFAULT_OFFSETS.map((item) => ({ ...item })),
+    appraisalReminderEnabled: data?.appraisalReminderEnabled !== false,
+    appraisalReminderIntervalValue: Number.isInteger(intervalValue) && intervalValue >= 1 ? intervalValue : 2,
+    appraisalReminderIntervalUnit: intervalUnit === 'weeks' ? 'weeks' : 'days',
   };
 }
 

@@ -1,20 +1,21 @@
 <template>
   <q-header elevated class="bg-primary text-white">
     <q-toolbar>
-      <q-btn
-        v-if="showDrawerToggle"
-        flat
-        dense
-        round
-        icon="menu"
-        aria-label="Menu"
-        @click="toggleDrawer"
-      />
+      <div class="header-drawer-slot">
+        <q-btn
+          v-if="showHamburger"
+          flat
+          dense
+          round
+          icon="menu"
+          aria-label="Menu"
+          @click="toggleDrawer"
+        />
+      </div>
 
       <div
-        class="row items-center q-gutter-sm"
+        class="row items-center q-gutter-sm q-ml-md"
         data-onboarding="navigation"
-        :class="showDrawerToggle ? 'q-ml-md' : ''"
       >
         <template v-for="(item, idx) in topMenus" :key="item.id">
           <q-btn-dropdown
@@ -80,12 +81,13 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMenuStore, type MenuItem } from '../../../stores/menus';
 import { findTopMenuForPath } from '../../../utils/menu-navigation';
+import { useHasLeftDrawer } from '../../../composables/useHasLeftDrawer';
 import ModuleLauncher from '../common/ModuleLauncher.vue';
 import LogoutCard from '../common/LogoutCard.vue';
 import NotificationBell from '../common/NotificationBell.vue';
 import OnboardingTour from '../common/OnboardingTour.vue';
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     showDrawerToggle?: boolean;
   }>(),
@@ -93,6 +95,9 @@ withDefaults(
     showDrawerToggle: true,
   },
 );
+
+const { hasLeftDrawer } = useHasLeftDrawer();
+const showHamburger = computed(() => props.showDrawerToggle && hasLeftDrawer.value);
 
 const menuStore = useMenuStore();
 const router = useRouter();
@@ -149,4 +154,14 @@ function toggleDrawer() {
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+.header-drawer-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2.4em;
+  width: 2.4em;
+  min-width: 2.4em;
+  height: 2.4em;
+}
+</style>

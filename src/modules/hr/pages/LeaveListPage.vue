@@ -148,6 +148,15 @@
           </q-td>
         </template>
 
+        <template #body-cell-paymentTreatment="props">
+          <q-td :props="props">
+            <span v-if="props.row.paymentTreatment">
+              {{ formatLeavePaymentTreatment(props.row.paymentTreatment) }}
+            </span>
+            <span v-else class="text-grey-5">—</span>
+          </q-td>
+        </template>
+
         <template #body-cell-comments="props">
           <q-td :props="props">
             <div v-if="props.row.notes" class="text-caption">
@@ -239,7 +248,14 @@ import {
 import { useEmployeeStore } from '@hr/stores/employee-store';
 import { useLeaveTypeStore } from '@hr/stores/leave-type-store';
 import { exportTeamLeavesToExcel } from '@hr/utils/leave-list-export';
-import { formatLeaveStatus, leaveStatusColor, LEAVE_PAYMENT_TREATMENT_OPTIONS } from '@hr/utils/leave-status';
+import {
+  formatLeaveStatus,
+  formatLeavePaymentTreatment,
+  leaveStatusColor,
+  DEFAULT_VACATION_PAYMENT_TREATMENT,
+  LEAVE_PAYMENT_TREATMENT_OPTIONS,
+  VACATION_PAYMENT_DIALOG_MESSAGE,
+} from '@hr/utils/leave-status';
 import type { LeavePaymentTreatment } from '@hr/utils/leave-status';
 
 const $q = useQuasar();
@@ -287,6 +303,7 @@ const columns: QTableProps['columns'] = [
   { name: 'netLeaveBalance', label: 'Net leave balance (days)', field: 'netLeaveBalance', align: 'right' },
   { name: 'requestedDays', label: 'Requested days', field: 'requestedDays', align: 'right' },
   { name: 'status', label: 'Status', field: 'statusCode', align: 'left' },
+  { name: 'paymentTreatment', label: 'Payroll', field: 'paymentTreatment', align: 'left' },
   { name: 'comments', label: 'Comments', field: 'notes', align: 'left' },
   { name: 'actions', label: 'Actions', field: 'actions', align: 'right' },
 ];
@@ -417,11 +434,11 @@ function promptAction(row: TeamLeaveRow, action: 'approve' | 'reject' | 'cancel'
 
   if (action === 'approve' && row.requiresPaymentConfirmation) {
     const defaultTreatment: LeavePaymentTreatment =
-      row.leaveTypeIsPaid === false ? 'unpaid' : 'paid_with_payroll';
+      row.leaveTypeIsPaid === false ? 'unpaid' : DEFAULT_VACATION_PAYMENT_TREATMENT;
 
     $q.dialog({
-      title: 'Confirm leave payment',
-      message: `How should leave pay be handled for ${row.employeeName} (${row.dateRange})?\n\n• Already paid in advance — salary for those days is excluded on the next payroll (avoids double pay)\n• Pay with this payroll — keep normal salary for those days\n• Unpaid — exclude those days from pay`,
+      title: 'Confirm vacation payment',
+      message: `${row.employeeName} (${row.dateRange})\n\n${VACATION_PAYMENT_DIALOG_MESSAGE}`,
       options: {
         type: 'radio',
         model: defaultTreatment,

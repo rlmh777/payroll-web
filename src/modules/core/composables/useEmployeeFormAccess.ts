@@ -1,12 +1,25 @@
-import { computed } from 'vue';
+import { computed, inject, provide, type ComputedRef, type InjectionKey } from 'vue';
 import { useAuthStore } from '@core/stores/auth';
 import {
   FULL_EMPLOYEE_FORM_ACCESS,
+  SELF_VIEW_EMPLOYEE_FORM_ACCESS,
   type EmployeeFormAccess,
   type EmployeeFormFieldMode,
   type EmployeeFormTabKey,
   type EmployeeFormTabMode,
 } from '@core/types/employee-form-access';
+
+export const EMPLOYEE_FORM_ACCESS_OVERRIDE: InjectionKey<{
+  forceReadonly: ComputedRef<boolean>;
+  mergeSelfView: ComputedRef<boolean>;
+}> = Symbol('employeeFormAccessOverride');
+
+export function provideReadonlyEmployeeProfile() {
+  provide(EMPLOYEE_FORM_ACCESS_OVERRIDE, {
+    forceReadonly: computed(() => true),
+    mergeSelfView: computed(() => true),
+  });
+}
 
 function asTabMode(value: unknown): EmployeeFormTabMode {
   return value === 'view' || value === 'edit' || value === 'hidden' ? value : 'hidden';
@@ -29,6 +42,7 @@ const EMPTY_EMPLOYEE_FORM_ACCESS: EmployeeFormAccess = {
 
 export function useEmployeeFormAccess() {
   const authStore = useAuthStore();
+  const override = inject(EMPLOYEE_FORM_ACCESS_OVERRIDE, null);
 
   const access = computed<EmployeeFormAccess>(() => {
     const raw = authStore.user?.employeeFormAccess;
@@ -44,10 +58,16 @@ export function useEmployeeFormAccess() {
   });
 
   function tabMode(tab: EmployeeFormTabKey): EmployeeFormTabMode {
+    if (override?.mergeSelfView.value) {
+      return asTabMode(SELF_VIEW_EMPLOYEE_FORM_ACCESS.tabs[tab]);
+    }
     return asTabMode(access.value.tabs[tab]);
   }
 
   function fieldMode(field: string): EmployeeFormFieldMode {
+    if (override?.mergeSelfView.value) {
+      return asFieldMode(SELF_VIEW_EMPLOYEE_FORM_ACCESS.fields[field]);
+    }
     return asFieldMode(access.value.fields[field]);
   }
 
@@ -56,6 +76,9 @@ export function useEmployeeFormAccess() {
   }
 
   function isTabEditable(tab: EmployeeFormTabKey): boolean {
+    if (override?.forceReadonly.value) {
+      return false;
+    }
     return tabMode(tab) === 'edit';
   }
 
@@ -64,6 +87,9 @@ export function useEmployeeFormAccess() {
   }
 
   function canWriteField(field: string, isCreating: boolean): boolean {
+    if (override?.forceReadonly.value) {
+      return false;
+    }
     const mode = fieldMode(field);
     if (mode === 'edit') return true;
     if (mode === 'locked') return isCreating;

@@ -24,6 +24,36 @@ export const coreRoutes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/forms',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('@hr/pages/MyFormsPage.vue'),
+      },
+      {
+        path: ':id',
+        component: () => import('@hr/pages/FillFormPage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/appraisals',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('@hr/pages/AppraisalsPage.vue'),
+      },
+      {
+        path: ':id',
+        component: () => import('@hr/pages/AppraisalReviewPage.vue'),
+      },
+    ],
+  },
+  {
     path: MODULE_ROUTES.settings,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },

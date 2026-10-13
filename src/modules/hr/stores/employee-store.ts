@@ -166,6 +166,22 @@ export const useEmployeeStore = defineStore('employee', {
       this.isLoading = false;
     },
     
+    async fetchMyEmployee(): Promise<Employee> {
+      const response = await fetch(`${API_URL}/employees/me`, {
+        headers: this.authHeaders(),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.status === 404) {
+        this.selectedEmployee = null;
+        throw new Error(body.message || 'No employee record is linked to your account.');
+      }
+      if (!response.ok) {
+        throw new Error(body.message || 'Failed to load your employee profile.');
+      }
+      this.selectedEmployee = body as Employee;
+      return this.selectedEmployee;
+    },
+
     async fetchEmployeeById(id: string) {
       if (this.isLoadingEmployeeById) return;
       
@@ -216,7 +232,9 @@ export const useEmployeeStore = defineStore('employee', {
         if (search) {
           queryParams.append('search', search);
         }
-        const response = await fetch(`${API_URL}/localities?${queryParams.toString()}`);
+        const response = await fetch(`${API_URL}/localities?${queryParams.toString()}`, {
+          headers: this.authHeaders(),
+        });
         const data = await response.json();
         this.localities = data.data ?? [];
         return this.localities;

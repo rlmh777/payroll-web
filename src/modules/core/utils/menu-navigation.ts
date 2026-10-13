@@ -40,6 +40,50 @@ export function collectMenuRoutes(items: MenuItem[]): string[] {
   return [...routes];
 }
 
+export type NavigableMenuOption = {
+  label: string;
+  value: string;
+};
+
+export function collectNavigableMenuOptions(items: MenuItem[], ancestors: string[] = []): NavigableMenuOption[] {
+  const options: NavigableMenuOption[] = [];
+  const seen = new Set<string>();
+
+  function walk(nodes: MenuItem[], trail: string[]) {
+    for (const node of nodes) {
+      const nextTrail = [...trail, node.title];
+      const route = node.route?.trim();
+      if (route && !seen.has(route)) {
+        seen.add(route);
+        options.push({ label: nextTrail.join(' / '), value: route });
+      }
+      if (node.children?.length) {
+        walk(node.children, nextTrail);
+      }
+    }
+  }
+
+  walk(items, ancestors);
+
+  return options;
+}
+
+export function resolvePreferredLandingPath(
+  defaultModule: string | null | undefined,
+  defaultMenu: string | null | undefined,
+  enabledModules: Array<{ code: string; default_route: string | null }>,
+  moduleMenus: Record<string, MenuItem[]>,
+): string {
+  const code = defaultModule && defaultModule !== '' ? defaultModule : 'payroll';
+  const options = collectNavigableMenuOptions(moduleMenus[code] ?? []);
+  if (defaultMenu && options.some((item) => item.value === defaultMenu)) {
+    return defaultMenu;
+  }
+
+  const module = enabledModules.find((item) => item.code === code);
+  return module?.default_route || '/';
+}
+
 export function isPathAllowedByMenus(path: string, menuRoutes: string[]): boolean {
   return menuRoutes.some((menuRoute) => routeMatches(menuRoute, path));
 }

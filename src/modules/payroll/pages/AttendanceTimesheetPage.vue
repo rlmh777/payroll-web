@@ -502,6 +502,7 @@
             <div class="text-h6 text-weight-bold">Employee payroll summary</div>
             <div class="text-body2 text-grey-7">
               Review gross pay, other payments, deductions, taxes, social security, YTD figures, and net pay for this payroll run.
+              Vacation paid as an advance is listed separately: it is not additional pay. It is recorded on this run and excluded from cash, tax, and social security so those days are not paid twice.
             </div>
           </div>
           <div class="col-12 col-md-auto row q-gutter-sm justify-end">
@@ -583,6 +584,7 @@
                 <q-tr v-if="payrollRunEmployeeSummary?.totals" class="bg-grey-2 text-weight-bold">
                   <q-td>Totals</q-td>
                   <q-td class="text-right">{{ formatCurrency(payrollRunEmployeeSummary.totals.baseEarnings) }}</q-td>
+                  <q-td class="text-right">{{ formatCurrency(payrollRunEmployeeSummary.totals.alreadyPaidLeave ?? 0) }}</q-td>
                   <q-td class="text-right">{{ formatCurrency(payrollRunEmployeeSummary.totals.nonTaxableAllowances) }}</q-td>
                   <q-td class="text-right">{{ formatCurrency(payrollRunEmployeeSummary.totals.deductions) }}</q-td>
                   <q-td class="text-right">{{ formatCurrency(payrollRunEmployeeSummary.totals.employerSocialSecurity) }}</q-td>
@@ -1092,6 +1094,7 @@ const importDetailColumns = [
 
 const payrollMoneyColumnNames = [
   'baseEarnings',
+  'alreadyPaidLeave',
   'nonTaxableAllowances',
   'deductions',
   'employerSocialSecurity',
@@ -1105,6 +1108,7 @@ const payrollMoneyColumnNames = [
 const payrollSummaryColumns = [
   { name: 'employeeName', label: 'Employee', field: 'employeeName', align: 'left' as const, sortable: true },
   { name: 'baseEarnings', label: 'Base pay', field: 'baseEarnings', align: 'right' as const, sortable: true },
+  { name: 'alreadyPaidLeave', label: 'Vacation advance', field: 'alreadyPaidLeave', align: 'right' as const, sortable: true },
   { name: 'nonTaxableAllowances', label: 'Non-taxable other payments', field: 'nonTaxableAllowances', align: 'right' as const, sortable: true },
   { name: 'deductions', label: 'Deduction', field: 'deductions', align: 'right' as const, sortable: true },
   { name: 'employerSocialSecurity', label: 'SS employer', field: 'employerSocialSecurity', align: 'right' as const, sortable: true },
@@ -1458,11 +1462,11 @@ function localDateString(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function formatCurrency(value: number) {
+function formatCurrency(value: number | null | undefined) {
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: 'BZD',
-  }).format(Number.isFinite(value) ? value : 0);
+  }).format(Number.isFinite(value) ? Number(value) : 0);
 }
 
 function formatHours(value: number) {

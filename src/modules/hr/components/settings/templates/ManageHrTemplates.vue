@@ -1,6 +1,7 @@
 <template>
   <q-page class="q-pa-md">
     <ContractExpiryReminderCard v-if="props.channel === 'email'" />
+    <AppraisalReminderCard v-if="props.channel === 'email'" />
 
     <q-card flat bordered>
       <q-card-section>
@@ -82,6 +83,7 @@ import {
 } from '@hr/stores/hr-template-store';
 import HrTemplateDialog from './HrTemplateDialog.vue';
 import ContractExpiryReminderCard from './ContractExpiryReminderCard.vue';
+import AppraisalReminderCard from '@hr/components/settings/appraisals/AppraisalReminderCard.vue';
 
 const props = defineProps<{
   title?: string;

@@ -237,6 +237,8 @@ export interface PayrollRunEmployeeSummaryRow {
   employeeCode: string | null;
   employeeName: string | null;
   baseEarnings: number;
+  alreadyPaidLeave?: number;
+  alreadyPaidLeaveDays?: number;
   taxableAllowances: number;
   nonTaxableAllowances: number;
   grossPay: number;
@@ -262,6 +264,7 @@ export interface PayrollRunEmployeeSummaryRow {
 
 export interface PayrollRunEmployeeSummaryTotals {
   baseEarnings: number;
+  alreadyPaidLeave: number;
   taxableAllowances: number;
   nonTaxableAllowances: number;
   grossPay: number;

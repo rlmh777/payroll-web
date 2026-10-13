@@ -81,3 +81,26 @@ export const FULL_EMPLOYEE_FORM_ACCESS: EmployeeFormAccess = {
     paymentMethodId: 'edit',
   },
 };
+
+const SELF_VIEW_TABS: EmployeeFormTabKey[] = [
+  'personal',
+  'address',
+  'employment',
+  'education',
+  'payment_details',
+  'contact',
+  'contracts',
+  'documents',
+];
+
+export const SELF_VIEW_EMPLOYEE_FORM_ACCESS: EmployeeFormAccess = {
+  tabs: Object.fromEntries(
+    Object.keys(FULL_EMPLOYEE_FORM_ACCESS.tabs).map((key) => [
+      key,
+      SELF_VIEW_TABS.includes(key as EmployeeFormTabKey) ? 'view' : 'hidden',
+    ]),
+  ) as EmployeeFormAccess['tabs'],
+  fields: Object.fromEntries(
+    Object.keys(FULL_EMPLOYEE_FORM_ACCESS.fields).map((key) => [key, 'view']),
+  ) as EmployeeFormAccess['fields'],
+};

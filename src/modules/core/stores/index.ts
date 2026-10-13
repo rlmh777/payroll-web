@@ -1,5 +1,6 @@
 export * from './database-backup-store';
 export * from './file-storage-store';
+export * from './biometric-device-store';
 export * from './mail-settings-store';
 export * from './login-page-store';
 export * from './auth';

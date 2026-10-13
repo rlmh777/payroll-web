@@ -19,6 +19,8 @@
           :submit-label="props.submitLabel ?? 'Save'"
           :lock-leave-type="Boolean(props.lockLeaveType)"
           :show-leave-type-actions="props.showLeaveTypeActions !== false"
+          :leave-type-picker="props.leaveTypePicker"
+          :wide="props.wide"
           @leave-type-change="onLeaveTypeChange"
           @duration-change="onDurationChange"
           @date-change="onDateChange"
@@ -40,6 +42,8 @@
       :cancel-label="props.cancelLabel ?? 'Reset'"
       :lock-leave-type="Boolean(props.lockLeaveType)"
       :show-leave-type-actions="props.showLeaveTypeActions !== false"
+      :leave-type-picker="props.leaveTypePicker"
+      :wide="props.wide"
       @leave-type-change="onLeaveTypeChange"
       @duration-change="onDurationChange"
       @date-change="onDateChange"
@@ -55,7 +59,9 @@ import { useQuasar } from 'quasar';
 import { useEmployeeLeaveStore } from '@/stores/employee-leave-store';
 import { useEmployeeStore } from '@/stores/employee-store';
 import LeaveFormFields from './LeaveFormFields.vue';
+import { leaveProofRequired } from '@hr/components/settings/leave/leave-type-form';
 import { leavePayMultiplierFromType } from '@hr/utils/leave-pay-utils';
+import { useLeaveBalanceStore } from '@hr/stores/leave-balance-store';
 import { useEmployeePoolStore } from '@payroll/stores/employee-pool-store';
 import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
 import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
@@ -75,6 +81,8 @@ interface Props {
   showLeaveTypeActions?: boolean;
   /** When true, leave goes to accounts payment confirmation (skip supervisor/HR). */
   assigned?: boolean;
+  leaveTypePicker?: 'select' | 'cards';
+  wide?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -85,6 +93,8 @@ const props = withDefaults(defineProps<Props>(), {
   initialLeaveTypeId: null,
   lockLeaveType: false,
   showLeaveTypeActions: true,
+  leaveTypePicker: 'select',
+  wide: false,
 });
 
 const emit = defineEmits<{
@@ -95,6 +105,7 @@ const emit = defineEmits<{
 
 const employeeLeaveStore = useEmployeeLeaveStore();
 const employeeStore = useEmployeeStore();
+const leaveBalanceStore = useLeaveBalanceStore();
 const poolStore = useEmployeePoolStore();
 const accruedHours = ref<number | null>(null);
 
@@ -256,6 +267,27 @@ const onSubmit = async () => {
   }
 
   if (form.value.duration === 'Custom' && (!form.value.fromTime || !form.value.toTime)) {
+    return;
+  }
+
+  const leaveTypeId = form.value.leaveTypeId;
+  const balance = leaveBalanceStore.balances.find((row) => row.leaveTypeId === leaveTypeId);
+  const leaveType = employeeStore.leaveTypes.find((row) => Number(row.id) === leaveTypeId);
+  if (
+    leaveProofRequired({
+      requiresCertification: Boolean(balance?.requiresCertification ?? leaveType?.requiresCertification),
+      uncertifiedDaysAllowed: Number(balance?.uncertifiedDaysAllowed ?? leaveType?.uncertifiedDaysAllowed ?? 0),
+      uncertifiedDaysUsed: Number(balance?.uncertifiedDaysUsed ?? 0),
+      requestedDays: form.value.totalDays,
+    }) &&
+    !(form.value.attachments?.length)
+  ) {
+    $q.notify({
+      color: 'negative',
+      position: 'top',
+      icon: 'error',
+      message: 'Medical documentation is required for this leave.',
+    });
     return;
   }
 

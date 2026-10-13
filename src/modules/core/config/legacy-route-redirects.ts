@@ -15,7 +15,13 @@ export const legacyRouteRedirects: RouteRecordRaw[] = [
   },
   {
     path: '/employee/:id',
-    redirect: (to) => `/hr/employees/${String(to.params.id)}`,
+    redirect: (to) => {
+      const id = String(to.params.id ?? '');
+      if (id === 'profile') {
+        return { name: 'employee-profile' };
+      }
+      return `/hr/employees/${id}`;
+    },
   },
   { path: '/leaves', redirect: '/payroll/leaves/list' },
   {
@@ -41,6 +47,7 @@ export const legacyRouteRedirects: RouteRecordRaw[] = [
   { path: '/payroll/settings/modules', redirect: '/admin/settings/modules' },
   { path: '/payroll/settings/database-backup', redirect: '/admin/settings/database-backup' },
   { path: '/payroll/settings/file-storage', redirect: '/admin/settings/file-storage' },
+  { path: '/payroll/settings/biometric-devices', redirect: '/admin/settings/biometric-devices' },
   { path: '/payroll/settings/email', redirect: '/admin/settings/email' },
   { path: '/payroll/settings/login-page', redirect: '/admin/settings/login-page' },
   { path: '/payroll/settings/menu', redirect: '/admin/settings/menu' },

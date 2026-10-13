@@ -35,6 +35,15 @@
           <template #body-cell-affectsBalance="props">
             <q-td :props="props">{{ props.row.affectsBalance ? 'Yes' : 'No' }}</q-td>
           </template>
+          <template #body-cell-uncertifiedDaysAllowed="props">
+            <q-td :props="props">
+              {{
+                props.row.requiresCertification
+                  ? formatLeaveDays(Number(props.row.uncertifiedDaysAllowed ?? 0))
+                  : '—'
+              }}
+            </q-td>
+          </template>
           <template #body-cell-annualEntitlementDays="props">
             <q-td :props="props">{{ formatLeaveDays(Number(props.row.policy?.annualEntitlementDays ?? 0)) }}</q-td>
           </template>
@@ -89,10 +98,27 @@
           <div class="row q-col-gutter-md">
             <div class="col-6"><q-toggle v-model="form.isPaid" label="Paid leave" /></div>
             <div class="col-6"><q-toggle v-model="form.affectsBalance" label="Track balance" /></div>
-            <div class="col-6"><q-toggle v-model="form.requiresCertification" label="Requires certification" /></div>
+            <div class="col-6">
+              <q-toggle
+                v-model="form.requiresCertification"
+                label="Requires certification"
+                @update:model-value="onRequiresCertification"
+              />
+            </div>
             <div class="col-6"><q-toggle v-model="form.isActive" label="Active" /></div>
             <div class="col-6"><q-toggle v-model="form.policyEnabled" label="Policy enabled" /></div>
           </div>
+          <q-input
+            v-if="form.requiresCertification"
+            v-model.number="form.uncertifiedDaysAllowed"
+            type="number"
+            min="0"
+            step="0.5"
+            label="Days allowed without medical proof"
+            outlined
+            dense
+            hint="Further days in the policy period require documentation attachments."
+          />
           <q-input v-model.number="form.sortOrder" type="number" min="0" label="Sort order" outlined dense />
         </q-card-section>
         <q-card-actions align="right">
@@ -134,6 +160,7 @@ const columns: QTableProps['columns'] = [
   { name: 'accrualMethod', label: 'Accrual', field: 'accrualMethod', align: 'left' },
   { name: 'isPaid', label: 'Pay', field: 'isPaid', align: 'left' },
   { name: 'affectsBalance', label: 'Balance', field: 'affectsBalance', align: 'left' },
+  { name: 'uncertifiedDaysAllowed', label: 'Uncertified days', field: 'uncertifiedDaysAllowed', align: 'right' },
   { name: 'isActive', label: 'Active', field: 'isActive', align: 'center' },
   { name: 'actions', label: '', field: 'actions', align: 'right' },
 ];
@@ -147,6 +174,13 @@ async function onRequest(props: { pagination: { page: number; rowsPerPage: numbe
   pagination.value.page = props.pagination.page;
   pagination.value.rowsPerPage = props.pagination.rowsPerPage;
   await refresh();
+}
+
+function onRequiresCertification(value: boolean) {
+  form.requiresCertification = value;
+  if (value && (!form.uncertifiedDaysAllowed || form.uncertifiedDaysAllowed <= 0)) {
+    form.uncertifiedDaysAllowed = 2;
+  }
 }
 
 function openCreate() {

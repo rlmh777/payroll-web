@@ -7,6 +7,7 @@ import {
 } from 'vue-router';
 import { useAuthStore } from 'src/stores/auth';
 import { useMenuStore } from '@core/stores/menus';
+import { useFormAssignmentStore } from '@hr/stores/form-assignment-store';
 import { isPathAllowedByMenus, collectMenuRoutes } from '@core/utils/menu-navigation';
 import { hasRoutePermission, routeViewPermission } from '@core/utils/permissions';
 import routes from './routes';
@@ -89,6 +90,14 @@ export default route(function (/* { store } */) {
 
       if (!canAccessPath(to.path)) {
         return { path: '/' };
+      }
+
+      if (!to.path.startsWith('/forms')) {
+        const formInbox = useFormAssignmentStore();
+        await formInbox.fetchPending();
+        if (formInbox.nextRequired) {
+          return { path: `/forms/${formInbox.nextRequired.id}` };
+        }
       }
     }
 

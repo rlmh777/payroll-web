@@ -118,6 +118,21 @@
               />
             </div>
             <div class="col-12">
+              <q-select
+                v-model="form.form_template_id"
+                outlined
+                dense
+                emit-value
+                map-options
+                clearable
+                label="Score sheet"
+                :options="scoreSheetOptions"
+                :loading="formTemplateStore.isLoading"
+                :disable="store.isSaving"
+                hint="Panel members use this form to score candidates."
+              />
+            </div>
+            <div class="col-12">
               <div class="text-caption text-grey-7 q-mb-xs">Job description</div>
               <q-editor
                 v-model="form.description"
@@ -196,6 +211,7 @@ import { useDepartmentStore } from '@hr/stores/department-store';
 import { useWorksiteStore } from '@hr/stores/worksite-store';
 import { useJobTitleStore } from '@core/stores/job-title-store';
 import { useVacancyStore, type Vacancy, type VacancyPayload } from '@hr/stores/vacancy-store';
+import { useFormTemplateStore } from '@hr/stores/form-template-store';
 import { useAuthStore } from '@core/stores/auth';
 import {
   VACANCY_ATTACHMENT_ACCEPT,
@@ -224,6 +240,7 @@ const store = useVacancyStore();
 const jobTitleStore = useJobTitleStore();
 const worksiteStore = useWorksiteStore();
 const departmentStore = useDepartmentStore();
+const formTemplateStore = useFormTemplateStore();
 const authStore = useAuthStore();
 
 const managers = ref<Employee[]>([]);
@@ -246,6 +263,7 @@ const form = reactive({
   advertise_internal: true,
   advertise_public: false,
   vacancy_stage_id: null as number | null,
+  form_template_id: null as string | null,
   description: '',
 });
 
@@ -257,6 +275,11 @@ const departmentOptions = computed(() =>
 );
 const stageOptions = computed(() =>
   store.stages.map((item) => ({ label: item.name, value: item.id })),
+);
+const scoreSheetOptions = computed(() =>
+  formTemplateStore.templates
+    .filter((item) => item.purpose === 'score_sheet' && item.is_active)
+    .map((item) => ({ label: item.name, value: item.id })),
 );
 
 const selectedJobTitle = computed(() =>
@@ -297,6 +320,7 @@ function resetForm() {
   form.advertise_internal = props.vacancy?.advertise_internal ?? true;
   form.advertise_public = props.vacancy?.advertise_public ?? false;
   form.vacancy_stage_id = props.vacancy?.vacancy_stage_id ?? store.defaultStage?.id ?? null;
+  form.form_template_id = props.vacancy?.form_template_id ?? null;
   form.description = props.vacancy?.description ?? '';
   attachmentFiles.value = null;
   removedAttachmentIds.value = [];
@@ -368,6 +392,7 @@ async function save() {
     advertise_internal: form.advertise_internal,
     advertise_public: form.advertise_public,
     vacancy_stage_id: form.vacancy_stage_id,
+    form_template_id: form.form_template_id,
     description: form.description,
     remove_attachment_ids: removedAttachmentIds.value,
   };
@@ -408,6 +433,7 @@ onMounted(async () => {
     jobTitleStore.fetchJobTitles(1, 200),
     worksiteStore.fetchWorksites(1, 200),
     departmentStore.fetchDepartments({ page: 1, perPage: 200 }),
+    formTemplateStore.fetchTemplates({ purpose: 'score_sheet' }),
     fetchManagers(),
     store.stages.length ? Promise.resolve() : store.fetchBoard(),
   ]);

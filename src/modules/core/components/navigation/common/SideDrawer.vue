@@ -15,13 +15,18 @@ import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useMenuStore, type MenuItem } from '../../../stores/menus';
 import { findTopMenuForPath } from '../../../utils/menu-navigation';
+import {
+  drawerChildrenForMenu,
+  isLeftDrawerPaneRoute,
+  menuHasLeftDrawer,
+} from '../../../composables/useHasLeftDrawer';
 import MenuList from '../../Menu/MenuList.vue';
 import EmployeeLeftPane from '@hr/components/employee/search/EmployeeLeftPane.vue';
 import SchedulerLeftPane from '@hr/components/settings/calendar/SchedulerLeftPane.vue';
 import TimesheetLeftPane from '@hr/components/timesheet/TimesheetLeftPane.vue';
 import ReportsLeftPane from '@payroll/components/reports/ReportsLeftPane.vue';
 import { useEmployeeLeaveStore } from '@hr/stores/employee-leave-store';
-import { MODULE_ROUTES, pathInModule } from '../../../config/module-routes';
+import { pathInModule } from '../../../config/module-routes';
 
 const menuStore = useMenuStore();
 const leaveStore = useEmployeeLeaveStore();
@@ -30,13 +35,7 @@ const drawerOpen = ref(false);
 const selectedMenu = ref<MenuItem | null>(null);
 
 function isDrawerPaneRoute(path: string) {
-  return (
-    pathInModule(path, 'employees') ||
-    pathInModule(path, 'scheduler') ||
-    pathInModule(path, 'timesheet') ||
-    pathInModule(path, 'leaves') ||
-    pathInModule(path, 'reports')
-  );
+  return isLeftDrawerPaneRoute(path) || pathInModule(path, 'leaves');
 }
 
 function shouldOpenDrawerForMenu(item: MenuItem) {
@@ -107,28 +106,11 @@ const isEmployeeRoute = computed(() => pathInModule(route.path, 'employees'));
 const isSchedulerRoute = computed(() => pathInModule(route.path, 'scheduler'));
 const isTimesheetRoute = computed(() => pathInModule(route.path, 'timesheet'));
 const isReportsRoute = computed(() => pathInModule(route.path, 'reports'));
-const selectedChildren = computed(() => {
-  const children = selectedMenu.value?.children || [];
-  const isLeavesMenu =
-    selectedMenu.value?.route === MODULE_ROUTES.leaves || selectedMenu.value?.title === 'Leaves';
-
-  if (!isLeavesMenu || leaveStore.teamAccess?.canAccess) {
-    return children;
-  }
-
-  return children.filter(
-    (item) =>
-      item.route !== `${MODULE_ROUTES.leaves}/list` &&
-      item.route !== `${MODULE_ROUTES.leaves}/entitlement`,
-  );
-});
-const hasSideMenu = computed(
-  () =>
-    isEmployeeRoute.value ||
-    isSchedulerRoute.value ||
-    isTimesheetRoute.value ||
-    isReportsRoute.value ||
-    selectedChildren.value.length > 0,
+const selectedChildren = computed(() =>
+  drawerChildrenForMenu(selectedMenu.value, leaveStore.teamAccess?.canAccess),
+);
+const hasSideMenu = computed(() =>
+  menuHasLeftDrawer(route.path, selectedMenu.value, leaveStore.teamAccess?.canAccess),
 );
 
 watch(

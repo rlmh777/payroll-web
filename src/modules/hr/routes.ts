@@ -71,6 +71,52 @@ export const hrRoutes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/hr/profile-changes',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'hr-profile-changes',
+        component: () => import('@hr/pages/ProfileChangesPage.vue'),
+      },
+      {
+        path: ':id',
+        name: 'hr-profile-change-review',
+        component: () => import('@hr/pages/ProfileChangeReviewPage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/hr/appraisals',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'hr-appraisals',
+        component: () => import('@hr/pages/AppraisalsPage.vue'),
+      },
+      {
+        path: ':id',
+        name: 'hr-appraisal-review',
+        component: () => import('@hr/pages/AppraisalReviewPage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/hr/panel',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'hr-panel',
+        component: () => import('@hr/pages/InterviewPanelPage.vue'),
+      },
+    ],
+  },
+  {
     path: MODULE_ROUTES.candidates,
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true, fullHeight: true },
@@ -208,6 +254,16 @@ export const hrRoutes: RouteRecordRaw[] = [
         path: 'email-templates',
         component: () => import('@hr/components/settings/templates/ManageHrTemplates.vue'),
         props: { title: 'Email templates', channel: 'email' },
+      },
+      {
+        path: 'form-templates',
+        component: () => import('@hr/components/settings/forms/ManageFormTemplates.vue'),
+        props: { title: 'Form templates' },
+      },
+      {
+        path: 'appraisals',
+        component: () => import('@hr/components/settings/appraisals/ManageAppraisalSettings.vue'),
+        props: { title: 'Appraisals' },
       },
       {
         path: 'relationship',

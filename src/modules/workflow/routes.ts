@@ -38,6 +38,18 @@ export const workflowRoutes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: adminSettingsPath('biometric-devices'),
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('@core/settings/biometric-devices/ManageBiometricDevices.vue'),
+        props: { title: 'Biometric Devices' },
+      },
+    ],
+  },
+  {
     path: adminSettingsPath('file-storage'),
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },

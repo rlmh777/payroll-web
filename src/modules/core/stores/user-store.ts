@@ -29,6 +29,14 @@ export interface User {
   };
 }
 
+export interface UserApiToken {
+  id: string;
+  name: string;
+  createdAt: string | null;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+}
+
 export interface CreateUserPayload {
   name: string;
   username?: string;
@@ -357,6 +365,50 @@ export const useUserStore = defineStore('user', {
         console.error('Error linking user to employee:', error);
         this.error = error instanceof Error ? error.message : 'Error linking user to employee';
         return false;
+      }
+    },
+
+    async fetchUserTokens(userId: string): Promise<UserApiToken[]> {
+      const response = await fetch(`${API_URL}/users/${userId}/tokens`, {
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error(await parseApiError(response, 'Failed to load API tokens'));
+      }
+      const body = await response.json();
+      return Array.isArray(body.data) ? body.data : [];
+    },
+
+    async createUserToken(
+      userId: string,
+      tokenName: string,
+      expiresAt?: string | null,
+    ): Promise<{ token: string; data: UserApiToken }> {
+      const response = await fetch(`${API_URL}/users/${userId}/tokens`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          tokenName,
+          expiresAt: expiresAt?.trim() || undefined,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(await parseApiError(response, 'Failed to create API token'));
+      }
+      const body = await response.json();
+      return {
+        token: String(body.token ?? ''),
+        data: body.data as UserApiToken,
+      };
+    },
+
+    async revokeUserToken(userId: string, tokenId: string): Promise<void> {
+      const response = await fetch(`${API_URL}/users/${userId}/tokens/${tokenId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error(await parseApiError(response, 'Failed to revoke API token'));
       }
     },
 

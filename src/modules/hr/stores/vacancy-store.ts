@@ -73,6 +73,9 @@ export interface Vacancy {
   advertise_public: boolean;
   vacancy_stage_id: number;
   stage?: VacancyStage | null;
+  form_template_id?: string | null;
+  form_template?: { id: string; name: string; purpose?: string; is_active?: boolean; max_score?: number } | null;
+  panel_members_count?: number;
   sort_order: number;
   applications_count?: number;
   published_at?: string | null;
@@ -132,6 +135,9 @@ export interface VacancyApplication {
   converted_at?: string | null;
   created_at?: string | null;
   matching_employee?: VacancyPerson | null;
+  scores_count?: number;
+  average_score?: number | null;
+  my_score?: { total_score?: number | null; is_submitted?: boolean } | null;
 }
 
 export interface VacancyApplicationPayload {
@@ -182,6 +188,7 @@ export interface VacancyPayload {
   advertise_internal?: boolean;
   advertise_public?: boolean;
   vacancy_stage_id?: number | null;
+  form_template_id?: string | null;
   remove_attachment_ids?: string[];
 }
 

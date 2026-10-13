@@ -51,23 +51,19 @@
             @change="onDurationChange"
           />
 
-          <q-input
+          <TimeField
             v-if="form.duration === 'Custom'"
             v-model="form.fromTime"
             label="From Time *"
-            type="time"
-            outlined
-            :rules="[val => !!val || 'From time is required']"
+            required
             :disable="employeeLeaveStore.isLoading"
           />
 
-          <q-input
+          <TimeField
             v-if="form.duration === 'Custom'"
             v-model="form.toTime"
             label="To Time *"
-            type="time"
-            outlined
-            :rules="[val => !!val || 'To time is required']"
+            required
             :disable="employeeLeaveStore.isLoading"
           />
 
@@ -92,6 +88,54 @@
             :disable="employeeLeaveStore.isLoading"
           />
 
+          <q-banner
+            v-if="certification.requiresCertification"
+            rounded
+            :class="needsNewProof ? 'bg-orange-1 text-orange-10' : 'bg-grey-2 text-grey-8'"
+          >
+            <template #avatar>
+              <q-icon :name="needsNewProof ? 'warning' : 'info'" />
+            </template>
+            <div v-if="needsNewProof && certification.allowed <= 0">
+              Medical documentation is required for this leave type.
+            </div>
+            <div v-else-if="needsNewProof">
+              Medical documentation is required. This leave exceeds the
+              {{ formatLeaveDays(certification.allowed) }} uncertified day(s) allowed this period.
+            </div>
+            <div v-else>
+              {{ formatLeaveDays(certification.remaining) }} uncertified day(s) remaining this period
+              without medical documentation.
+            </div>
+          </q-banner>
+
+          <div v-if="existingAttachments.length" class="text-caption text-grey-7">
+            On file: {{ existingAttachments.map((file) => file.fileName).join(', ') }}
+          </div>
+
+          <q-file
+            v-model="form.attachments"
+            :label="needsNewProof ? 'Medical documentation *' : 'Attachments'"
+            outlined
+            multiple
+            clearable
+            use-chips
+            counter
+            max-files="10"
+            :accept="EMPLOYEE_DOCUMENT_ACCEPT"
+            :disable="employeeLeaveStore.isLoading"
+            :rules="attachmentRules"
+            :hint="
+              needsNewProof
+                ? 'Required. PDF, Word, Excel, images, or text — up to 10 files, 20 MB each.'
+                : 'Optional. PDF, Word, Excel, images, or text — up to 10 files, 20 MB each.'
+            "
+          >
+            <template #prepend>
+              <q-icon name="attach_file" />
+            </template>
+          </q-file>
+
           <div class="row q-gutter-sm justify-end q-mt-lg">
             <q-btn
               flat
@@ -105,6 +149,7 @@
               label="Update"
               color="primary"
               :loading="employeeLeaveStore.isLoading"
+              :disable="needsNewProof && !hasNewAttachments"
             />
           </div>
         </q-form>
@@ -119,9 +164,13 @@ import { useQuasar } from 'quasar';
 import { useEmployeeLeaveStore } from '@/stores/employee-leave-store';
 import { useEmployeeStore } from '@/stores/employee-store';
 import DateField from '@core/components/common/DateField.vue';
+import TimeField from '@core/components/common/TimeField.vue';
 import LeaveTypeSelect from '../common/LeaveTypeSelect.vue';
 import LeaveDurationSelect from '../common/LeaveDurationSelect.vue';
+import { EMPLOYEE_DOCUMENT_ACCEPT } from '@hr/components/employee/document/employee-document-form';
+import { formatLeaveDays, leaveProofRequired } from '@hr/components/settings/leave/leave-type-form';
 import { leavePayMultiplierFromType } from '@hr/utils/leave-pay-utils';
+import { useLeaveBalanceStore } from '@hr/stores/leave-balance-store';
 import type { EmployeeLeave } from '@core/types/models';
 
 const $q = useQuasar();
@@ -143,6 +192,7 @@ const emit = defineEmits<{
 
 const employeeLeaveStore = useEmployeeLeaveStore();
 const employeeStore = useEmployeeStore();
+const leaveBalanceStore = useLeaveBalanceStore();
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -167,6 +217,79 @@ const form = ref({
   totalDays: null as number | null,
   notes: '',
   multiplier: 1.0 as number,
+  attachments: [] as File[],
+});
+
+const existingAttachments = computed(() => props.employeeLeave?.attachments ?? []);
+const hasExistingProof = computed(() => existingAttachments.value.length > 0);
+const hasNewAttachments = computed(
+  () => Array.isArray(form.value.attachments) && form.value.attachments.length > 0,
+);
+
+const selectedLeaveBalance = computed(() => {
+  const leaveTypeId = form.value.leaveTypeId;
+  if (leaveTypeId == null) {
+    return null;
+  }
+  return leaveBalanceStore.balances.find((balance) => balance.leaveTypeId === leaveTypeId) ?? null;
+});
+
+const selectedLeaveType = computed(() => {
+  const leaveTypeId = form.value.leaveTypeId;
+  if (leaveTypeId == null) {
+    return null;
+  }
+  return employeeStore.leaveTypes.find((leaveType) => Number(leaveType.id) === leaveTypeId) ?? null;
+});
+
+const certification = computed(() => {
+  const balance = selectedLeaveBalance.value;
+  const leaveType = selectedLeaveType.value;
+  const requiresCertification = Boolean(
+    balance?.requiresCertification ?? leaveType?.requiresCertification,
+  );
+  const allowed = Number(balance?.uncertifiedDaysAllowed ?? leaveType?.uncertifiedDaysAllowed ?? 0);
+  const used = Number(balance?.uncertifiedDaysUsed ?? 0);
+  const currentUncertified = hasExistingProof.value
+    ? 0
+    : Number(props.employeeLeave?.totalDays ?? 0);
+  const usedOthers = Math.max(0, used - currentUncertified);
+  const remaining = Math.max(0, allowed - usedOthers);
+
+  return {
+    requiresCertification,
+    allowed,
+    used: usedOthers,
+    remaining,
+  };
+});
+
+const proofRequired = computed(() =>
+  leaveProofRequired({
+    requiresCertification: certification.value.requiresCertification,
+    uncertifiedDaysAllowed: certification.value.allowed,
+    uncertifiedDaysUsed: certification.value.used,
+    requestedDays: form.value.totalDays,
+  }),
+);
+
+const needsNewProof = computed(() => proofRequired.value && !hasExistingProof.value);
+
+const attachmentRules = computed(() => {
+  if (!needsNewProof.value) {
+    return [];
+  }
+  return [
+    (val: File[] | File | null | undefined) => {
+      if (Array.isArray(val) && val.length > 0) {
+        return true;
+      }
+      if (val instanceof File) {
+        return true;
+      }
+      return 'Medical documentation is required for this leave.';
+    },
+  ];
 });
 
 const syncMultiplierFromLeaveType = (leaveTypeId: number | null) => {
@@ -281,6 +404,16 @@ const onSubmit = async () => {
     return;
   }
 
+  if (needsNewProof.value && !hasNewAttachments.value) {
+    $q.notify({
+      color: 'negative',
+      position: 'top',
+      icon: 'error',
+      message: 'Medical documentation is required for this leave.',
+    });
+    return;
+  }
+
   // Format time from HH:mm to HH:mm:00 for API
   const formatTimeForAPI = (time: string | null): string | null => {
     if (!time) return null;
@@ -303,7 +436,9 @@ const onSubmit = async () => {
       form.value.duration,
       form.value.totalDays,
       form.value.notes || null,
-      form.value.multiplier
+      form.value.multiplier,
+      undefined,
+      form.value.attachments ?? [],
     );
 
     if (updatedEmployeeLeave) {
@@ -352,12 +487,17 @@ watch(isOpen, async (newValue) => {
       totalDays: props.employeeLeave.totalDays !== null && props.employeeLeave.totalDays !== undefined ? props.employeeLeave.totalDays : null,
       notes: props.employeeLeave.notes || '',
       multiplier: 1.0,
+      attachments: [],
     };
     // Fetch leave types if not already loaded
     if (employeeStore.leaveTypes.length === 0) {
       await employeeStore.fetchLeaveTypes();
     }
     syncMultiplierFromLeaveType(form.value.leaveTypeId);
+    const employeeId = props.employeeLeave.employeeId;
+    if (employeeId) {
+      await leaveBalanceStore.fetchByEmployee(String(employeeId));
+    }
   }
 });
 
