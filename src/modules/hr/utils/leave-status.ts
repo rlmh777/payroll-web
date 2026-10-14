@@ -107,6 +107,10 @@ export function leaveRequiresPaymentConfirmation(
     && isVacationLeaveType(leaveTypeCode, leaveTypeName);
 }
 
+export function leaveIsUnapproved(value?: string | null): boolean {
+  return leaveAllowsApprovalAction(value);
+}
+
 export function leaveAllowsCancellation(value?: string | null): boolean {
   const code = normalizeLeaveStatusCode(value);
   return code === 'PENDING_SUPERVISOR_APPROVAL'

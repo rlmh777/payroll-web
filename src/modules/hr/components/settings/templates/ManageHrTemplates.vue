@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar, type QTableProps } from 'quasar';
 import {
   useHrTemplateStore,
@@ -174,6 +174,13 @@ function confirmDelete(row: HrTemplate) {
     })();
   });
 }
+
+watch(
+  () => props.channel,
+  () => {
+    void refresh();
+  },
+);
 
 onMounted(() => {
   void refresh();

@@ -1,8 +1,10 @@
 <template>
   <q-drawer v-if="hasSideMenu" v-model="drawerOpen" show-if-above bordered side="left" :width="256">
-    <q-scroll-area class="drawer-scroll">
-      <EmployeeLeftPane v-if="isEmployeeRoute" />
-      <SchedulerLeftPane v-else-if="isSchedulerRoute" />
+    <div v-if="isEmployeeRoute" class="drawer-pane">
+      <EmployeeLeftPane />
+    </div>
+    <q-scroll-area v-else class="drawer-scroll">
+      <SchedulerLeftPane v-if="isSchedulerRoute" />
       <TimesheetLeftPane v-else-if="isTimesheetRoute" />
       <ReportsLeftPane v-else-if="isReportsRoute" />
       <MenuList v-else-if="selectedChildren.length" :items="selectedChildren" />
@@ -128,13 +130,23 @@ watch(
   (hasMenu) => {
     if (!hasMenu) {
       drawerOpen.value = false;
+      return;
+    }
+
+    if (isDrawerPaneRoute(route.path)) {
+      drawerOpen.value = true;
     }
   },
 );
 </script>
 
 <style scoped>
-.drawer-scroll {
+.drawer-scroll,
+.drawer-pane {
   height: 100%;
+}
+
+.drawer-pane {
+  overflow: hidden;
 }
 </style>

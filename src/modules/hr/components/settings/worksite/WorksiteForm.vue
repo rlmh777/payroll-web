@@ -1,66 +1,56 @@
 <template>
-  <q-form class="app-dialog-form row q-col-gutter-md" @submit.prevent="$emit('submit')">
-    <div class="col-12">
-      <q-input
-        :model-value="modelValue.name"
-        label="Work site name *"
-        outlined
-        dense
-        :rules="[(value) => !!value || 'Name is required']"
-        :disable="saving"
-        @update:model-value="updateField('name', String($event ?? ''))"
-      />
-    </div>
+  <q-form class="app-dialog-form q-gutter-md" @submit.prevent="$emit('submit')">
+    <q-input
+      :model-value="modelValue.name"
+      label="Work site name *"
+      outlined
+      dense
+      :rules="[(value) => !!value || 'Name is required']"
+      :disable="saving"
+      @update:model-value="updateField('name', String($event ?? ''))"
+    />
 
-    <div class="col-12">
-      <q-input
-        :model-value="modelValue.address1"
-        label="Address line 1 *"
-        outlined
-        dense
-        :rules="[(value) => !!value || 'Address line 1 is required']"
-        :disable="saving"
-        @update:model-value="updateField('address1', String($event ?? ''))"
-      />
-    </div>
+    <q-input
+      :model-value="modelValue.address1"
+      label="Address line 1 *"
+      outlined
+      dense
+      :rules="[(value) => !!value || 'Address line 1 is required']"
+      :disable="saving"
+      @update:model-value="updateField('address1', String($event ?? ''))"
+    />
 
-    <div class="col-12">
-      <q-input
-        :model-value="modelValue.address2 ?? ''"
-        label="Address line 2"
-        outlined
-        dense
-        :disable="saving"
-        @update:model-value="updateField('address2', String($event ?? '') || null)"
-      />
-    </div>
+    <q-input
+      :model-value="modelValue.address2 ?? ''"
+      label="Address line 2"
+      outlined
+      dense
+      :disable="saving"
+      @update:model-value="updateField('address2', String($event ?? '') || null)"
+    />
 
-    <div class="col-12">
-      <q-select
-        :model-value="modelValue.localityId"
-        :options="localityOptions"
-        option-value="id"
-        option-label="label"
-        emit-value
-        map-options
-        use-input
-        input-debounce="0"
-        label="Locality *"
-        outlined
-        dense
-        :loading="localityLoading"
-        :disable="saving"
-        :rules="[(value) => !!value || 'Locality is required']"
-        @filter="filterLocalities"
-        @update:model-value="updateField('localityId', String($event ?? ''))"
-      />
-    </div>
+    <q-select
+      :model-value="modelValue.localityId"
+      :options="localityOptions"
+      option-value="id"
+      option-label="label"
+      emit-value
+      map-options
+      use-input
+      input-debounce="0"
+      label="Locality *"
+      outlined
+      dense
+      :loading="localityLoading"
+      :disable="saving"
+      :rules="[(value) => !!value || 'Locality is required']"
+      @filter="filterLocalities"
+      @update:model-value="updateField('localityId', String($event ?? ''))"
+    />
 
-    <div v-if="showActions" class="col-12">
-      <div class="row justify-end q-gutter-sm app-dialog-form-actions">
-        <q-btn flat label="Cancel" color="grey" :disable="saving" @click="$emit('cancel')" />
-        <q-btn type="submit" color="primary" :label="submitLabel" :loading="saving" />
-      </div>
+    <div v-if="showActions" class="row justify-end q-gutter-sm app-dialog-form-actions">
+      <q-btn flat label="Cancel" color="grey" :disable="saving" @click="$emit('cancel')" />
+      <q-btn type="submit" color="primary" :label="submitLabel" :loading="saving" />
     </div>
   </q-form>
 </template>

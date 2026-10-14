@@ -112,7 +112,7 @@
 
         <div class="user-menu__card">
           <div class="text-subtitle2 q-mb-sm">Default application</div>
-          <div class="user-menu__combo">
+          <div v-if="canChooseDefaultApplication" class="user-menu__combo">
             <q-input
               v-model="moduleFilter"
               :placeholder="selectedModuleLabel"
@@ -120,7 +120,7 @@
               dense
               bg-color="white"
               :loading="savingPreference"
-              :disable="!moduleOptions.length || savingPreference"
+              :disable="savingPreference"
               @focus="openModuleList"
               @click="openModuleList"
             >
@@ -150,6 +150,7 @@
               </q-item>
             </q-list>
           </div>
+          <div v-else class="text-body2">{{ selectedModuleLabel || 'No application available' }}</div>
           <div class="user-menu__combo q-mt-sm">
             <q-input
               v-model="menuFilter"
@@ -247,8 +248,10 @@ import { useMenuStore } from '../../../stores/menus';
 import { useOnboardingStore } from '../../../stores/onboarding';
 import {
   collectNavigableMenuOptions,
+  pickAccessibleApplicationCode,
   resolvePreferredLandingPath,
 } from '../../../utils/menu-navigation';
+import { shouldShowApplicationsLauncher } from '../../../utils/module-navigation';
 import { getUserAvatarColor, getUserInitials } from '../../users/user-avatar';
 import {
   applyTextSize,
@@ -293,8 +296,16 @@ const currentTextSize = computed(
   () => authStore.user?.preferences?.textSize ?? DEFAULT_TEXT_SIZE,
 );
 
+const permittedApplications = computed(() =>
+  menuStore.launcher.length ? menuStore.launcher : menuStore.enabledModules,
+);
+
+const canChooseDefaultApplication = computed(() =>
+  shouldShowApplicationsLauncher(menuStore.launcher),
+);
+
 const moduleOptions = computed(() =>
-  menuStore.enabledModules.map((module) => ({
+  permittedApplications.value.map((module) => ({
     label: module.title,
     value: module.code,
   })),
@@ -359,6 +370,25 @@ watch(accountMenuOpen, (open) => {
   moduleFilter.value = selectedModuleLabel.value;
   menuFilter.value = selectedMenuLabel.value;
 });
+
+watch(
+  permittedApplications,
+  (applications) => {
+    if (!applications.length) {
+      return;
+    }
+
+    const next = pickAccessibleApplicationCode(
+      defaultModule.value,
+      applications,
+      menuStore.moduleMenus,
+    );
+    if (next !== defaultModule.value) {
+      defaultModule.value = next;
+    }
+  },
+  { immediate: true },
+);
 
 onMounted(async () => {
   if (!menuStore.modules.length && authStore.token) {
@@ -442,6 +472,10 @@ function replayTour() {
 }
 
 function openModuleList() {
+  if (!canChooseDefaultApplication.value) {
+    return;
+  }
+
   menuListOpen.value = false;
   menuFilter.value = selectedMenuLabel.value;
   if (!moduleListOpen.value && moduleFilter.value === selectedModuleLabel.value) {
@@ -501,7 +535,7 @@ function landingPath(moduleCode: string, menuRoute: string | null) {
   return resolvePreferredLandingPath(
     moduleCode,
     menuRoute,
-    menuStore.enabledModules,
+    permittedApplications.value,
     menuStore.moduleMenus,
   );
 }

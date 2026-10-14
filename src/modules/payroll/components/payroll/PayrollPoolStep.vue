@@ -6,7 +6,7 @@
           <div class="text-overline text-primary">Pool distribution</div>
           <div class="text-h6 text-weight-bold">Enter pool totals</div>
           <div class="text-body2 text-grey-7 q-mt-xs">
-            Enter one period total for tips. Department percentages must add to 100%. Sub-departments inherit the parent split unless they have their own percentage. Only employees who worked the period are paid; active employees who did not work still appear with $0.
+            Enter one period total for tips. Amounts are stored at full precision and shown rounded to two decimals. Department percentages must add to 100%. Sub-departments inherit the parent split unless they have their own percentage. Only employees who worked the period are paid; active employees who did not work still appear with $0.
           </div>
           <div class="q-mt-md column q-gutter-sm">
             <q-btn
@@ -57,14 +57,16 @@
               </q-item-section>
               <q-item-section side style="min-width: 180px">
                 <q-input
-                  v-model.number="row.totalAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  :model-value="amountInputValue(row)"
+                  type="text"
+                  inputmode="decimal"
                   dense
                   outlined
                   prefix="$"
                   :disable="disabled || row.calculationMode === 'manual' || row.calculationMode === 'disabled'"
+                  @focus="startEditingAmount(row)"
+                  @blur="stopEditingAmount"
+                  @update:model-value="(value) => onAmountInput(row, value)"
                 />
               </q-item-section>
             </q-item>
@@ -184,11 +186,19 @@ const distributing = ref(false);
 const isLoadingTotals = ref(false);
 const loadError = ref<string | null>(null);
 
+const editingAmountId = ref<number | null>(null);
+const editingAmountDraft = ref('');
+
+function formatMoney(value: number | string | null | undefined): string {
+  const amount = Number(value ?? 0);
+  return Number.isFinite(amount) ? amount.toFixed(2) : '0.00';
+}
+
 const departmentColumns: QTableProps['columns'] = [
   { name: 'poolName', label: 'Pool', field: (row) => row.poolName || '—', align: 'left' },
   { name: 'departmentName', label: 'Department', field: 'departmentName', align: 'left' },
   { name: 'percent', label: '%', field: (row) => `${Number(row.percent).toFixed(2)}%`, align: 'right' },
-  { name: 'departmentAmount', label: 'Amount', field: (row) => Number(row.departmentAmount).toFixed(2), align: 'right' },
+  { name: 'departmentAmount', label: 'Amount', field: (row) => formatMoney(row.departmentAmount), align: 'right' },
   { name: 'workingCount', label: 'Working', field: 'workingCount', align: 'right' },
   { name: 'listedCount', label: 'Listed', field: 'listedCount', align: 'right' },
 ];
@@ -198,9 +208,9 @@ const distributionColumns: QTableProps['columns'] = [
   { name: 'poolName', label: 'Pool', field: (row) => row.poolName || row.poolDistributionTypeId, align: 'left' },
   { name: 'departmentName', label: 'Department', field: (row) => row.departmentName || '—', align: 'left' },
   { name: 'departmentPercent', label: 'Dept %', field: (row) => row.departmentPercent == null ? '—' : `${Number(row.departmentPercent).toFixed(2)}%`, align: 'right' },
-  { name: 'departmentAmount', label: 'Dept amount', field: (row) => row.departmentAmount == null ? '—' : Number(row.departmentAmount).toFixed(2), align: 'right' },
+  { name: 'departmentAmount', label: 'Dept amount', field: (row) => row.departmentAmount == null ? '—' : formatMoney(row.departmentAmount), align: 'right' },
   { name: 'workedThisPeriod', label: 'Worked', field: (row) => (row.workedThisPeriod ? 'Yes' : 'No'), align: 'left' },
-  { name: 'amount', label: 'Amount', field: (row) => Number(row.amount).toFixed(2), align: 'right' },
+  { name: 'amount', label: 'Amount', field: (row) => formatMoney(row.amount), align: 'right' },
   {
     name: 'eligible',
     label: 'Status',
@@ -211,6 +221,37 @@ const distributionColumns: QTableProps['columns'] = [
 
 function modeLabel(mode: string) {
   return POOL_CALCULATION_MODE_OPTIONS.find((option) => option.value === mode)?.label ?? mode;
+}
+
+function amountInputValue(row: PoolTotalRow): string {
+  if (editingAmountId.value === row.poolDistributionTypeId) {
+    return editingAmountDraft.value;
+  }
+  return formatMoney(row.totalAmount);
+}
+
+function startEditingAmount(row: PoolTotalRow) {
+  editingAmountId.value = row.poolDistributionTypeId;
+  editingAmountDraft.value = row.totalAmount ? String(row.totalAmount) : '';
+}
+
+function stopEditingAmount() {
+  editingAmountId.value = null;
+  editingAmountDraft.value = '';
+}
+
+function onAmountInput(row: PoolTotalRow, value: string | number | null) {
+  const raw = String(value ?? '');
+  editingAmountDraft.value = raw;
+  const trimmed = raw.replace(/,/g, '').trim();
+  if (trimmed === '' || trimmed === '.') {
+    row.totalAmount = 0;
+    return;
+  }
+  const parsed = Number(trimmed);
+  if (Number.isFinite(parsed) && parsed >= 0) {
+    row.totalAmount = parsed;
+  }
 }
 
 function departmentShareCaption(row: PoolTotalRow) {

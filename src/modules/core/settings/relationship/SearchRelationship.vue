@@ -9,9 +9,7 @@
       class="col-10"
     />
     <q-space />
-    <q-btn dense icon="add_circle" color="primary" @click="store.openCreateDialog()">
-      Add Relationship
-    </q-btn>
+    <q-btn color="primary" icon="add" label="Add Relationship" @click="store.openCreateDialog()" />
   </q-card-section>
 
   <AddRelationship />

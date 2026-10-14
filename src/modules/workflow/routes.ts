@@ -50,6 +50,18 @@ export const workflowRoutes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: adminSettingsPath('application-logs'),
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('@core/settings/application-logs/ManageApplicationLogs.vue'),
+        props: { title: 'Application Logs' },
+      },
+    ],
+  },
+  {
     path: adminSettingsPath('file-storage'),
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },

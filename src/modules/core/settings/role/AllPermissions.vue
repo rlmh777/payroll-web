@@ -50,7 +50,7 @@
             flat
             round
             dense
-            icon="add_circle"
+            icon="add"
             color="positive"
             size="sm"
             @click="addPermission(permission.id)"

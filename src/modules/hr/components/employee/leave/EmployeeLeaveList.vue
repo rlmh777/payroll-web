@@ -58,7 +58,7 @@
         <q-td :props="props" class="text-right">
           <div class="action-buttons">
             <q-btn
-              v-if="leaveAllowsApprovalAction(resolveLeaveStatusCode(props.row))"
+              v-if="canApproveLeave(props.row)"
               flat
               round
               dense
@@ -71,7 +71,7 @@
               <q-tooltip>Approve</q-tooltip>
             </q-btn>
             <q-btn
-              v-if="leaveAllowsApprovalAction(resolveLeaveStatusCode(props.row))"
+              v-if="canRejectLeave(props.row)"
               flat
               round
               dense
@@ -84,7 +84,7 @@
               <q-tooltip>Reject</q-tooltip>
             </q-btn>
             <q-btn
-              v-if="leaveAllowsCancellation(resolveLeaveStatusCode(props.row))"
+              v-if="canCancelLeave(props.row)"
               flat
               round
               dense
@@ -97,6 +97,7 @@
               <q-tooltip>Cancel</q-tooltip>
             </q-btn>
             <q-btn
+              v-if="canEditLeave(props.row)"
               flat
               round
               dense
@@ -109,6 +110,7 @@
               <q-tooltip>Edit Leave</q-tooltip>
             </q-btn>
             <q-btn
+              v-if="canDeleteLeave(props.row)"
               flat
               round
               dense
@@ -158,11 +160,13 @@ import { useLeaveBalanceStore } from 'src/stores/leave-balance-store';
 import SearchEmployeeLeave from './SearchEmployeeLeave.vue';
 import EditEmployeeLeave from './EditEmployeeLeave.vue';
 import type { EmployeeLeave } from '@core/types/models';
+import { usePermissions } from '@core/composables/usePermissions';
 import {
   formatLeaveStatus,
   formatLeavePaymentTreatment,
   leaveAllowsApprovalAction,
   leaveAllowsCancellation,
+  leaveIsUnapproved,
   leaveRequiresPaymentConfirmation,
   leaveStatusColor,
   DEFAULT_VACATION_PAYMENT_TREATMENT,
@@ -172,9 +176,12 @@ import {
 } from '@hr/utils/leave-status';
 
 const $q = useQuasar();
+const { can } = usePermissions();
 const employeeLeaveStore = useEmployeeLeaveStore();
 const employeeStore = useEmployeeStore();
 const leaveBalanceStore = useLeaveBalanceStore();
+const canWriteEmployeeLeave = computed(() => can('leave-crud') || can('employee-leave-crud'));
+const isLeaveAdmin = computed(() => can('leave-crud') && can('employees-crud'));
 
 const pagination = ref({
   rowsPerPage: 5,
@@ -304,6 +311,30 @@ const employeeLeaveToDelete = ref<EmployeeLeave | null>(null);
 
 function resolveLeaveStatusCode(row: EmployeeLeave): string | null {
   return row.statusCode ?? row.leave_status?.code ?? null;
+}
+
+function canApproveLeave(row: EmployeeLeave): boolean {
+  return can('leave-crud') && leaveAllowsApprovalAction(resolveLeaveStatusCode(row));
+}
+
+function canRejectLeave(row: EmployeeLeave): boolean {
+  return canApproveLeave(row);
+}
+
+function canCancelLeave(row: EmployeeLeave): boolean {
+  const status = resolveLeaveStatusCode(row);
+  if (!canWriteEmployeeLeave.value) return false;
+  if (isLeaveAdmin.value) return leaveAllowsCancellation(status);
+  return leaveIsUnapproved(status);
+}
+
+function canEditLeave(row: EmployeeLeave): boolean {
+  if (!canWriteEmployeeLeave.value) return false;
+  return isLeaveAdmin.value || leaveIsUnapproved(resolveLeaveStatusCode(row));
+}
+
+function canDeleteLeave(row: EmployeeLeave): boolean {
+  return canEditLeave(row);
 }
 
 function handleStatusAction(

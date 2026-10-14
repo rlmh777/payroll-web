@@ -27,7 +27,26 @@
         <div class="onboarding-card__title">{{ currentStep.title }}</div>
         <p class="onboarding-card__body">{{ currentStep.body }}</p>
         <div class="onboarding-card__actions">
-          <q-btn flat dense no-caps size="sm" label="Skip" color="grey-7" @click="onboarding.skip()" />
+          <q-btn
+            flat
+            dense
+            no-caps
+            size="sm"
+            label="Skip"
+            color="grey-7"
+            :disable="onboarding.saving"
+            @click="onboarding.skip()"
+          />
+          <q-btn
+            flat
+            dense
+            no-caps
+            size="sm"
+            label="Don't show again"
+            color="grey-7"
+            :disable="onboarding.saving"
+            @click="disableTour"
+          />
           <q-space />
           <q-btn
             v-if="onboarding.stepIndex > 0"
@@ -198,6 +217,14 @@ function scheduleAutoStart() {
       tryUpdateSpot();
     });
   }, onboarding.isCompleted() ? 1100 : 700);
+}
+
+async function disableTour() {
+  if (onboarding.saving) {
+    return;
+  }
+
+  await onboarding.setEnabled(false);
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -388,6 +415,7 @@ onUnmounted(() => {
 .onboarding-card__actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
 }
 

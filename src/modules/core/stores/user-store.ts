@@ -26,6 +26,10 @@ export interface User {
     two_factor_required: boolean | null;
     passkey_count: number;
     requires_two_factor: boolean;
+    allowed_ips?: string[];
+    locked_until?: string | null;
+    is_locked?: boolean;
+    client_ip?: string | null;
   };
 }
 

@@ -114,13 +114,16 @@ export const useDatabaseBackupStore = defineStore('databaseBackup', {
       await this.fetchSettings();
     },
 
-    async restoreBackup(id: string) {
+    async restoreBackup(
+      id: string,
+      confirmation: { challenge_key: string; confirmation_code: string },
+    ) {
       this.isRestoring = true;
       try {
         const response = await fetch(`${API_URL}/database-backups/${id}/restore`, {
           method: 'POST',
           headers: this.buildHeaders(),
-          body: JSON.stringify({ confirmation: 'RESTORE' }),
+          body: JSON.stringify(confirmation),
         });
         const body = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -131,13 +134,17 @@ export const useDatabaseBackupStore = defineStore('databaseBackup', {
       }
     },
 
-    async restoreUpload(file: File) {
+    async restoreUpload(
+      file: File,
+      confirmation: { challenge_key: string; confirmation_code: string },
+    ) {
       this.isRestoring = true;
       try {
         const authStore = useAuthStore();
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('confirmation', 'RESTORE');
+        formData.append('challenge_key', confirmation.challenge_key);
+        formData.append('confirmation_code', confirmation.confirmation_code);
 
         const headers: HeadersInit = {};
         if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;

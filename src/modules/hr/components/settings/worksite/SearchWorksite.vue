@@ -9,9 +9,7 @@
       class="col-10"
     />
     <q-space />
-    <q-btn dense icon="add_circle" color="primary" @click="store.openCreateDialog()">
-      Add Work Site
-    </q-btn>
+    <q-btn color="primary" icon="add" label="Add Work Site" @click="store.openCreateDialog()" />
   </q-card-section>
 
   <AddWorksite />

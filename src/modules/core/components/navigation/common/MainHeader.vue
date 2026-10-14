@@ -1,6 +1,6 @@
 <template>
   <q-header elevated class="bg-primary text-white">
-    <q-toolbar>
+    <q-toolbar class="header-toolbar">
       <div class="header-drawer-slot">
         <q-btn
           v-if="showHamburger"
@@ -14,7 +14,62 @@
       </div>
 
       <div
-        class="row items-center q-gutter-sm q-ml-md"
+        v-if="isCompactNav"
+        class="header-nav header-nav--compact"
+        data-onboarding="navigation"
+      >
+        <q-btn-dropdown
+          v-if="topMenus.length"
+          flat
+          dense
+          no-caps
+          :label="selectedTopTitle"
+          :icon="selectedTopIcon"
+          class="header-nav__current bg-white text-primary"
+          menu-anchor="bottom start"
+          menu-self="top start"
+          content-class="employee-menu-dropdown header-nav-menu"
+        >
+          <q-list dense style="min-width: 220px">
+            <template v-for="item in topMenus" :key="item.id">
+              <q-item
+                clickable
+                v-close-popup
+                :active="selectedTopId === item.id"
+                :data-onboarding="onboardingTarget(item)"
+                @click="openTopMenu(item)"
+              >
+                <q-item-section v-if="item.icon" avatar>
+                  <q-icon :name="item.icon" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ item.title }}</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-item
+                v-for="child in item.children"
+                :key="child.id"
+                clickable
+                v-close-popup
+                class="header-nav-menu__child"
+                :data-onboarding="onboardingTarget(child)"
+                @click="openChildMenu(item, child)"
+              >
+                <q-item-section v-if="child.icon" avatar>
+                  <q-icon :name="child.icon" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ child.title }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-list>
+        </q-btn-dropdown>
+      </div>
+
+      <div
+        v-else
+        class="header-nav"
         data-onboarding="navigation"
       >
         <template v-for="(item, idx) in topMenus" :key="item.id">
@@ -25,7 +80,7 @@
             dense
             :label="item.title"
             :icon="item.icon ?? undefined"
-            :data-onboarding="(item.route || '').includes('/payroll/reports') || item.title.toLowerCase() === 'reports' ? 'reports' : undefined"
+            :data-onboarding="onboardingTarget(item)"
             :class="selectedTopId === item.id ? 'bg-white text-primary' : 'text-white'"
             menu-anchor="bottom start"
             menu-self="top start"
@@ -38,7 +93,7 @@
                 :key="child.id"
                 clickable
                 v-close-popup
-                :data-onboarding="(child.route || '').includes('/payroll/reports') || child.title.toLowerCase() === 'reports' ? 'reports' : undefined"
+                :data-onboarding="onboardingTarget(child)"
                 @click="openChildMenu(item, child)"
               >
                 <q-item-section v-if="child.icon" avatar>
@@ -57,7 +112,7 @@
             dense
             :label="item.title"
             :icon="item.icon ?? undefined"
-            :data-onboarding="(item.route || '').includes('/payroll/reports') || item.title.toLowerCase() === 'reports' ? 'reports' : undefined"
+            :data-onboarding="onboardingTarget(item)"
             :class="selectedTopId === item.id ? 'bg-white text-primary' : 'text-white'"
             @click="openTopMenu(item)"
           />
@@ -68,9 +123,11 @@
 
       <q-space />
 
-      <ModuleLauncher />
-      <NotificationBell />
-      <LogoutCard />
+      <div class="header-actions">
+        <ModuleLauncher />
+        <NotificationBell />
+        <LogoutCard />
+      </div>
     </q-toolbar>
     <OnboardingTour />
   </q-header>
@@ -78,6 +135,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { useMenuStore, type MenuItem } from '../../../stores/menus';
 import { findTopMenuForPath } from '../../../utils/menu-navigation';
@@ -96,8 +154,10 @@ const props = withDefaults(
   },
 );
 
+const $q = useQuasar();
 const { hasLeftDrawer } = useHasLeftDrawer();
 const showHamburger = computed(() => props.showDrawerToggle && hasLeftDrawer.value);
+const isCompactNav = computed(() => $q.screen.lt.sm);
 
 const menuStore = useMenuStore();
 const router = useRouter();
@@ -130,6 +190,21 @@ watch(
 
 const topMenus = computed(() => menuStore.activeModuleMenus || []);
 
+const selectedTopMenu = computed(
+  () => topMenus.value.find((item) => item.id === selectedTopId.value) ?? topMenus.value[0] ?? null,
+);
+const selectedTopTitle = computed(() => selectedTopMenu.value?.title ?? 'Menu');
+const selectedTopIcon = computed(() => selectedTopMenu.value?.icon ?? undefined);
+
+function onboardingTarget(item: MenuItem): string | undefined {
+  const path = item.route || '';
+  if (path.includes('/payroll/reports') || item.title.toLowerCase() === 'reports') {
+    return 'reports';
+  }
+
+  return undefined;
+}
+
 function openTopMenu(item: MenuItem) {
   selectedTopId.value = item.id ?? null;
 
@@ -155,6 +230,10 @@ function toggleDrawer() {
 </script>
 
 <style scoped>
+.header-toolbar {
+  min-width: 0;
+}
+
 .header-drawer-slot {
   display: inline-flex;
   align-items: center;
@@ -163,5 +242,40 @@ function toggleDrawer() {
   width: 2.4em;
   min-width: 2.4em;
   height: 2.4em;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.header-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.header-nav--compact {
+  overflow: visible;
+}
+
+.header-nav :deep(.q-btn),
+.header-nav :deep(.q-btn-dropdown) {
+  flex: 0 0 auto;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.header-nav-menu__child {
+  padding-left: 36px;
 }
 </style>

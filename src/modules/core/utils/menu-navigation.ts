@@ -68,13 +68,34 @@ export function collectNavigableMenuOptions(items: MenuItem[], ancestors: string
   return options;
 }
 
+export function pickAccessibleApplicationCode(
+  preferred: string | null | undefined,
+  applications: Array<{ code: string }>,
+  moduleMenus?: Record<string, MenuItem[]>,
+): string {
+  const accessible = applications.filter((app) => {
+    if (!moduleMenus || !Object.keys(moduleMenus).length) {
+      return true;
+    }
+
+    return (moduleMenus[app.code]?.length ?? 0) > 0;
+  });
+  const list = accessible.length ? accessible : applications;
+  const requested = preferred && preferred !== '' ? preferred : 'payroll';
+  if (list.some((app) => app.code === requested)) {
+    return requested;
+  }
+
+  return list[0]?.code ?? requested;
+}
+
 export function resolvePreferredLandingPath(
   defaultModule: string | null | undefined,
   defaultMenu: string | null | undefined,
   enabledModules: Array<{ code: string; default_route: string | null }>,
   moduleMenus: Record<string, MenuItem[]>,
 ): string {
-  const code = defaultModule && defaultModule !== '' ? defaultModule : 'payroll';
+  const code = pickAccessibleApplicationCode(defaultModule, enabledModules, moduleMenus);
   const options = collectNavigableMenuOptions(moduleMenus[code] ?? []);
   if (defaultMenu && options.some((item) => item.value === defaultMenu)) {
     return defaultMenu;

@@ -9,9 +9,7 @@
       class="col-10"
     />
     <q-space />
-    <q-btn dense icon="add_circle" color="primary" @click="store.openCreateDailog()">
-      Add Degree
-    </q-btn>
+    <q-btn color="primary" icon="add" label="Add Degree" @click="store.openCreateDailog()" />
   </q-card-section>
 
   <AddDegree v-model="store.$state.isCreateOpen" />

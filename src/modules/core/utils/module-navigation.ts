@@ -85,31 +85,48 @@ export function pickDefaultActiveModule(
   preferredModule?: string | null,
   moduleMenus?: Record<string, MenuItem[]>,
 ): string {
-  const isEnabled = (code: string | null | undefined) =>
-    !!code && modules.some((module) => module.code === code && module.enabled);
+  const hasMenus = (code: string | null | undefined) => {
+    if (!code) {
+      return false;
+    }
+    if (!moduleMenus || !Object.keys(moduleMenus).length) {
+      return true;
+    }
+
+    return (moduleMenus[code]?.length ?? 0) > 0;
+  };
+
+  const isAccessible = (code: string | null | undefined) =>
+    !!code &&
+    modules.some((module) => module.code === code && module.enabled) &&
+    hasMenus(code);
 
   const stored = getStoredActiveModule();
   const fromPath = resolveModuleForPath(path, menuTree, {
     preferredModule: stored ?? preferredModule,
     moduleMenus,
   });
-  if (path !== '/' && isEnabled(fromPath)) {
+  if (path !== '/' && isAccessible(fromPath)) {
     return fromPath!;
   }
 
-  if (isEnabled(preferredModule)) {
+  if (isAccessible(preferredModule)) {
     return preferredModule!;
   }
 
-  if (isEnabled(stored)) {
+  if (isAccessible(stored)) {
     return stored!;
   }
 
-  if (isEnabled(fromPath)) {
+  if (isAccessible(fromPath)) {
     return fromPath!;
   }
 
-  return modules.find((module) => module.enabled)?.code ?? 'payroll';
+  return (
+    modules.find((module) => module.enabled && hasMenus(module.code))?.code ??
+    modules.find((module) => module.enabled)?.code ??
+    'payroll'
+  );
 }
 
 export function shouldShowApplicationsLauncher(launcher: AppModule[]): boolean {

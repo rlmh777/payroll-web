@@ -40,6 +40,8 @@ export interface LoginSettings {
   username_separator: UsernameSeparator;
   username_include_middle_initial: boolean;
   employee_login_domain: string | null;
+  lockout_max_attempts: number;
+  lockout_decay_minutes: number;
   username_preview: string;
   username_preview_with_middle: string;
   username_preview_candidates: string[];
@@ -53,6 +55,8 @@ export interface LoginSettingsPayload {
   username_separator?: UsernameSeparator;
   username_include_middle_initial?: boolean;
   employee_login_domain?: string | null;
+  lockout_max_attempts?: number;
+  lockout_decay_minutes?: number;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
@@ -93,6 +97,10 @@ function normalizeSettings(data: Partial<LoginSettings> | null | undefined): Log
       separator === '_' || separator === '-' || separator === '' ? separator : '.',
     username_include_middle_initial: data?.username_include_middle_initial ?? true,
     employee_login_domain: data?.employee_login_domain ?? null,
+    lockout_max_attempts:
+      typeof data?.lockout_max_attempts === 'number' ? data.lockout_max_attempts : 5,
+    lockout_decay_minutes:
+      typeof data?.lockout_decay_minutes === 'number' ? data.lockout_decay_minutes : 15,
     username_preview: data?.username_preview ?? 'john.doe',
     username_preview_with_middle: data?.username_preview_with_middle ?? 'john.m.doe',
     username_preview_candidates: Array.isArray(data?.username_preview_candidates)

@@ -49,6 +49,7 @@ export interface PasskeyCeremony {
   options: PublicKeyCredentialRequestOptionsJSON;
   challengeKey: string;
   hasPasskeys: boolean;
+  fetchedAt: number;
 }
 
 export interface TwoFactorSetupOptions {
@@ -209,7 +210,12 @@ export const useAuthStore = defineStore('auth', () => {
       });
 
       if (!response.ok) {
-        throw new Error('Login failed');
+        const body = await response.json().catch(() => ({}));
+        throw new Error(
+          typeof body.message === 'string' && body.message
+            ? body.message
+            : 'Login failed',
+        );
       }
 
       const data = await response.json();
@@ -371,6 +377,7 @@ export const useAuthStore = defineStore('auth', () => {
       options: publicKeyOptions,
       challengeKey: payload.challenge_key ?? '',
       hasPasskeys: payload.has_passkeys === true || hasAllowList,
+      fetchedAt: Date.now(),
     };
   }
 

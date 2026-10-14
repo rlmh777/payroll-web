@@ -25,6 +25,8 @@ function emptyEmployeeDraft(): Employee {
   return {
     id: '',
     code: '',
+    internalId1: null,
+    internalId2: null,
     firstName: '',
     lastName: '',
     birthdate: '',

@@ -209,6 +209,82 @@
         <q-separator v-if="canManageUsers" class="q-my-md" />
 
         <div v-if="canManageUsers" class="q-mb-md">
+          <div class="text-subtitle1 q-mb-sm">IP access</div>
+          <div class="text-body2 text-grey-7 q-mb-sm">
+            Restrict this account to specific IPv4/IPv6 addresses or CIDR ranges (for example
+            <code>203.0.113.10</code> or <code>10.0.0.0/24</code>). Leave empty to allow any IP.
+            Restrictions apply at sign-in and on every API request.
+          </div>
+          <q-banner
+            v-if="user.security?.is_locked"
+            class="bg-orange-1 text-orange-10 q-mb-sm"
+            rounded
+          >
+            Locked until {{ formatDate(user.security.locked_until || '') }}.
+            <template #action>
+              <q-btn
+                flat
+                dense
+                color="orange-10"
+                label="Unlock"
+                :loading="isUpdatingSecurity"
+                @click="onUnlockAccount"
+              />
+            </template>
+          </q-banner>
+          <div v-if="allowedIps.length" class="row q-gutter-sm q-mb-sm">
+            <q-chip
+              v-for="ip in allowedIps"
+              :key="ip"
+              removable
+              color="primary"
+              text-color="white"
+              :disable="isUpdatingSecurity"
+              @remove="onRemoveAllowedIp(ip)"
+            >
+              {{ ip }}
+            </q-chip>
+          </div>
+          <div v-else class="text-body2 text-grey-6 q-mb-sm">No IP restriction.</div>
+          <div class="row q-gutter-sm items-end">
+            <div class="col">
+              <q-input
+                v-model="ipToAdd"
+                label="IP or CIDR"
+                outlined
+                dense
+                :disable="isUpdatingSecurity"
+                @keyup.enter="onAddAllowedIp"
+              />
+            </div>
+            <div class="col-auto">
+              <q-btn
+                label="Add"
+                color="primary"
+                :disable="!ipToAdd.trim()"
+                :loading="isUpdatingSecurity"
+                @click="onAddAllowedIp"
+              />
+            </div>
+            <div class="col-auto">
+              <q-btn
+                outline
+                color="primary"
+                label="Add my IP"
+                :disable="!clientIp || allowedIps.includes(clientIp)"
+                :loading="isUpdatingSecurity"
+                @click="onAddCurrentIp"
+              />
+            </div>
+          </div>
+          <div v-if="clientIp" class="text-caption text-grey-7 q-mt-xs">
+            Your current IP: {{ clientIp }}
+          </div>
+        </div>
+
+        <q-separator v-if="canManageUsers" class="q-my-md" />
+
+        <div v-if="canManageUsers" class="q-mb-md">
           <div class="text-subtitle1 q-mb-sm">API tokens</div>
           <div class="text-body2 text-grey-7 q-mb-sm">
             Issue a named token for this user so a third-party app can call the API
@@ -494,6 +570,8 @@ const selfTwoFactorSetup = ref<{ secret: string; qr_svg: string } | null>(null);
 const selfTwoFactorCode = ref('');
 const selfRecoveryCodes = ref<string[]>([]);
 const twoFactorRequiredOverride = ref<boolean | null>(null);
+const allowedIps = ref<string[]>([]);
+const ipToAdd = ref('');
 const authStore = useAuthStore();
 const apiTokens = ref<UserApiToken[]>([]);
 const tokenName = ref('');
@@ -514,6 +592,8 @@ const isViewingSelf = computed(
 
 const userRoles = computed(() => props.user?.rolesManyToMany || []);
 
+const clientIp = computed(() => props.user?.security?.client_ip?.trim() || '');
+
 const availableRoleOptions = computed(() => {
   const assignedIds = new Set(userRoles.value.map((role) => role.id));
   return roleStore.roles
@@ -529,25 +609,6 @@ onMounted(async () => {
     await roleStore.fetchRoles(1, 100);
   }
 });
-
-watch(() => props.user, (newUser) => {
-  if (newUser) {
-    selectedEmployeeId.value = newUser.employee?.id || null;
-    twoFactorRequiredOverride.value = newUser.security?.two_factor_required ?? null;
-    void loadTokens(newUser.id);
-  } else {
-    selectedEmployeeId.value = null;
-    twoFactorRequiredOverride.value = null;
-    apiTokens.value = [];
-  }
-  roleToAdd.value = null;
-  tokenName.value = '';
-  tokenExpiryDate.value = oneYearFromToday();
-  passwordForm.value = {
-    newPassword: '',
-    confirmPassword: '',
-  };
-}, { immediate: true });
 
 const formatDate = (dateString: string): string => {
   if (!dateString) return '—';
@@ -574,6 +635,28 @@ const loadTokens = async (userId: string) => {
     apiTokens.value = [];
   }
 };
+
+watch(() => props.user, (newUser) => {
+  if (newUser) {
+    selectedEmployeeId.value = newUser.employee?.id || null;
+    twoFactorRequiredOverride.value = newUser.security?.two_factor_required ?? null;
+    allowedIps.value = [...(newUser.security?.allowed_ips ?? [])];
+    ipToAdd.value = '';
+    void loadTokens(newUser.id);
+  } else {
+    selectedEmployeeId.value = null;
+    twoFactorRequiredOverride.value = null;
+    allowedIps.value = [];
+    ipToAdd.value = '';
+  }
+  roleToAdd.value = null;
+  tokenName.value = '';
+  tokenExpiryDate.value = oneYearFromToday();
+  passwordForm.value = {
+    newPassword: '',
+    confirmPassword: '',
+  };
+}, { immediate: true });
 
 const onTokenExpiryChange = (value: string | null) => {
   tokenExpiryDate.value = value || oneYearFromToday();
@@ -685,14 +768,27 @@ const onAddRole = async () => {
   }
 };
 
+function isValidIpOrCidr(value: string): boolean {
+  const entry = value.trim();
+  if (!entry) {
+    return false;
+  }
+  const ipv4 = /^(?:\d{1,3}\.){3}\d{1,3}(?:\/(?:3[0-2]|[12]?\d))?$/;
+  const ipv6 = /^[0-9a-f:]+(?:\/(?:12[0-8]|1[01]\d|[1-9]?\d))?$/i;
+  return ipv4.test(entry) || (entry.includes(':') && ipv6.test(entry));
+}
+
 const saveUserSecurity = async (payload: {
   two_factor_required?: boolean | null;
   reset_two_factor?: boolean;
+  allowed_ips?: string[];
+  unlock?: boolean;
 }) => {
-  if (!props.user) return;
+  if (!props.user) {
+    return;
+  }
   isUpdatingSecurity.value = true;
   try {
-    const authStore = useAuthStore();
     const response = await fetch(
       `${import.meta.env.VITE_API_URL || 'http://localhost:3031/api'}/users/${props.user.id}/security`,
       {
@@ -727,6 +823,47 @@ const saveUserSecurity = async (payload: {
 
 const onSaveSecurity = async () => {
   await saveUserSecurity({ two_factor_required: twoFactorRequiredOverride.value });
+};
+
+const persistAllowedIps = async (next: string[]) => {
+  allowedIps.value = next;
+  await saveUserSecurity({ allowed_ips: next });
+};
+
+const onAddAllowedIp = () => {
+  const entry = ipToAdd.value.trim().toLowerCase();
+  if (!entry) {
+    return;
+  }
+  if (!isValidIpOrCidr(entry)) {
+    $q.notify({
+      type: 'negative',
+      message: 'Enter a valid IPv4/IPv6 address or CIDR range.',
+      position: 'top',
+    });
+    return;
+  }
+  if (allowedIps.value.includes(entry)) {
+    ipToAdd.value = '';
+    return;
+  }
+  ipToAdd.value = '';
+  void persistAllowedIps([...allowedIps.value, entry]);
+};
+
+const onAddCurrentIp = () => {
+  if (!clientIp.value || allowedIps.value.includes(clientIp.value)) {
+    return;
+  }
+  void persistAllowedIps([...allowedIps.value, clientIp.value]);
+};
+
+const onRemoveAllowedIp = (ip: string) => {
+  void persistAllowedIps(allowedIps.value.filter((item) => item !== ip));
+};
+
+const onUnlockAccount = () => {
+  void saveUserSecurity({ unlock: true });
 };
 
 const onResetTwoFactor = () => {

@@ -200,8 +200,9 @@ body.platform-android:not(.native-mobile) .q-dialog__inner--minimized.q-dialog__
 }
 
 .q-notification.motd-toast {
-  max-width: min(520px, calc(100vw - 24px));
-  min-width: min(360px, calc(100vw - 24px));
+  max-width: min(640px, calc(100vw - 24px));
+  min-width: min(420px, calc(100vw - 24px));
+  padding: 16px 20px;
 }
 
 html[data-text-size='sm'] {
@@ -238,4 +239,20 @@ html[data-text-size] .text-subtitle1,
 html[data-text-size] .text-subtitle2,
 html[data-text-size] .text-caption {
   font-size: var(--app-font-size);
+}
+
+html[data-text-size] .q-notification.motd-toast .q-notification__message,
+.q-notification.motd-toast .q-notification__message {
+  font-size: 24px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+html[data-text-size] .q-notification.motd-toast .q-notification__caption,
+.q-notification.motd-toast .q-notification__caption {
+  font-size: 0.95rem;
+  line-height: 1.3;
+  font-weight: 500;
+  margin-top: 6px;
+  opacity: 0.92;
 }

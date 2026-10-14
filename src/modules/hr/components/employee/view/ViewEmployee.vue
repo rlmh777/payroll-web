@@ -225,6 +225,8 @@ function buildCreatePayload(employee: Employee): Partial<Employee> {
 
   if (employee.genderId != null) assignIfWritable('genderId', employee.genderId);
   if (employee.code?.trim()) assignIfWritable('code', employee.code.trim());
+  if (employee.internalId1?.trim()) assignIfWritable('internalId1', employee.internalId1.trim());
+  if (employee.internalId2?.trim()) assignIfWritable('internalId2', employee.internalId2.trim());
   if (employee.honorificId != null) assignIfWritable('honorificId', employee.honorificId);
   if (employee.middleName?.trim()) assignIfWritable('middleName', employee.middleName.trim());
   if (employee.maidenName?.trim()) assignIfWritable('maidenName', employee.maidenName.trim());

@@ -19,6 +19,7 @@ import { watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useEmployeeStore } from '@/stores/employee-store';
 import EmployeeList from './EmployeeList.vue';
+import MiniSearchEmployeeComponent from './MiniSearchEmployeeComponent.vue';
 import { employeePath, pathInModule } from '@core/config/module-routes';
 
 const route = useRoute();
@@ -88,6 +89,7 @@ watch(
 .fixed-search {
   flex-shrink: 0;
   z-index: 1;
+  padding: 12px 12px 8px;
 }
 
 .scrollable-list {
@@ -96,6 +98,7 @@ watch(
   overflow-x: hidden;
   position: relative;
   min-height: 120px;
+  padding: 0 8px 12px;
 }
 
 .employee-pane-loading-label {

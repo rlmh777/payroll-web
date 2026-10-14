@@ -12,17 +12,15 @@
         <q-space />
         <q-btn
           v-if="tab === 'accounts'"
-          dense
-          icon="add_circle"
           color="primary"
+          icon="add"
           label="Add line"
           @click="store.isCreateAccountOpen = true"
         />
         <q-btn
           v-else
-          dense
-          icon="add_circle"
           color="primary"
+          icon="add"
           label="Add rate"
           @click="store.isCreateRateOpen = true"
         />

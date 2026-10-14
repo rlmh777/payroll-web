@@ -23,6 +23,20 @@
                     </template>
                 </q-input>
             </div>
+            <div v-if="isFieldVisible('internalId1')" class="col-3 col-md-2">
+                <q-input
+                    v-model="internalId1"
+                    label="Internal Code 1"
+                    :readonly="isFieldReadonly('internalId1', isCreating)"
+                />
+            </div>
+            <div v-if="isFieldVisible('internalId2')" class="col-3 col-md-2">
+                <q-input
+                    v-model="internalId2"
+                    label="Internal Code 2"
+                    :readonly="isFieldReadonly('internalId2', isCreating)"
+                />
+            </div>
             <div v-if="isFieldVisible('honorificId')" class="col-3 col-md-2">
                 <HonorificSelect
                     v-model="honorific"
@@ -188,6 +202,16 @@ function setField<K extends keyof NonNullable<typeof employeeStore.selectedEmplo
   }
   employeeStore.selectedEmployee[field] = value;
 }
+
+const internalId1 = computed({
+    get: () => employeeStore.selectedEmployee?.internalId1 || '',
+    set: (value: string) => setField('internalId1', value || null),
+});
+
+const internalId2 = computed({
+    get: () => employeeStore.selectedEmployee?.internalId2 || '',
+    set: (value: string) => setField('internalId2', value || null),
+});
 
 const firstName = computed({
     get: () => employeeStore.selectedEmployee?.firstName || '',

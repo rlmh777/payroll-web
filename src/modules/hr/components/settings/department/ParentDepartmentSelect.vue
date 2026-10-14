@@ -16,6 +16,8 @@
       :rules="rules"
       :clearable="clearable"
       :label="label"
+      :outlined="outlined"
+      :dense="dense"
       @filter="filterDepartments"
     >
       <template #option="scope">
@@ -83,6 +85,8 @@ interface Props {
   disable?: boolean;
   rules?: Array<(val: number | null | undefined) => boolean | string>;
   clearable?: boolean;
+  outlined?: boolean;
+  dense?: boolean;
   label?: string;
   showAddNew?: boolean;
   showEdit?: boolean;
@@ -95,6 +99,8 @@ const props = withDefaults(defineProps<Props>(), {
   disable: false,
   rules: () => [],
   clearable: false,
+  outlined: false,
+  dense: false,
   label: 'Parent department',
   showAddNew: false,
   showEdit: false,

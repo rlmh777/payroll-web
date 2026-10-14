@@ -1,28 +1,34 @@
 <template>
   <q-dialog v-model="isOpen" position="right">
-    <q-card class="q-drawer-card">
-      <q-card-section class="row items-center q-pb-none">
+    <AppDialogCard>
+      <AppDialogHeader>
         <div class="text-h6">Edit Work Site</div>
-        <q-space />
-        <q-btn icon="close" flat round dense :disable="saving" @click="closeDialog" />
-      </q-card-section>
+        <template #close>
+          <q-btn icon="close" flat round dense :disable="saving" @click="closeDialog" />
+        </template>
+      </AppDialogHeader>
 
-      <WorksiteForm
-        v-model="form"
-        :localities="store.localityOptions"
-        :locality-loading="store.isLoadingLocalities"
-        :saving="saving"
-        submit-label="Save Changes"
-        @submit="save"
-        @cancel="closeDialog"
-      />
-    </q-card>
+      <AppDialogBody>
+        <WorksiteForm
+          v-model="form"
+          :localities="store.localityOptions"
+          :locality-loading="store.isLoadingLocalities"
+          :saving="saving"
+          submit-label="Save Changes"
+          @submit="save"
+          @cancel="closeDialog"
+        />
+      </AppDialogBody>
+    </AppDialogCard>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
+import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
+import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import { useWorksiteStore, type Worksite, type WorksitePayload } from 'src/stores/worksite-store';
 import WorksiteForm from './WorksiteForm.vue';
 
@@ -125,16 +131,3 @@ async function save() {
   }
 }
 </script>
-
-<style scoped>
-.q-drawer-card {
-  width: min(480px, 95vw);
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.q-drawer-card :deep(.q-card__section) {
-  overflow-y: auto;
-}
-</style>

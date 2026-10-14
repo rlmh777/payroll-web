@@ -9,9 +9,7 @@
       class="col-10"
     />
     <q-space />
-    <q-btn dense icon="add_circle" color="primary" @click="store.openCreateDailog">
-      Add Locality
-    </q-btn>
+    <q-btn color="primary" icon="add" label="Add Locality" @click="store.openCreateDailog" />
   </q-card-section>
   <AddLocality v-model="store.$state.isCreateOpen" />
 </template>

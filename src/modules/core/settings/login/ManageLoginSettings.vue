@@ -35,6 +35,39 @@
 
           <q-separator />
 
+          <div class="text-subtitle2">Login lockout</div>
+          <div class="text-body2 text-grey-7">
+            After too many failed password or authenticator attempts, the account is locked for a
+            cooldown. Set attempts to 0 to disable lockout.
+          </div>
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model.number="form.lockout_max_attempts"
+                type="number"
+                min="0"
+                max="50"
+                outlined
+                label="Failed attempts before lockout"
+                hint="0 disables lockout"
+                :disable="store.isLoading || store.isSaving"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model.number="form.lockout_decay_minutes"
+                type="number"
+                min="1"
+                max="1440"
+                outlined
+                label="Lockout duration (minutes)"
+                :disable="store.isLoading || store.isSaving"
+              />
+            </div>
+          </div>
+
+          <q-separator />
+
           <div class="text-subtitle2">Username rules</div>
           <div class="text-body2 text-grey-7">
             Check the patterns to try, then drag to set priority. The first checked pattern is used
@@ -189,6 +222,8 @@ const form = reactive({
   username_separator: '.' as UsernameSeparator,
   username_include_middle_initial: true,
   employee_login_domain: '',
+  lockout_max_attempts: 5,
+  lockout_decay_minutes: 15,
 });
 
 const twoFactorPolicyOptions = [
@@ -354,6 +389,8 @@ function syncFormFromStore() {
   form.username_separator = store.settings.username_separator;
   form.username_include_middle_initial = store.settings.username_include_middle_initial;
   form.employee_login_domain = store.settings.employee_login_domain ?? '';
+  form.lockout_max_attempts = store.settings.lockout_max_attempts;
+  form.lockout_decay_minutes = store.settings.lockout_decay_minutes;
 }
 
 function resetForm() {
@@ -378,6 +415,8 @@ async function save() {
       username_separator: form.username_separator,
       username_include_middle_initial: form.username_include_middle_initial,
       employee_login_domain: form.employee_login_domain.trim() || null,
+      lockout_max_attempts: Number(form.lockout_max_attempts) || 0,
+      lockout_decay_minutes: Math.max(1, Number(form.lockout_decay_minutes) || 15),
     });
     syncFormFromStore();
     $q.notify({

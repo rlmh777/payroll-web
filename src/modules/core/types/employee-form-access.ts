@@ -53,6 +53,8 @@ export const FULL_EMPLOYEE_FORM_ACCESS: EmployeeFormAccess = {
   },
   fields: {
     code: 'edit',
+    internalId1: 'edit',
+    internalId2: 'edit',
     honorificId: 'edit',
     firstName: 'edit',
     lastName: 'edit',

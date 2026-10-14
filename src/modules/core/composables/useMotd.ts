@@ -34,8 +34,8 @@ function localDate(now = new Date()): string {
 function showToast(name: string, text: string) {
   Notify.create({
     group: 'motd',
-    message: `${greeting()}, ${firstName(name)}`,
-    caption: text,
+    message: text,
+    caption: `${greeting()}, ${firstName(name)}`,
     icon: 'auto_awesome',
     color: 'teal-8',
     textColor: 'white',

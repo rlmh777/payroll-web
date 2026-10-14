@@ -9,9 +9,7 @@
       class="col-10"
     />
     <q-space />
-    <q-btn dense icon="add_circle" color="primary" @click="store.openCreateDialog()">
-      Add Bank Account Type
-    </q-btn>
+    <q-btn color="primary" icon="add" label="Add Bank Account Type" @click="store.openCreateDialog()" />
   </q-card-section>
 
   <AddBankAccountType />

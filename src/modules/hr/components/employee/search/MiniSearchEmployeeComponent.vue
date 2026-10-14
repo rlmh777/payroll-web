@@ -1,13 +1,16 @@
 <template>
-  <div class="q-my-md employee-search-filters" data-onboarding="employees-search">
+  <div class="employee-search-filters" data-onboarding="employees-search">
+    <div class="text-subtitle2 text-weight-medium q-mb-xs">Search employees</div>
     <q-input
-      v-model="searchName"
+      v-model="searchInput"
       outlined
       dense
-      placeholder="Search by name"
+      clearable
+      debounce="300"
+      placeholder="Name, code, or internal code"
       class="q-mb-sm"
     >
-      <template #append>
+      <template #prepend>
         <q-icon name="search" />
       </template>
     </q-input>
@@ -32,34 +35,29 @@
       @filter="filterStatuses"
     />
 
-    <DepartmentSelect
+    <ParentDepartmentSelect
       v-model="filterDepartmentId"
       label="Department"
       clearable
+      outlined
+      dense
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import type { Ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useEmployeeStore } from '@/stores/employee-store';
 import {
   useEmployeeStatusStore,
   type EmployeeStatus,
 } from 'src/stores/employee-status-store';
-import DepartmentSelect from '@hr/components/department/DepartmentSelect.vue';
+import ParentDepartmentSelect from '@hr/components/settings/department/ParentDepartmentSelect.vue';
 
 const employeeStore = useEmployeeStore();
 const employeeStatusStore = useEmployeeStatusStore();
 const statusOptions = ref<EmployeeStatus[]>([]);
-
-const searchName = computed({
-  get: () => employeeStore.searchName,
-  set: (value: string) => {
-    employeeStore.searchName = value;
-  },
-}) as Ref<string>;
+const searchInput = ref(employeeStore.searchName);
 
 const filterEmployeeStatusIds = computed({
   get: () => employeeStore.filterEmployeeStatusIds,
@@ -74,6 +72,22 @@ const filterDepartmentId = computed({
     employeeStore.filterDepartmentId = value;
   },
 });
+
+watch(searchInput, (value) => {
+  const next = value ?? '';
+  if (employeeStore.searchName !== next) {
+    employeeStore.searchName = next;
+  }
+});
+
+watch(
+  () => employeeStore.searchName,
+  (value) => {
+    if (searchInput.value !== value) {
+      searchInput.value = value;
+    }
+  },
+);
 
 function filterStatuses(val: string, update: (fn: () => void) => void) {
   update(() => {
@@ -93,9 +107,3 @@ onMounted(async () => {
   statusOptions.value = [...employeeStatusStore.employeeStatuses];
 });
 </script>
-
-<style scoped>
-.employee-search-filters {
-  padding: 0 4px;
-}
-</style>

@@ -2,9 +2,7 @@
   <div>
     <q-card-section class="row items-center q-gutter-sm">
       <q-space />
-      <q-btn dense icon="add_circle" color="primary" @click="store.openCreateDialog()">
-        Add Contribution Rule
-      </q-btn>
+      <q-btn color="primary" icon="add" label="Add Contribution Rule" @click="store.openCreateDialog()" />
     </q-card-section>
 
     <q-table

@@ -2,7 +2,7 @@
   <div v-if="step === 'accounts'" class="login-accounts" style="width: 100%">
     <div class="text-h6 q-mb-sm">Choose an account</div>
     <div class="text-caption text-grey-7 q-mb-md">
-      Select a saved account to continue, or use another account.
+      Select a saved account to sign in with your passkey. Accounts without a passkey will ask for a password.
     </div>
     <q-list class="login-accounts__list">
       <q-item
@@ -366,10 +366,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useAuthStore, type PasskeyCeremony } from '@core/stores/auth';
 import { useMenuStore } from '@core/stores/menus';
-import { resolvePreferredLandingPath } from '@core/utils/menu-navigation';
+import {
+  pickAccessibleApplicationCode,
+  resolvePreferredLandingPath,
+} from '@core/utils/menu-navigation';
 import { useOrganizationStore } from 'src/stores/organization-store';
 import { useRoute, useRouter } from 'vue-router';
 import { Dialog, Notify } from 'quasar';
@@ -409,6 +412,9 @@ const selectedAccount = ref<RememberedAccount | null>(null);
 const proceedingId = ref<string | null>(null);
 const passkeyPrep = ref<Record<string, PasskeyCeremony>>({});
 const passkeyPrepTasks = new Map<string, Promise<PasskeyCeremony>>();
+const PASSKEY_CHALLENGE_MAX_AGE_MS = 240_000;
+const PASSKEY_CHALLENGE_REFRESH_MS = 120_000;
+let passkeyRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
 const authStore = useAuthStore();
 const menuStore = useMenuStore();
@@ -445,6 +451,18 @@ onMounted(() => {
   if (passkeysSupported.value) {
     void authStore.preloadPasskeyLibrary();
     prefetchAccountPasskeys();
+    passkeyRefreshTimer = setInterval(() => {
+      if (!passkeyLoading.value) {
+        prefetchAccountPasskeys(true);
+      }
+    }, PASSKEY_CHALLENGE_REFRESH_MS);
+  }
+});
+
+onUnmounted(() => {
+  if (passkeyRefreshTimer) {
+    clearInterval(passkeyRefreshTimer);
+    passkeyRefreshTimer = null;
   }
 });
 
@@ -469,6 +487,18 @@ function accountHasPasskey(account: RememberedAccount): boolean {
   return passkeyPrep.value[account.id]?.hasPasskeys ?? account.hasPasskeys;
 }
 
+function isCeremonyFresh(ceremony: PasskeyCeremony): boolean {
+  return Date.now() - ceremony.fetchedAt < PASSKEY_CHALLENGE_MAX_AGE_MS;
+}
+
+function usablePasskeyCeremony(account: RememberedAccount): PasskeyCeremony | undefined {
+  const prepared = passkeyPrep.value[account.id];
+  if (prepared?.hasPasskeys && isCeremonyFresh(prepared)) {
+    return prepared;
+  }
+  return undefined;
+}
+
 function invalidatePasskeyPrep(accountId: string) {
   passkeyPrepTasks.delete(accountId);
   const next = { ...passkeyPrep.value };
@@ -477,6 +507,10 @@ function invalidatePasskeyPrep(accountId: string) {
 }
 
 async function preparePasskey(account: RememberedAccount): Promise<PasskeyCeremony> {
+  const cached = passkeyPrep.value[account.id];
+  if (cached && (!cached.hasPasskeys || isCeremonyFresh(cached))) {
+    return cached;
+  }
   const existing = passkeyPrepTasks.get(account.id);
   if (existing) {
     return existing;
@@ -496,8 +530,11 @@ async function preparePasskey(account: RememberedAccount): Promise<PasskeyCeremo
   }
 }
 
-function prefetchAccountPasskeys() {
+function prefetchAccountPasskeys(force = false) {
   for (const account of accounts.value) {
+    if (force) {
+      invalidatePasskeyPrep(account.id);
+    }
     void preparePasskey(account).catch((error) => {
       console.error('Passkey options prefetch error:', error);
     });
@@ -620,12 +657,20 @@ async function afterLoginSuccess(options: { offerPasskey?: boolean } = {}) {
   }
 
   const preferred = authStore.user?.preferences?.defaultModule ?? 'payroll';
-  menuStore.setActiveModule(preferred);
+  const applications = menuStore.launcher.length
+    ? menuStore.launcher
+    : menuStore.enabledModules;
+  const moduleCode = pickAccessibleApplicationCode(
+    preferred,
+    applications,
+    menuStore.moduleMenus,
+  );
+  menuStore.setActiveModule(moduleCode);
   void router.push(
     resolvePreferredLandingPath(
-      preferred,
+      moduleCode,
       authStore.user?.preferences?.defaultMenu ?? null,
-      menuStore.enabledModules,
+      applications,
       menuStore.moduleMenus,
     ),
   );
@@ -698,42 +743,71 @@ function selectAccount(account: RememberedAccount) {
     return;
   }
   const prepared = passkeyPrep.value[account.id];
-  if (prepared && !prepared.hasPasskeys && !account.hasPasskeys) {
-    showPasswordForAccount(account);
+  if (prepared && !prepared.hasPasskeys) {
+    showPasswordForAccount({ ...account, hasPasskeys: false });
     return;
   }
-  void promptPasskey(account, prepared?.hasPasskeys ? prepared : undefined);
+  void promptPasskey(account, usablePasskeyCeremony(account), { onDismiss: 'accounts' });
 }
 
-async function promptPasskey(account: RememberedAccount, prepared?: PasskeyCeremony) {
+async function promptPasskey(
+  account: RememberedAccount,
+  prepared?: PasskeyCeremony,
+  options: { onDismiss?: 'accounts' | 'password' } = {},
+) {
+  const onDismiss = options.onDismiss ?? 'accounts';
   proceedingId.value = account.id;
   passkeyLoading.value = true;
   try {
-    const ceremony = prepared?.hasPasskeys ? prepared : await preparePasskey(account);
+    const ceremony =
+      prepared?.hasPasskeys && isCeremonyFresh(prepared)
+        ? prepared
+        : await preparePasskey(account);
     if (!ceremony.hasPasskeys) {
       showPasswordForAccount({ ...account, hasPasskeys: false });
       return;
     }
-    const result = await authStore.completePasskeyLogin(ceremony.options, ceremony.challengeKey, {
-      quiet: true,
-    });
-    invalidatePasskeyPrep(account.id);
+    const result = await authStore.completePasskeyLogin(ceremony.options, ceremony.challengeKey);
     if (result === 'success') {
+      invalidatePasskeyPrep(account.id);
       updateRememberedAccountPasskeys(account.id, true);
       await afterLoginSuccess();
       return;
     }
     if (result === 'no_passkey') {
+      invalidatePasskeyPrep(account.id);
       updateRememberedAccountPasskeys(account.id, false);
       refreshAccounts();
       showPasswordForAccount({ ...account, hasPasskeys: false });
       return;
     }
-    showPasswordForAccount(account);
+    if (result === 'failed') {
+      invalidatePasskeyPrep(account.id);
+      void preparePasskey(account).catch((error) => {
+        console.error('Passkey options prefetch error:', error);
+      });
+    }
+    if (onDismiss === 'password') {
+      showPasswordForAccount(account);
+      return;
+    }
+    step.value = 'accounts';
   } catch (error) {
     console.error('Passkey login error:', error);
     invalidatePasskeyPrep(account.id);
-    showPasswordForAccount(account);
+    void preparePasskey(account).catch((prefetchError) => {
+      console.error('Passkey options prefetch error:', prefetchError);
+    });
+    if (onDismiss === 'password') {
+      showPasswordForAccount(account);
+      return;
+    }
+    Notify.create({
+      type: 'negative',
+      message: error instanceof Error ? error.message : 'Passkey login failed.',
+      position: 'top',
+    });
+    step.value = 'accounts';
   } finally {
     passkeyLoading.value = false;
     proceedingId.value = null;
@@ -816,8 +890,11 @@ async function onPasskeyLogin(fromSelectedAccount: boolean) {
   }
 
   if (fromSelectedAccount && selectedAccount.value) {
-    const prepared = passkeyPrep.value[selectedAccount.value.id];
-    await promptPasskey(selectedAccount.value, prepared);
+    await promptPasskey(
+      selectedAccount.value,
+      usablePasskeyCeremony(selectedAccount.value),
+      { onDismiss: 'password' },
+    );
     return;
   }
 

@@ -149,6 +149,7 @@ import {
   useDatabaseBackupStore,
   type DatabaseBackup,
 } from 'src/stores/database-backup-store';
+import { confirmSensitiveAction } from '@core/composables/useSensitiveActionConfirm';
 
 const store = useDatabaseBackupStore();
 const $q = useQuasar();
@@ -249,49 +250,38 @@ function onDownload(row: DatabaseBackup) {
 }
 
 function onRestore(row: DatabaseBackup) {
-  $q.dialog({
-    title: 'Restore database?',
-    message:
-      `This will replace the current database with "${row.filename}". ` +
-      'Type RESTORE to confirm. Active users may be interrupted.',
-    prompt: {
-      model: '',
-      type: 'text',
-      label: 'Type RESTORE',
-    },
-    cancel: true,
-    ok: { label: 'Restore', color: 'warning' },
-  }).onOk((value: string) => {
-    if (value !== 'RESTORE') {
-      $q.notify({
-        color: 'negative',
-        position: 'top',
-        icon: 'warning',
-        message: 'Confirmation text must be exactly RESTORE.',
-      });
+  void (async () => {
+    const confirmation = await confirmSensitiveAction({
+      action: 'database_restore',
+      context: { source: 'backup', backup_id: row.id },
+      title: 'Restore database?',
+      message:
+        `This replaces the live database with "${row.filename}". ` +
+        'Active users may be interrupted. This cannot be undone from this screen.',
+      confirmLabel: 'Restore',
+    });
+    if (!confirmation) {
       return;
     }
 
-    void (async () => {
-      try {
-        await store.restoreBackup(row.id);
-        $q.notify({
-          color: 'positive',
-          position: 'top',
-          icon: 'check_circle',
-          message: 'Database restored. Refresh the app if anything looks stale.',
-        });
-        await refresh();
-      } catch (error) {
-        $q.notify({
-          color: 'negative',
-          position: 'top',
-          icon: 'error',
-          message: error instanceof Error ? error.message : 'Restore failed.',
-        });
-      }
-    })();
-  });
+    try {
+      await store.restoreBackup(row.id, confirmation);
+      $q.notify({
+        color: 'positive',
+        position: 'top',
+        icon: 'check_circle',
+        message: 'Database restored. Refresh the app if anything looks stale.',
+      });
+      await refresh();
+    } catch (error) {
+      $q.notify({
+        color: 'negative',
+        position: 'top',
+        icon: 'error',
+        message: error instanceof Error ? error.message : 'Restore failed.',
+      });
+    }
+  })();
 }
 
 function onDelete(row: DatabaseBackup) {
@@ -332,48 +322,37 @@ function onFileSelected(event: Event) {
   input.value = '';
   if (!file) return;
 
-  $q.dialog({
-    title: 'Restore from uploaded file?',
-    message:
-      `Upload and restore "${file.name}"? This replaces the current database. ` +
-      'Type RESTORE to confirm.',
-    prompt: {
-      model: '',
-      type: 'text',
-      label: 'Type RESTORE',
-    },
-    cancel: true,
-    ok: { label: 'Restore', color: 'warning' },
-  }).onOk((value: string) => {
-    if (value !== 'RESTORE') {
-      $q.notify({
-        color: 'negative',
-        position: 'top',
-        icon: 'warning',
-        message: 'Confirmation text must be exactly RESTORE.',
-      });
+  void (async () => {
+    const confirmation = await confirmSensitiveAction({
+      action: 'database_restore',
+      context: { source: 'upload' },
+      title: 'Restore from uploaded file?',
+      message:
+        `Upload and restore "${file.name}"? This replaces the live database. ` +
+        'This cannot be undone from this screen.',
+      confirmLabel: 'Restore',
+    });
+    if (!confirmation) {
       return;
     }
 
-    void (async () => {
-      try {
-        await store.restoreUpload(file);
-        $q.notify({
-          color: 'positive',
-          position: 'top',
-          icon: 'check_circle',
-          message: 'Database restored from uploaded file.',
-        });
-      } catch (error) {
-        $q.notify({
-          color: 'negative',
-          position: 'top',
-          icon: 'error',
-          message: error instanceof Error ? error.message : 'Upload restore failed.',
-        });
-      }
-    })();
-  });
+    try {
+      await store.restoreUpload(file, confirmation);
+      $q.notify({
+        color: 'positive',
+        position: 'top',
+        icon: 'check_circle',
+        message: 'Database restored from uploaded file.',
+      });
+    } catch (error) {
+      $q.notify({
+        color: 'negative',
+        position: 'top',
+        icon: 'error',
+        message: error instanceof Error ? error.message : 'Upload restore failed.',
+      });
+    }
+  })();
 }
 
 onMounted(() => {

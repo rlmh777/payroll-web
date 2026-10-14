@@ -48,6 +48,7 @@ export const legacyRouteRedirects: RouteRecordRaw[] = [
   { path: '/payroll/settings/database-backup', redirect: '/admin/settings/database-backup' },
   { path: '/payroll/settings/file-storage', redirect: '/admin/settings/file-storage' },
   { path: '/payroll/settings/biometric-devices', redirect: '/admin/settings/biometric-devices' },
+  { path: '/payroll/settings/application-logs', redirect: '/admin/settings/application-logs' },
   { path: '/payroll/settings/email', redirect: '/admin/settings/email' },
   { path: '/payroll/settings/login-page', redirect: '/admin/settings/login-page' },
   { path: '/payroll/settings/menu', redirect: '/admin/settings/menu' },

@@ -7,9 +7,7 @@
       </div>
     </div>
     <q-space />
-    <q-btn dense icon="add_circle" color="primary" @click="store.openCreateDialog()">
-      Add Mapping
-    </q-btn>
+    <q-btn color="primary" icon="add" label="Add Mapping" @click="store.openCreateDialog()" />
   </q-card-section>
 
   <AddPayrollAccountMapping />
