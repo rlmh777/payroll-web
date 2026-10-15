@@ -26,7 +26,7 @@ jobs:
     environment: ${{ github.event.inputs.client || 'chaacreek' }}
     env:
       CLIENT: ${{ github.event.inputs.client || 'chaacreek' }}
-      VITE_API_URL: ${{ vars.VITE_API_URL || 'https://ca-payroll-shrdprod-api.proudriver-fdf05cd7.centralus.azurecontainerapps.io/api' }}
+      VITE_API_URL: ${{ vars.VITE_API_URL || 'https://chaacreek.kamihrm.com/api' }}
       VITE_TENANT_SLUG: ${{ vars.TENANT_SLUG || github.event.inputs.client || 'chaacreek' }}
       STORAGE_ACCOUNT: ${{ vars.STORAGE_ACCOUNT || 'stpayrollshrdprodi7i0ek' }}
 

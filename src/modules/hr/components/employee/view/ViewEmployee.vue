@@ -47,6 +47,7 @@
         <q-banner v-if="isCreating" dense class="bg-grey-2 q-mb-md">
           Save the employee first to add education records.
         </q-banner>
+        <employee-custom-fields tab="education" />
         <employee-education-info />
       </q-step>
 
@@ -60,6 +61,7 @@
         <q-banner v-if="isCreating" dense class="bg-grey-2 q-mb-md">
           Save the employee first to add bank / payment details.
         </q-banner>
+        <employee-custom-fields tab="payment_details" />
         <employee-payment-details-info />
       </q-step>
 
@@ -73,6 +75,7 @@
         <q-banner v-if="isCreating" dense class="bg-grey-2 q-mb-md">
           Save the employee first to add contacts.
         </q-banner>
+        <employee-custom-fields tab="contact" />
         <employee-contact-info />
       </q-step>
     </q-stepper>
@@ -99,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { employeePath } from '@core/config/module-routes';
@@ -114,6 +117,8 @@ import EmployeeEducationInfo from '../education/EmployeeEducationInfo.vue';
 import EmployeePaymentDetailsInfo from '@payroll/components/employee/payment-details/EmployeePaymentDetailsInfo.vue';
 import EmployeeContactInfo from '../contact/EmployeeContactInfo.vue';
 import EmployeeDetails from './EmployeeDetails.vue';
+import EmployeeCustomFields from '../common/EmployeeCustomFields.vue';
+import { useEmployeeFormFieldStore } from '@hr/stores/employee-form-field-store';
 
 const props = withDefaults(defineProps<{
   mode?: 'create' | 'edit';
@@ -127,6 +132,7 @@ const $q = useQuasar();
 const route = useRoute();
 const router = useRouter();
 const employeeStore = useEmployeeStore();
+const catalogStore = useEmployeeFormFieldStore();
 const {
   isTabVisible,
   isTabEditable,
@@ -196,6 +202,15 @@ function requiredCreateFields(employee: Employee): string | null {
   ) {
     return 'Payment method is required.';
   }
+  for (const field of catalogStore.activeCustomFields) {
+    if (!field.is_required || !isFieldVisible(field.key) || !canWriteField(field.key, true)) {
+      continue;
+    }
+    const value = employee.customAttributes?.[field.key];
+    if (value == null || value === '') {
+      return `${field.label} is required.`;
+    }
+  }
   return null;
 }
 
@@ -262,6 +277,20 @@ function buildCreatePayload(employee: Employee): Partial<Employee> {
   }
   if (employee.supervisorId) assignIfWritable('supervisorId', employee.supervisorId);
 
+  const customAttributes: Record<string, unknown> = {};
+  for (const field of catalogStore.activeCustomFields) {
+    if (!canWriteField(field.key, true)) {
+      continue;
+    }
+    const value = employee.customAttributes?.[field.key];
+    if (value !== undefined) {
+      customAttributes[field.key] = value;
+    }
+  }
+  if (Object.keys(customAttributes).length > 0) {
+    payload.customAttributes = customAttributes;
+  }
+
   return payload;
 }
 
@@ -303,4 +332,10 @@ async function saveEmployee() {
     isSaving.value = false;
   }
 }
+
+onMounted(() => {
+  if (catalogStore.fields.length === 0 && !catalogStore.isLoading) {
+    void catalogStore.fetchCatalog();
+  }
+});
 </script>

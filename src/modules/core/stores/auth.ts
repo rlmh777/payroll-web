@@ -14,6 +14,8 @@ import { markMotdFreshLogin, resetMotdSession } from '@core/utils/motd-session';
 import { DEFAULT_TEXT_SIZE, normalizeTextSize, type TextSize } from '@core/utils/text-size';
 import type { EmployeeFormAccess } from '@core/types/employee-form-access';
 
+export type PasskeyPromptPreference = 'prompt' | 'never';
+
 export interface UserPreferences {
   defaultModule: string;
   defaultMenu: string | null;
@@ -21,6 +23,7 @@ export interface UserPreferences {
   onboardingEnabled: boolean;
   onboardingCompleted: boolean;
   onboardingSeen: Record<string, boolean>;
+  passkeyPrompt: PasskeyPromptPreference;
 }
 
 interface User {
@@ -64,6 +67,10 @@ type UnauthorizedHandler = (redirectPath?: string) => void;
 const API_URL = import.meta.env.VITE_API_URL || process.env.API_URL || 'http://localhost:3031/api';
 const SESSION_VALIDATION_TTL_MS = 60 * 1000;
 
+function normalizePasskeyPrompt(value: unknown): PasskeyPromptPreference {
+  return value === 'never' ? 'never' : 'prompt';
+}
+
 function normalizeOnboardingSeen(value: unknown): Record<string, boolean> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {};
@@ -87,6 +94,8 @@ function normalizeUser(data: Partial<User> & {
     onboarding_enabled?: boolean;
     onboarding_completed?: boolean;
     onboarding_seen?: Record<string, boolean>;
+    passkeyPrompt?: string | null;
+    passkey_prompt?: string | null;
   };
   hasPasskeys?: boolean;
   has_passkeys?: boolean;
@@ -114,6 +123,9 @@ function normalizeUser(data: Partial<User> & {
       ),
       onboardingSeen: normalizeOnboardingSeen(
         data.preferences?.onboardingSeen ?? data.preferences?.onboarding_seen,
+      ),
+      passkeyPrompt: normalizePasskeyPrompt(
+        data.preferences?.passkeyPrompt ?? data.preferences?.passkey_prompt,
       ),
     },
     hasPasskeys: Boolean(data.hasPasskeys ?? data.has_passkeys),

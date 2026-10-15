@@ -53,6 +53,7 @@ function emptyEmployeeDraft(): Employee {
     employmentStatusId: null,
     timesheetTemplateId: null,
     supervisorId: null,
+    customAttributes: {},
   };
 }
 

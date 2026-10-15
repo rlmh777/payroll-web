@@ -38,6 +38,7 @@
                 />
             </div>
         </div>
+        <employee-custom-fields class="q-mt-md" tab="address" />
     </div>
 </template>
 
@@ -46,6 +47,7 @@ import { computed } from 'vue';
 import { useEmployeeStore } from '@/stores/employee-store';
 import { useEmployeeFormAccess } from '@core/composables/useEmployeeFormAccess';
 import LocalitySelect from './LocalitySelect.vue';
+import EmployeeCustomFields from './EmployeeCustomFields.vue';
 
 const employeeStore = useEmployeeStore();
 const { isFieldVisible, isFieldReadonly, canWriteField } = useEmployeeFormAccess();

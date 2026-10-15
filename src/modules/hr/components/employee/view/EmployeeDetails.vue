@@ -14,10 +14,12 @@
 
     <q-tab-panels v-model="tab" animated class="q-mt-none">
       <q-tab-panel name="allowances">
+        <employee-custom-fields class="q-mb-md" tab="allowances" />
         <manage-employee-default-allowances />
       </q-tab-panel>
 
       <q-tab-panel name="deductions">
+        <employee-custom-fields class="q-mb-md" tab="deductions" />
         <manage-employee-default-deductions />
       </q-tab-panel>
 
@@ -26,6 +28,7 @@
       </q-tab-panel>
 
       <q-tab-panel name="ss-benefit">
+        <employee-custom-fields class="q-mb-md" tab="ss_benefit" />
         <manage-employee-ss-benefit
           v-if="employeeStore.selectedEmployee?.id"
           :employee-id="employeeStore.selectedEmployee.id"
@@ -33,6 +36,7 @@
       </q-tab-panel>
 
       <q-tab-panel name="contracts">
+        <employee-custom-fields class="q-mb-md" tab="contracts" />
         <manage-employment-details
           v-if="employeeStore.selectedEmployee?.id"
           :employee-id="employeeStore.selectedEmployee.id"
@@ -41,6 +45,7 @@
       </q-tab-panel>
 
       <q-tab-panel name="compensation">
+        <employee-custom-fields class="q-mb-md" tab="compensation" />
         <manage-employee-compensation
           v-if="employeeStore.selectedEmployee?.id"
           :employee-id="employeeStore.selectedEmployee.id"
@@ -48,6 +53,7 @@
       </q-tab-panel>
 
       <q-tab-panel name="documents">
+        <employee-custom-fields class="q-mb-md" tab="documents" />
         <manage-employee-documents
           v-if="employeeStore.selectedEmployee?.id"
           :employee-id="employeeStore.selectedEmployee.id"
@@ -56,6 +62,7 @@
       </q-tab-panel>
 
       <q-tab-panel name="incidents">
+        <employee-custom-fields class="q-mb-md" tab="incidents" />
         <manage-employee-incidents
           v-if="employeeStore.selectedEmployee?.id"
           :employee-id="employeeStore.selectedEmployee.id"
@@ -64,6 +71,7 @@
       </q-tab-panel>
 
       <q-tab-panel name="time-travel">
+        <employee-custom-fields class="q-mb-md" tab="time_travel" />
         <employee-time-travel
           v-if="employeeStore.selectedEmployee?.id"
           :employee-id="employeeStore.selectedEmployee.id"
@@ -88,6 +96,7 @@ import ManageEmployeeCompensation from '@payroll/components/employee/compensatio
 import ManageEmployeeDocuments from '../document/ManageEmployeeDocuments.vue';
 import ManageEmployeeIncidents from '../incident/ManageEmployeeIncidents.vue';
 import EmployeeTimeTravel from '../time-travel/EmployeeTimeTravel.vue';
+import EmployeeCustomFields from '../common/EmployeeCustomFields.vue';
 
 const employeeStore = useEmployeeStore();
 const { activeDetailsTab } = storeToRefs(employeeStore);

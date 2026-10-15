@@ -2,7 +2,7 @@
   <div v-if="step === 'accounts'" class="login-accounts" style="width: 100%">
     <div class="text-h6 q-mb-sm">Choose an account</div>
     <div class="text-caption text-grey-7 q-mb-md">
-      Select a saved account to sign in with your passkey. Accounts without a passkey will ask for a password.
+      Select a saved account. Use a passkey only if that account already has one on this device.
     </div>
     <q-list class="login-accounts__list">
       <q-item
@@ -186,17 +186,6 @@
         :loading="loading"
       />
       <q-btn
-        v-if="passkeysSupported"
-        flat
-        label="Sign in with passkey"
-        color="primary"
-        class="full-width"
-        icon="fingerprint"
-        :loading="passkeyLoading"
-        :disable="loading"
-        @click="onPasskeyLogin(false)"
-      />
-      <q-btn
         v-if="accounts.length > 0"
         flat
         label="Back to accounts"
@@ -205,9 +194,6 @@
         :disable="busy"
         @click="backToChooser"
       />
-      <div v-if="passkeysSupported" class="text-caption text-grey-7 text-center">
-        Create a passkey after you sign in with your password.
-      </div>
       <q-btn
         flat
         no-caps
@@ -363,6 +349,42 @@
       @click="finishAfterRecovery"
     />
   </div>
+
+  <div v-else-if="step === 'passkey-offer'" class="column q-gutter-md" style="width: 100%">
+    <div class="text-h6">Create a passkey?</div>
+    <div class="text-body2 text-grey-8">
+      Save a passkey on this device so next time you can sign in with Face ID, Touch ID, or Windows Hello instead of a password.
+    </div>
+    <div class="column q-gutter-sm">
+      <q-btn
+        outlined
+        label="Create passkey"
+        color="primary"
+        class="full-width"
+        icon="fingerprint"
+        :loading="passkeyLoading"
+        :disable="busy"
+        @click="onCreatePasskey"
+      />
+      <q-btn
+        flat
+        label="Next time"
+        color="primary"
+        class="full-width"
+        :disable="busy"
+        @click="skipPasskeyOffer"
+      />
+      <q-btn
+        flat
+        no-caps
+        label="Never"
+        color="grey-7"
+        class="full-width"
+        :disable="busy"
+        @click="neverPasskeyOffer"
+      />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -386,7 +408,7 @@ import {
   type RememberedAccount,
 } from '@core/utils/remembered-accounts';
 
-type LoginStep = 'accounts' | 'credentials' | 'password' | 'invite' | 'verify' | 'setup' | 'recovery';
+type LoginStep = 'accounts' | 'credentials' | 'password' | 'invite' | 'verify' | 'setup' | 'recovery' | 'passkey-offer';
 
 interface LoginTwoFactorSetup {
   secret: string;
@@ -606,32 +628,52 @@ function confirmRemove(account: RememberedAccount) {
   });
 }
 
-function promptCreatePasskey(): Promise<boolean> {
-  return new Promise((resolve) => {
-    Dialog.create({
-      title: 'Create a passkey?',
-      message:
-        'Save a passkey on this device so next time you can sign in with Face ID, Touch ID, or Windows Hello instead of a password.',
-      cancel: { label: 'Not now', flat: true },
-      ok: { label: 'Create passkey', color: 'primary' },
-    })
-      .onOk(() => resolve(true))
-      .onCancel(() => resolve(false));
-  });
+function shouldOfferPasskey(hasPasskeys: boolean): boolean {
+  if (!passkeysSupported.value || hasPasskeys) {
+    return false;
+  }
+  return authStore.user?.preferences?.passkeyPrompt !== 'never';
 }
 
 async function afterLoginSuccess(options: { offerPasskey?: boolean } = {}) {
   rememberCurrentUser();
-  if (options.offerPasskey && passkeysSupported.value) {
-    const shouldCreate = await promptCreatePasskey();
-    if (shouldCreate) {
-      const created = await authStore.registerCurrentDevicePasskey();
-      if (created) {
-        rememberCurrentUser({ hasPasskeys: true });
-      }
-    }
+  if (options.offerPasskey && shouldOfferPasskey(Boolean(authStore.user?.hasPasskeys))) {
+    step.value = 'passkey-offer';
+    return;
   }
+  await continueAfterAuth();
+}
 
+async function onCreatePasskey() {
+  passkeyLoading.value = true;
+  try {
+    const created = await authStore.registerCurrentDevicePasskey();
+    if (created) {
+      rememberCurrentUser({ hasPasskeys: true });
+      await continueAfterAuth();
+    }
+  } finally {
+    passkeyLoading.value = false;
+  }
+}
+
+async function skipPasskeyOffer() {
+  await continueAfterAuth();
+}
+
+async function neverPasskeyOffer() {
+  loading.value = true;
+  try {
+    await authStore.updatePreferences({ passkeyPrompt: 'never' });
+  } catch (error) {
+    console.error('Passkey preference error:', error);
+  } finally {
+    loading.value = false;
+  }
+  await continueAfterAuth();
+}
+
+async function continueAfterAuth() {
   await organizationStore.fetchOrganizations();
   await menuStore.fetchMenus();
 

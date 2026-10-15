@@ -1,7 +1,6 @@
 import { computed, inject, provide, type ComputedRef, type InjectionKey } from 'vue';
 import { useAuthStore } from '@core/stores/auth';
 import {
-  FULL_EMPLOYEE_FORM_ACCESS,
   SELF_VIEW_EMPLOYEE_FORM_ACCESS,
   type EmployeeFormAccess,
   type EmployeeFormFieldMode,
@@ -32,12 +31,8 @@ function asFieldMode(value: unknown): EmployeeFormFieldMode {
 }
 
 const EMPTY_EMPLOYEE_FORM_ACCESS: EmployeeFormAccess = {
-  tabs: Object.fromEntries(
-    Object.keys(FULL_EMPLOYEE_FORM_ACCESS.tabs).map((key) => [key, 'hidden']),
-  ) as EmployeeFormAccess['tabs'],
-  fields: Object.fromEntries(
-    Object.keys(FULL_EMPLOYEE_FORM_ACCESS.fields).map((key) => [key, 'hidden']),
-  ) as EmployeeFormAccess['fields'],
+  tabs: {},
+  fields: {},
 };
 
 export function useEmployeeFormAccess() {
@@ -66,7 +61,10 @@ export function useEmployeeFormAccess() {
 
   function fieldMode(field: string): EmployeeFormFieldMode {
     if (override?.mergeSelfView.value) {
-      return asFieldMode(SELF_VIEW_EMPLOYEE_FORM_ACCESS.fields[field]);
+      if (field in SELF_VIEW_EMPLOYEE_FORM_ACCESS.fields) {
+        return asFieldMode(SELF_VIEW_EMPLOYEE_FORM_ACCESS.fields[field]);
+      }
+      return 'view';
     }
     return asFieldMode(access.value.fields[field]);
   }

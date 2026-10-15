@@ -266,6 +266,12 @@ export const hrRoutes: RouteRecordRaw[] = [
         props: { title: 'Appraisals' },
       },
       {
+        path: 'employee-fields',
+        name: 'hr-employee-fields',
+        component: () => import('@hr/components/settings/employee-fields/ManageEmployeeFormFields.vue'),
+        props: { title: 'Employee fields' },
+      },
+      {
         path: 'relationship',
         component: () => import('@core/settings/relationship/ManageRelationship.vue'),
         props: { title: 'Setting Relationship' },

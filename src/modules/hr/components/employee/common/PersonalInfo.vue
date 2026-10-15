@@ -152,6 +152,7 @@
                 />
             </div>
         </div>
+        <employee-custom-fields class="q-mt-md" tab="personal" />
     </div>
 </template>
 
@@ -164,6 +165,7 @@ import GenderSelect from './GenderSelect.vue';
 import HonorificSelect from './HonorificSelect.vue';
 import NationalitySelect from './NationalitySelect.vue';
 import CitizenshipStatusSelect from './CitizenshipStatusSelect.vue';
+import EmployeeCustomFields from './EmployeeCustomFields.vue';
 import SsBenefitDateField from '@payroll/components/employee/ss-benefit/SsBenefitDateField.vue';
 
 const employeeStore = useEmployeeStore();

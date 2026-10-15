@@ -288,6 +288,7 @@ export interface Employee {
   employeeStatusId?: number | null;
   timesheetTemplateId?: string | null;
   supervisorId?: string | null;
+  customAttributes?: Record<string, unknown> | null;
   // Relationships
   locality?: Locality | null;
   honorific?: Honorific | null;

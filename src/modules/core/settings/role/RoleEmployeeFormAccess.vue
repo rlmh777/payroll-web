@@ -63,8 +63,20 @@
         </thead>
         <tbody>
           <tr v-for="field in catalog?.fields || []" :key="field.key">
-            <td>{{ field.label }}</td>
-            <td class="text-grey">{{ field.tab }}</td>
+            <td>
+              <span>{{ field.label }}</span>
+              <q-chip
+                v-if="field.is_system === false"
+                class="q-ml-sm"
+                color="teal"
+                text-color="white"
+                size="sm"
+                dense
+              >
+                Custom
+              </q-chip>
+            </td>
+            <td class="text-grey">{{ tabLabel(field.tab) }}</td>
             <td style="min-width: 160px">
               <q-select
                 v-model="draft.fields[field.key]"
@@ -88,7 +100,6 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRoleStore } from '../../stores/role-store';
 import type { EmployeeFormAccess } from '@core/types/employee-form-access';
-import { FULL_EMPLOYEE_FORM_ACCESS } from '@core/types/employee-form-access';
 
 const $q = useQuasar();
 const roleStore = useRoleStore();
@@ -100,8 +111,8 @@ const saving = ref(false);
 const dirty = ref(false);
 
 const draft = reactive<EmployeeFormAccess>({
-  tabs: { ...FULL_EMPLOYEE_FORM_ACCESS.tabs },
-  fields: { ...FULL_EMPLOYEE_FORM_ACCESS.fields },
+  tabs: {},
+  fields: {},
 });
 
 const tabModeOptions = [
@@ -121,14 +132,31 @@ function markDirty() {
   dirty.value = true;
 }
 
+function tabLabel(key: string): string {
+  return catalog.value?.tabs.find((tab) => tab.key === key)?.label ?? key;
+}
+
+function catalogDefaults(): EmployeeFormAccess {
+  const tabs: EmployeeFormAccess['tabs'] = {};
+  const fields: EmployeeFormAccess['fields'] = {};
+  for (const tab of catalog.value?.tabs ?? []) {
+    tabs[tab.key] = 'hidden';
+  }
+  for (const field of catalog.value?.fields ?? []) {
+    fields[field.key] = 'hidden';
+  }
+  return { tabs, fields };
+}
+
 function loadDraftFromRole() {
-  const profile = selectedRole.value?.employee_form_access || FULL_EMPLOYEE_FORM_ACCESS;
-  draft.tabs = { ...FULL_EMPLOYEE_FORM_ACCESS.tabs, ...(profile.tabs || {}) };
-  draft.fields = { ...FULL_EMPLOYEE_FORM_ACCESS.fields, ...(profile.fields || {}) };
+  const defaults = catalogDefaults();
+  const profile = selectedRole.value?.employee_form_access;
+  draft.tabs = { ...defaults.tabs, ...(profile?.tabs ?? {}) };
+  draft.fields = { ...defaults.fields, ...(profile?.fields ?? {}) };
   dirty.value = false;
 }
 
-watch(selectedRole, () => {
+watch([selectedRole, catalog], () => {
   loadDraftFromRole();
 }, { immediate: true });
 

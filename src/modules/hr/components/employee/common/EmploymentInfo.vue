@@ -47,6 +47,7 @@
         />
       </div>
     </div>
+    <employee-custom-fields class="q-mt-md" tab="employment" />
   </div>
 </template>
 
@@ -59,6 +60,7 @@ import EmployeeStatusSelect from '@hr/components/shared/employee-status/Employee
 import TimesheetTemplateSelect from '@hr/components/settings/department/TimesheetTemplateSelect.vue';
 import PaymentMethodSelect from '@hr/components/employee/common/PaymentMethodSelect.vue';
 import EmployeeSelect from '@hr/components/shared/EmployeeSelect.vue';
+import EmployeeCustomFields from './EmployeeCustomFields.vue';
 
 const employeeStore = useEmployeeStore();
 const { isFieldVisible, isFieldReadonly, canWriteField } = useEmployeeFormAccess();

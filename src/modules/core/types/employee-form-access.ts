@@ -23,15 +23,36 @@ export interface EmployeeFormAccess {
 }
 
 export interface EmployeeFormTabCatalogItem {
-  key: EmployeeFormTabKey;
+  key: string;
   label: string;
-  group: 'stepper' | 'details';
+  group: string;
+}
+
+export type EmployeeFormFieldInputType =
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'date'
+  | 'select'
+  | 'toggle';
+
+export interface EmployeeFormFieldOption {
+  label: string;
+  value: string;
 }
 
 export interface EmployeeFormFieldCatalogItem {
+  id?: string;
   key: string;
   label: string;
   tab: string;
+  input_type?: EmployeeFormFieldInputType;
+  is_required?: boolean;
+  options?: EmployeeFormFieldOption[];
+  help_text?: string | null;
+  is_system?: boolean;
+  is_active?: boolean;
+  sort?: number;
 }
 
 export const FULL_EMPLOYEE_FORM_ACCESS: EmployeeFormAccess = {
