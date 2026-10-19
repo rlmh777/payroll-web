@@ -1,4 +1,6 @@
+import { saveReportWorkbook } from '@payroll/utils/save-report-workbook';
 import * as XLSX from 'xlsx';
+import { openPrintableReport } from '@payroll/utils/printable-report';
 import type { TaxCalculatorResults } from '@payroll/stores/tax-calculator-store';
 
 export interface GstCalculatorPartialExemptionExport {
@@ -205,5 +207,18 @@ export function exportGstCalculatorResultsExcel(input: GstCalculatorResultsExpor
   appendSheet(workbook, 'BTB', buildBtbSheet(input), [58, 16]);
 
   const period = sanitizeFilename(input.periodLabel) || `${input.year}_${String(input.month).padStart(2, '0')}`;
-  XLSX.writeFile(workbook, `gst-calculator-results_${period}.xlsx`);
+  void saveReportWorkbook(workbook, `gst-calculator-results_${period}.xlsx`);
+}
+
+export function exportGstCalculatorResultsPdf(input: GstCalculatorResultsExport): boolean {
+  return openPrintableReport({
+    title: 'GST Calculator',
+    lines: [input.periodLabel],
+    sections: [
+      { heading: 'Partial Exemption', rows: buildPartialExemptionSheet(input), headerRowCount: 4 },
+      { heading: 'Business tax', rows: buildBusinessTaxSheet(input), headerRowCount: 4 },
+      { heading: 'GST', rows: buildGstSheet(input), headerRowCount: 4 },
+      { heading: 'BTB', rows: buildBtbSheet(input), headerRowCount: 4 },
+    ],
+  });
 }

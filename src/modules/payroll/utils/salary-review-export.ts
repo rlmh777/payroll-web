@@ -1,4 +1,6 @@
+import { saveReportWorkbook } from '@payroll/utils/save-report-workbook';
 import * as XLSX from 'xlsx';
+import { openPrintableReport } from '@payroll/utils/printable-report';
 import { formatDate } from '../components/attendance/utils';
 import type { SalaryReviewReport } from '@payroll/stores/reports-store';
 
@@ -80,7 +82,18 @@ export function exportSalaryReviewExcel(report: SalaryReviewReport): void {
 
   const startDate = sanitizeFilename(formatDate(report.startDate));
   const endDate = sanitizeFilename(formatDate(report.endDate));
-  XLSX.writeFile(workbook, `salary-review_${startDate}_to_${endDate}.xlsx`);
+  void saveReportWorkbook(workbook, `salary-review_${startDate}_to_${endDate}.xlsx`);
+}
+
+export function exportSalaryReviewPdf(report: SalaryReviewReport): boolean {
+  return openPrintableReport({
+    title: 'Salary Review',
+    lines: [formatDateRange(report)],
+    sections: report.departments.map((department) => ({
+      heading: department.departmentName,
+      rows: buildDepartmentSheet(report, department).slice(3),
+    })),
+  });
 }
 
 export function formatSalaryReviewCurrency(value: number): string {

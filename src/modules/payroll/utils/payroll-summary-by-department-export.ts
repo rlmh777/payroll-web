@@ -1,4 +1,6 @@
+import { saveReportWorkbook } from '@payroll/utils/save-report-workbook';
 import * as XLSX from 'xlsx';
+import { openPrintableReport } from '@payroll/utils/printable-report';
 import { formatDate } from '../components/attendance/utils';
 import type { PayrollSummaryByDepartmentReport } from '@payroll/stores/reports-store';
 
@@ -76,7 +78,57 @@ export function exportPayrollSummaryByDepartmentExcel(report: PayrollSummaryByDe
 
   const startDate = sanitizeFilename(formatDate(report.payPeriodStartDate));
   const endDate = sanitizeFilename(formatDate(report.payPeriodEndDate));
-  XLSX.writeFile(workbook, `payroll-summary-by-department_${startDate}_to_${endDate}.xlsx`);
+  void saveReportWorkbook(workbook, `payroll-summary-by-department_${startDate}_to_${endDate}.xlsx`);
+}
+
+export function exportPayrollSummaryByDepartmentPdf(report: PayrollSummaryByDepartmentReport): boolean {
+  const columns = report.earningColumns ?? [];
+  const header: Array<string | number> = ['Department', 'Employee Code', 'Employee Name'];
+  columns.forEach((column) => {
+    if (column.showHours) {
+      header.push(`${column.name} Hours`);
+    }
+    header.push(column.name);
+  });
+  header.push('Gross Pay');
+
+  const body: Array<Array<string | number>> = [];
+  report.departments.forEach((department) => {
+    department.rows.forEach((row) => {
+      const line: Array<string | number> = [
+        department.departmentName,
+        row.employeeCode ?? '',
+        row.employeeName,
+      ];
+      columns.forEach((column) => {
+        if (column.showHours) {
+          line.push(row.hours?.[column.key] ?? 0);
+        }
+        line.push(row.amounts?.[column.key] ?? 0);
+      });
+      line.push(row.grossPay);
+      body.push(line);
+    });
+    const totals: Array<string | number> = [`${department.departmentName} Totals`, '', ''];
+    columns.forEach((column) => {
+      if (column.showHours) {
+        totals.push(department.totals.hours?.[column.key] ?? 0);
+      }
+      totals.push(department.totals.amounts?.[column.key] ?? 0);
+    });
+    totals.push(department.totals.grossPay);
+    body.push(totals);
+  });
+
+  return openPrintableReport({
+    title: 'Payroll Summary by Department',
+    lines: [
+      report.payPeriodGroupName ?? '—',
+      `${formatDate(report.payPeriodStartDate)} - ${formatDate(report.payPeriodEndDate)}`,
+      `Pay period number ${report.payPeriodNumber}`,
+    ],
+    sections: [{ rows: [header, ...body] }],
+  });
 }
 
 export function formatPayrollSummaryCurrency(value: number): string {

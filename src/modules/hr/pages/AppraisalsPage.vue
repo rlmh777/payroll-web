@@ -12,7 +12,7 @@
             }}
           </div>
         </div>
-        <q-btn v-if="canManage" color="primary" icon="add" label="Start appraisal" @click="startOpen = true" />
+        <q-btn v-if="canStart" color="primary" icon="add" label="Start appraisal" @click="startOpen = true" />
       </q-card-section>
     </q-card>
 
@@ -73,7 +73,7 @@
       </q-card-section>
     </q-card>
 
-    <StartAppraisalDialog v-model="startOpen" @started="onStarted" />
+    <StartAppraisalDialog v-model="startOpen" :reports-only="!canManage" @started="onStarted" />
   </q-page>
 </template>
 
@@ -91,6 +91,7 @@ const route = useRoute();
 const router = useRouter();
 const startOpen = ref(false);
 const canManage = computed(() => canAny(['appraisals-crud', 'employees-crud']));
+const canStart = computed(() => canManage.value || !route.path.startsWith('/hr/'));
 
 const columns: QTableProps['columns'] = [
   { name: 'employee', label: 'Employee', field: (row) => row.employee?.name, align: 'left' },

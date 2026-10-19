@@ -13,6 +13,8 @@ export interface EmploymentDetailFormModel {
   departmentId: number;
   worksiteId: number;
   defaultPayPeriodGroupId: string | null;
+  appraisalDate: string | null;
+  appraisalFormTemplateId: string | null;
 }
 
 export function createDefaultEmploymentDetailForm(): EmploymentDetailFormModel {
@@ -31,6 +33,8 @@ export function createDefaultEmploymentDetailForm(): EmploymentDetailFormModel {
     departmentId: null as unknown as number,
     worksiteId: null as unknown as number,
     defaultPayPeriodGroupId: null,
+    appraisalDate: null,
+    appraisalFormTemplateId: null,
   };
 }
 
@@ -77,6 +81,8 @@ interface EmploymentDetailRecordSource {
   worksite?: { id: number } | null;
   defaultPayPeriodGroup?: { id: string } | null;
   default_pay_period_group?: { id: string } | null;
+  appraisalDate?: string | null;
+  appraisalFormTemplateId?: string | null;
 }
 
 export function mapEmploymentDetailRecordToForm(
@@ -97,5 +103,7 @@ export function mapEmploymentDetailRecordToForm(
     departmentId: record.departmentId ?? record.department?.id ?? null as unknown as number,
     worksiteId: record.worksiteId ?? record.worksite?.id ?? null as unknown as number,
     defaultPayPeriodGroupId: record.defaultPayPeriodGroupId ?? record.defaultPayPeriodGroup?.id ?? record.default_pay_period_group?.id ?? null,
+    appraisalDate: record.appraisalDate?.slice(0, 10) ?? null,
+    appraisalFormTemplateId: record.appraisalFormTemplateId ?? null,
   };
 }

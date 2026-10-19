@@ -66,6 +66,15 @@
             dense
             label="Accounts notes"
           />
+          <q-input
+            v-if="appraisal.is_supervisor_step"
+            v-model="nextAppraisalDate"
+            type="date"
+            outlined
+            dense
+            label="Next appraisal date"
+            hint="The employee’s contract is updated with this date."
+          />
           <q-input v-model="note" type="textarea" autogrow outlined dense label="Note" />
           <div class="row q-gutter-sm">
             <q-btn
@@ -108,6 +117,7 @@ const $q = useQuasar();
 const error = ref<string | null>(null);
 const answers = ref<Record<string, unknown>>({});
 const note = ref('');
+const nextAppraisalDate = ref('');
 const accountsNotes = ref('');
 const hr = reactive({
   renew: true,
@@ -192,6 +202,13 @@ async function act(action: 'approve' | 'reject' | 'return') {
       answers: answers.value,
       submit_form: action === 'approve',
     };
+    if (appraisal.value.is_supervisor_step) {
+      if (action === 'approve' && !nextAppraisalDate.value) {
+        $q.notify({ type: 'negative', message: 'Choose the date of the next appraisal.' });
+        return;
+      }
+      payload.next_appraisal_date = nextAppraisalDate.value || null;
+    }
     if (appraisal.value.is_hr_step) {
       payload.hr_renew_contract = hr.renew;
       payload.hr_increment_approved = hr.increment;

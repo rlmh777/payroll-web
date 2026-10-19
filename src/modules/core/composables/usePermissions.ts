@@ -39,12 +39,16 @@ export function usePermissions() {
   }
 
   function canAccessRoute(path: string, menuTree: MenuItem[] = []): boolean {
-    if (menuTree.length > 0 && isPathAllowedByMenus(path, collectMenuRoutes(menuTree))) {
-      return true;
+    const required = routeViewPermission(path);
+    if (required) {
+      return hasRoutePermission(permissions.value, required);
     }
 
-    const required = routeViewPermission(path);
-    return hasRoutePermission(permissions.value, required);
+    if (menuTree.length > 0) {
+      return isPathAllowedByMenus(path, collectMenuRoutes(menuTree));
+    }
+
+    return true;
   }
 
   return {

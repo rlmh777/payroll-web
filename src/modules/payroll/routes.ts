@@ -121,6 +121,10 @@ export const payrollRoutes: RouteRecordRaw[] = [
         component: () => import('@payroll/components/settings/payroll-settings/ManagePayrollSettings.vue'),
       },
       {
+        path: '/payroll/settings/document-headers',
+        component: () => import('@payroll/components/settings/document-header/ManageDocumentHeaders.vue'),
+      },
+      {
         path: '/payroll/settings/tax-calculator-accounts',
         component: () => import('@payroll/components/settings/tax-calculator/ManageTaxCalculatorAccounts.vue'),
         props: { title: 'GST Calculator' },

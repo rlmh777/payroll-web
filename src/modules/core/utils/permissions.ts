@@ -39,6 +39,7 @@ export const CRUD_PERMISSIONS = {
 export type CrudResource = keyof typeof CRUD_PERMISSIONS;
 
 export const ROUTE_VIEW_PERMISSIONS: Array<{ prefix: string; permission: string | string[] }> = [
+  { prefix: '/hr/leaves', permission: 'view-leave' },
   { prefix: '/hr/vacancies', permission: 'view-vacancies' },
   { prefix: '/hr/appraisals', permission: ['view-appraisals', 'employees-crud', 'appraisals-crud'] },
   { prefix: '/hr/profile-changes', permission: ['view-employees', 'employees-crud'] },
@@ -85,6 +86,23 @@ export const ROUTE_VIEW_PERMISSIONS: Array<{ prefix: string; permission: string 
   { prefix: '/hr/settings/department', permission: 'view-department' },
   { prefix: '/hr/settings/worksite', permission: 'view-worksite' },
   { prefix: '/hr/settings/holidays', permission: 'view-holidays' },
+  {
+    prefix: '/hr/settings/profile-changes',
+    permission: [
+      'view-hr-settings',
+      'view-vacancies',
+      'view-job-title',
+      'view-department',
+      'view-worksite',
+      'view-holidays',
+      'view-relationship',
+      'view-degree',
+      'view-country',
+      'view-district',
+      'view-locality',
+      'view-institution',
+    ],
+  },
   {
     prefix: '/hr/settings/birthdays',
     permission: [
@@ -187,6 +205,8 @@ export const ROUTE_VIEW_PERMISSIONS: Array<{ prefix: string; permission: string 
   { prefix: '/payroll/settings/application-logs', permission: 'view-application-logs' },
   { prefix: '/admin/settings/email', permission: 'view-email-settings' },
   { prefix: '/payroll/settings/email', permission: 'view-email-settings' },
+  { prefix: '/admin/settings/login', permission: 'manager-users' },
+  { prefix: '/payroll/settings/login', permission: 'manager-users' },
   { prefix: '/admin/settings/login-page', permission: 'view-login-page' },
   { prefix: '/payroll/settings/login-page', permission: 'view-login-page' },
   { prefix: '/admin/settings/menu', permission: 'view-menu' },

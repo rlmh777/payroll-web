@@ -85,63 +85,129 @@
       </q-card>
 
       <q-card flat bordered class="panel panel--leaves">
-        <q-card-section class="panel__header row items-center">
-          Leave summary
-          <q-space />
-          <span v-if="data.leaves.asOf" class="text-caption text-grey-7">As of {{ formatAsOfDate(data.leaves.asOf) }}</span>
-        </q-card-section>
-        <q-card-section class="q-pt-none">
-          <div v-if="data.leaves.balances.length" class="leave-cards">
-            <q-card
-              v-for="balance in data.leaves.balances"
-              :key="balance.leaveTypeId"
+        <q-tabs
+          v-model="leaveTab"
+          dense
+          no-caps
+          align="left"
+          active-color="primary"
+          indicator-color="primary"
+          class="text-grey-8"
+        >
+          <q-tab name="summary" label="Leave summary" />
+          <q-tab name="detail" label="Leave detail" />
+        </q-tabs>
+        <q-separator />
+        <q-tab-panels v-model="leaveTab" animated>
+          <q-tab-panel name="summary" class="q-pa-md">
+            <div class="row items-center q-mb-sm">
+              <q-space />
+              <span v-if="data.leaves.asOf" class="text-caption text-grey-7">As of {{ formatAsOfDate(data.leaves.asOf) }}</span>
+            </div>
+            <div v-if="data.leaves.balances.length" class="leave-cards">
+              <q-card
+                v-for="balance in data.leaves.balances"
+                :key="balance.leaveTypeId"
+                flat
+                bordered
+                clickable
+                class="leave-card"
+                :class="[`leave-card--${leaveCardTone(balance)}`, {
+                  'leave-card--empty': balance.affectsBalance && balance.availableDays <= 0,
+                  'leave-card--selected': isLeaveCardSelected(balance),
+                }]"
+                :aria-pressed="isLeaveCardSelected(balance) ? 'true' : 'false'"
+                @click="openApplyLeave(balance)"
+              >
+                <q-card-section class="leave-card__body">
+                  <div class="leave-card__name">{{ balance.name }}</div>
+                  <div class="leave-card__available">
+                    {{ balance.affectsBalance ? formatLeaveDays(balance.availableDays) : '—' }}
+                  </div>
+                  <div class="leave-card__available-label">available</div>
+                  <div class="leave-card__stat">
+                    <div class="leave-card__stat-label">Taken</div>
+                    <div class="leave-card__stat-value">{{ formatLeaveDays(balance.takenDays) }}</div>
+                  </div>
+                  <div class="leave-card__stat">
+                    <div class="leave-card__stat-label">Scheduled</div>
+                    <div class="leave-card__stat-value">{{ formatLeaveDays(balance.scheduledDays) }}</div>
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
+            <div v-else class="text-caption text-grey-6">No leave balances</div>
+            <div v-if="data.leaves.upcoming.length" class="q-mt-md">
+              <div class="text-caption text-grey-7 q-mb-xs">Upcoming leave</div>
+              <q-list dense separator>
+                <q-item v-for="leave in data.leaves.upcoming" :key="leave.id">
+                  <q-item-section>
+                    <q-item-label>{{ leave.leaveTypeName }}</q-item-label>
+                    <q-item-label caption>
+                      {{ formatRange(leave.startDate, leave.endDate) }}
+                      · {{ formatLeaveDays(leave.totalDays) }} day{{ leave.totalDays === 1 ? '' : 's' }}
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-badge outline :color="leaveStatusColor(leave.status)" :label="formatLeaveStatus(leave.status)" />
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+          </q-tab-panel>
+
+          <q-tab-panel name="detail" class="q-pa-md">
+            <div class="row q-col-gutter-sm items-end q-mb-md">
+              <div class="col-12 col-sm-4">
+                <q-select
+                  v-model="takenFilters.leaveTypeId"
+                  :options="takenLeaveTypeOptions"
+                  option-value="value"
+                  option-label="label"
+                  emit-value
+                  map-options
+                  outlined
+                  dense
+                  clearable
+                  label="Leave type"
+                />
+              </div>
+              <div class="col-12 col-sm-3">
+                <DateField v-model="takenFilters.fromDate" label="From date" clearable />
+              </div>
+              <div class="col-12 col-sm-3">
+                <DateField v-model="takenFilters.toDate" label="To date" clearable />
+              </div>
+              <div class="col-12 col-sm-auto">
+                <q-btn color="primary" label="Search" :loading="store.isLoadingTakenLeaves" @click="searchTakenLeaves" />
+                <q-btn flat label="Reset" class="q-ml-sm" @click="resetTakenLeaves" />
+              </div>
+            </div>
+            <q-banner v-if="takenDateError || store.takenLeavesError" class="bg-orange-1 text-grey-9 q-mb-sm" dense rounded>
+              {{ takenDateError || store.takenLeavesError }}
+            </q-banner>
+            <q-table
+              :rows="store.takenLeaves"
+              :columns="takenLeaveColumns"
+              row-key="id"
               flat
-              bordered
-              clickable
-              class="leave-card"
-              :class="[`leave-card--${leaveCardTone(balance)}`, {
-                'leave-card--empty': balance.affectsBalance && balance.availableDays <= 0,
-                'leave-card--selected': isLeaveCardSelected(balance),
-              }]"
-              :aria-pressed="isLeaveCardSelected(balance) ? 'true' : 'false'"
-              @click="openApplyLeave(balance)"
+              dense
+              :loading="store.isLoadingTakenLeaves"
+              :pagination="{ rowsPerPage: 10 }"
+              no-data-label="No leave has been taken for the selected filters."
             >
-              <q-card-section class="leave-card__body">
-                <div class="leave-card__name">{{ balance.name }}</div>
-                <div class="leave-card__available">
-                  {{ balance.affectsBalance ? formatLeaveDays(balance.availableDays) : '—' }}
-                </div>
-                <div class="leave-card__available-label">available</div>
-                <div class="leave-card__stat">
-                  <div class="leave-card__stat-label">Taken</div>
-                  <div class="leave-card__stat-value">{{ formatLeaveDays(balance.takenDays) }}</div>
-                </div>
-                <div class="leave-card__stat">
-                  <div class="leave-card__stat-label">Scheduled</div>
-                  <div class="leave-card__stat-value">{{ formatLeaveDays(balance.scheduledDays) }}</div>
-                </div>
-              </q-card-section>
-            </q-card>
-          </div>
-          <div v-else class="text-caption text-grey-6">No leave balances</div>
-          <div v-if="data.leaves.upcoming.length" class="q-mt-md">
-            <div class="text-caption text-grey-7 q-mb-xs">Upcoming leave</div>
-            <q-list dense separator>
-              <q-item v-for="leave in data.leaves.upcoming" :key="leave.id">
-                <q-item-section>
-                  <q-item-label>{{ leave.leaveTypeName }}</q-item-label>
-                  <q-item-label caption>
-                    {{ formatRange(leave.startDate, leave.endDate) }}
-                    · {{ formatLeaveDays(leave.totalDays) }} day{{ leave.totalDays === 1 ? '' : 's' }}
-                  </q-item-label>
-                </q-item-section>
-                <q-item-section side>
-                  <q-badge outline :color="leaveStatusColor(leave.status)" :label="formatLeaveStatus(leave.status)" />
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </div>
-        </q-card-section>
+              <template #body-cell-dates="props">
+                <q-td :props="props">{{ formatRange(props.row.startDate, props.row.endDate) }}</q-td>
+              </template>
+              <template #body-cell-days="props">
+                <q-td :props="props" class="text-right">{{ formatLeaveDays(props.row.totalDays) }}</q-td>
+              </template>
+              <template #body-cell-notes="props">
+                <q-td :props="props">{{ props.row.notes || '—' }}</q-td>
+              </template>
+            </q-table>
+          </q-tab-panel>
+        </q-tab-panels>
       </q-card>
 
       <AddEmployeeLeave
@@ -199,7 +265,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import type { QTableProps } from 'quasar';
 import AddEmployeeLeave from '@hr/components/employee/leave/AddEmployeeLeave.vue';
@@ -223,6 +289,15 @@ const weekStart = ref<string | undefined>(undefined);
 const showApplyLeave = ref(false);
 const selectedLeaveTypeId = ref<number | null>(null);
 
+const leaveTab = ref<'summary' | 'detail'>('summary');
+const currentYear = new Date().getFullYear();
+const takenFilters = reactive({
+  leaveTypeId: null as number | null,
+  fromDate: `${currentYear}-01-01` as string | null,
+  toDate: new Date().toISOString().slice(0, 10) as string | null,
+});
+const takenDateError = ref<string | null>(null);
+
 const data = computed(() => store.data);
 const today = new Date().toISOString().slice(0, 10);
 
@@ -241,6 +316,21 @@ const weekLabel = computed(() => {
   }
   return `${formatDay(start)} – ${formatDay(end)}`;
 });
+
+const takenLeaveTypeOptions = computed(() =>
+  (data.value?.leaves.balances ?? []).map((balance) => ({
+    label: balance.name,
+    value: balance.leaveTypeId,
+  })),
+);
+
+const takenLeaveColumns: QTableProps['columns'] = [
+  { name: 'type', label: 'Leave type', field: 'leaveTypeName', align: 'left' },
+  { name: 'dates', label: 'Dates', field: 'startDate', align: 'left' },
+  { name: 'days', label: 'Days', field: 'totalDays', align: 'right' },
+  { name: 'duration', label: 'Duration', field: (row) => row.duration || '—', align: 'left' },
+  { name: 'notes', label: 'Notes', field: 'notes', align: 'left' },
+];
 
 const payslipColumns: QTableProps['columns'] = [
   { name: 'period', label: 'Period', field: (row) => formatRange(row.periodStart, row.periodEnd), align: 'left' },
@@ -376,11 +466,37 @@ function openApplyLeave(balance: EmployeeDashboardLeaveBalance) {
   showApplyLeave.value = true;
 }
 
+function searchTakenLeaves() {
+  takenDateError.value = null;
+  if (takenFilters.fromDate && takenFilters.toDate && takenFilters.toDate < takenFilters.fromDate) {
+    takenDateError.value = 'The end date must be on or after the start date.';
+    return;
+  }
+  void store.fetchTakenLeaves({
+    leaveTypeId: takenFilters.leaveTypeId,
+    fromDate: takenFilters.fromDate,
+    toDate: takenFilters.toDate,
+  });
+}
+
+function resetTakenLeaves() {
+  takenFilters.leaveTypeId = null;
+  takenFilters.fromDate = `${currentYear}-01-01`;
+  takenFilters.toDate = new Date().toISOString().slice(0, 10);
+  searchTakenLeaves();
+}
+
 function onLeaveRequested() {
   showApplyLeave.value = false;
   selectedLeaveTypeId.value = null;
   void reload();
 }
+
+watch(leaveTab, (tab) => {
+  if (tab === 'detail') {
+    searchTakenLeaves();
+  }
+});
 
 watch(showApplyLeave, (open) => {
   if (!open) {
@@ -425,6 +541,9 @@ onMounted(() => {
 .panel__header {
   font-weight: 600;
 }
+
+.panel--leaves :deep(.q-tab-panel) {
+  padding-top: 12px;
 
 .schedule-week {
   display: grid;

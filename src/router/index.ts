@@ -8,7 +8,7 @@ import {
 import { useAuthStore } from 'src/stores/auth';
 import { useMenuStore } from '@core/stores/menus';
 import { useFormAssignmentStore } from '@hr/stores/form-assignment-store';
-import { isPathAllowedByMenus, collectMenuRoutes } from '@core/utils/menu-navigation';
+import { moduleLandingPath } from '@core/utils/menu-navigation';
 import { hasRoutePermission, routeViewPermission } from '@core/utils/permissions';
 import routes from './routes';
 
@@ -40,19 +40,21 @@ export default route(function (/* { store } */) {
   const menuStore = useMenuStore();
 
   function canAccessPath(path: string): boolean {
-    if (menuStore.menuTree.length > 0) {
-      const menuRoutes = collectMenuRoutes(menuStore.menuTree);
-      if (isPathAllowedByMenus(path, menuRoutes)) {
-        return true;
-      }
-    }
-
     const requiredPermission = routeViewPermission(path);
-    if (!requiredPermission) {
-      return true;
+    if (requiredPermission) {
+      return hasRoutePermission(authStore.user?.permissions ?? [], requiredPermission);
     }
 
-    return hasRoutePermission(authStore.user?.permissions ?? [], requiredPermission);
+    return true;
+  }
+
+  function adminLandingPath(): string | null {
+    const landing = moduleLandingPath('/admin/settings', menuStore.moduleMenus.admin ?? []);
+    if (!landing || landing === '/admin/settings' || !canAccessPath(landing)) {
+      return null;
+    }
+
+    return landing;
   }
 
   authStore.setUnauthorizedHandler((redirectPath) => {
@@ -88,7 +90,21 @@ export default route(function (/* { store } */) {
 
       menuStore.syncActiveModuleFromPath(to.path);
 
+      if (to.path === '/admin/settings') {
+        const landing = adminLandingPath();
+        if (landing) {
+          return { path: landing };
+        }
+      }
+
       if (!canAccessPath(to.path)) {
+        if (to.path.startsWith('/admin/')) {
+          const landing = adminLandingPath();
+          if (landing && landing !== to.path) {
+            return { path: landing };
+          }
+        }
+
         return { path: '/' };
       }
 

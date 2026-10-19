@@ -23,10 +23,15 @@ export const legacyRouteRedirects: RouteRecordRaw[] = [
       return `/hr/employees/${id}`;
     },
   },
-  { path: '/leaves', redirect: '/payroll/leaves/list' },
+  { path: '/leaves', redirect: '/hr/leaves/list' },
   {
     path: '/leaves/:pathMatch(.*)*',
-    redirect: (to) => `/payroll/leaves/${String(to.params.pathMatch ?? '')}`,
+    redirect: (to) => `/hr/leaves/${String(to.params.pathMatch ?? '')}`,
+  },
+  { path: '/payroll/leaves', redirect: '/hr/leaves/list' },
+  {
+    path: '/payroll/leaves/:pathMatch(.*)*',
+    redirect: (to) => `/hr/leaves/${String(to.params.pathMatch ?? '')}`,
   },
   { path: '/reports', redirect: '/payroll/reports/journal-entries' },
   {

@@ -29,6 +29,7 @@
             <q-select
               v-model="selectedPayrollRunId"
               outlined
+              dense
               emit-value
               map-options
               label="Processed payroll run"
@@ -36,7 +37,6 @@
               :options="processedPayrollRunOptions"
               :disable="!selectedPayPeriodGroupId"
             >
-              <template #prepend><q-icon name="task_alt" /></template>
               <template #no-option>
                 <q-item>
                   <q-item-section class="text-grey-7">
@@ -53,6 +53,9 @@
                 </q-item>
               </template>
             </q-select>
+          </div>
+          <div class="col-12 col-md-4">
+            <ReportHeaderSelect />
           </div>
         </div>
       </q-card-section>
@@ -139,6 +142,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import ReportHeaderSelect from '@payroll/components/reports/ReportHeaderSelect.vue';
 import { useQuasar } from 'quasar';
 import { storeToRefs } from 'pinia';
 import type { QTableProps } from 'quasar';

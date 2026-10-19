@@ -8,7 +8,11 @@
       </q-card-section>
       <q-card-section class="employment-contract-drawer__body q-pa-none">
         <q-form @submit.prevent="save">
-          <EmploymentDetailForm v-model="form" :disable="saving" />
+          <EmploymentDetailForm
+            :model-value="form"
+            :disable="saving"
+            @update:model-value="assignForm"
+          />
           <div class="employment-contract-drawer__actions row justify-end q-gutter-sm">
             <q-btn flat label="Cancel" color="grey" :disable="saving" @click="closeDialog" />
             <q-btn type="submit" color="primary" :loading="saving" label="Save" />
@@ -48,6 +52,10 @@ function closeDialog() {
   Object.assign(form, createDefaultEmploymentDetailForm());
 }
 
+function assignForm(value: EmploymentDetailFormModel) {
+  Object.assign(form, value);
+}
+
 function validateForm(): string | null {
   return validateEmploymentDetailForm(form);
 }
@@ -75,6 +83,8 @@ async function save() {
       departmentId: form.departmentId,
       worksiteId: form.worksiteId,
       defaultPayPeriodGroupId: form.defaultPayPeriodGroupId as string,
+      appraisalDate: form.appraisalDate || null,
+      appraisalFormTemplateId: form.appraisalFormTemplateId || null,
     }, form.contractAgreementFile);
     $q.notify({ color: 'positive', position: 'top', message: 'Employment contract saved.' });
     emit('saved');

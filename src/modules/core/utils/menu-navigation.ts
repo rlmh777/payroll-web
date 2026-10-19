@@ -102,11 +102,57 @@ export function resolvePreferredLandingPath(
   }
 
   const module = enabledModules.find((item) => item.code === code);
-  return module?.default_route || '/';
+  return moduleLandingPath(module?.default_route, moduleMenus[code] ?? []);
 }
 
 export function isPathAllowedByMenus(path: string, menuRoutes: string[]): boolean {
   return menuRoutes.some((menuRoute) => routeMatches(menuRoute, path));
+}
+
+/** First concrete page in a menu tree, skipping parents that only group children. */
+export function firstLeafMenuRoute(items: MenuItem[]): string | null {
+  for (const item of items) {
+    if (item.children?.length) {
+      const child = firstLeafMenuRoute(item.children);
+      if (child) {
+        return child;
+      }
+    }
+
+    const route = item.route?.trim();
+    if (route) {
+      return route;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Module home. A default route that only groups child pages (Administration → Settings)
+ * opens the first child the user can see instead of a hardcoded page.
+ */
+export function moduleLandingPath(
+  defaultRoute: string | null | undefined,
+  menus: MenuItem[],
+): string {
+  const leaf = firstLeafMenuRoute(menus);
+  const preferred = defaultRoute?.trim() || '';
+  if (!preferred) {
+    return leaf || '/';
+  }
+
+  const routes = collectMenuRoutes(menus);
+  const hasChild = routes.some((route) => route !== preferred && route.startsWith(`${preferred}/`));
+  if (hasChild) {
+    return leaf || preferred;
+  }
+
+  if (isPathAllowedByMenus(preferred, routes)) {
+    return preferred;
+  }
+
+  return leaf || preferred;
 }
 
 export function findTopMenuForPath(path: string, tree: MenuItem[]): MenuItem | null {

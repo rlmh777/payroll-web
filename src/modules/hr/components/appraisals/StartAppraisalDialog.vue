@@ -10,6 +10,18 @@
       <AppDialogBody>
         <q-form class="q-gutter-md" @submit.prevent="submit">
           <q-select
+            v-if="reportsOnly"
+            v-model="form.employee_id"
+            :options="reportOptions"
+            emit-value
+            map-options
+            outlined
+            dense
+            label="Employee"
+            :loading="loadingReports"
+          />
+          <q-select
+            v-else
             v-model="form.employee_id"
             :options="employeeOptions"
             emit-value
@@ -30,96 +42,53 @@
               <q-input v-model="form.period_end" outlined dense type="date" label="To" />
             </div>
           </div>
-          <q-select
-            ref="formSelectRef"
-            :model-value="form.form_template_id"
-            :options="formOptions"
-            emit-value
-            map-options
+          <q-input
+            :model-value="selectedFormName"
             outlined
             dense
+            readonly
             label="Appraisal form"
-            @update:model-value="onFormTemplateSelect"
-          >
-            <template #option="scope">
-              <q-item
-                v-if="isNewFormOption(scope.opt)"
-                clickable
-                v-close-popup
-                @click="openCreateForm"
-              >
-                <q-item-section avatar>
-                  <q-icon name="add" color="primary" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>{{ scope.opt.label }}</q-item-label>
-                </q-item-section>
-              </q-item>
-              <q-item v-else v-bind="scope.itemProps">
-                <q-item-section>
-                  <q-item-label>{{ scope.opt.label }}</q-item-label>
-                </q-item-section>
-                <q-item-section v-if="canManageAppraisalForms" side>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    icon="edit"
-                    color="primary"
-                    size="sm"
-                    @click.stop="openEditForm(String(scope.opt.value))"
-                  >
-                    <q-tooltip>Update form</q-tooltip>
-                  </q-btn>
-                </q-item-section>
-              </q-item>
-            </template>
-          </q-select>
-          <q-select
-            v-model="form.pipeline_template_id"
-            :options="pipelineOptions"
-            emit-value
-            map-options
-            outlined
-            dense
-            clearable
-            label="Pipeline"
-            hint="Leave blank to use the default supervisor → department head → HR → accounts pipeline."
+            hint="The form is taken from the employee’s active contract."
           />
+          <div v-if="form.employee_id && !selectedFormName" class="text-negative">
+            Set an appraisal form on this employee’s contract before starting a review.
+          </div>
           <div class="row justify-end q-gutter-sm">
             <q-btn flat label="Cancel" v-close-popup />
-            <q-btn color="primary" type="submit" label="Start" :loading="store.isSaving" />
+            <q-btn
+              color="primary"
+              type="submit"
+              label="Start"
+              :loading="store.isSaving"
+              :disable="!selectedFormName"
+            />
           </div>
         </q-form>
       </AppDialogBody>
     </AppDialogCard>
   </q-dialog>
-
-  <FormBuilderDialog
-    v-model="formBuilderOpen"
-    :record="editingForm"
-    default-purpose="appraisal"
-    lock-purpose
-    @saved="onFormSaved"
-  />
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
 import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import AppDialogBody from '@core/components/dialog/AppDialogBody.vue';
-import { usePermissions } from '@core/composables/usePermissions';
-import FormBuilderDialog from '@hr/components/forms/FormBuilderDialog.vue';
 import { useAppraisalStore } from '@hr/stores/appraisal-store';
-import { useFormTemplateStore } from '@hr/stores/form-template-store';
-import type { FormTemplate } from '@hr/stores/form-template-store';
 import { useAuthStore } from '@core/stores/auth';
 
-const NEW_FORM_VALUE = '__new_appraisal_form__';
+interface ReportOption {
+  id: string;
+  code?: string | null;
+  name: string;
+  appraisal_form?: { id: string; name: string } | null;
+}
 
-const props = defineProps<{ modelValue: boolean }>();
+const props = defineProps<{
+  modelValue: boolean;
+  reportsOnly?: boolean;
+}>();
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   started: [id: string];
@@ -127,101 +96,63 @@ const emit = defineEmits<{
 
 const $q = useQuasar();
 const store = useAppraisalStore();
-const formTemplateStore = useFormTemplateStore();
-const { canAny, roles } = usePermissions();
 const loadingEmployees = ref(false);
+const loadingReports = ref(false);
 const employeeOptions = ref<Array<{ label: string; value: string }>>([]);
-const formBuilderOpen = ref(false);
-const editingForm = ref<FormTemplate | null>(null);
-const formSelectRef = ref<{ hidePopup?: () => void } | null>(null);
-
-const canManageAppraisalForms = computed(() => {
-  if (canAny(['form-templates-crud', 'appraisals-crud'])) {
-    return true;
-  }
-
-  return roles.value.some((role) => ['hr', 'admin'].includes(role.toLowerCase()));
-});
+const reports = ref<ReportOption[]>([]);
+const selectedContract = ref<ReportOption | undefined>();
 
 const form = reactive({
   employee_id: '',
   period_label: `${new Date().getFullYear()} appraisal`,
   period_start: '',
   period_end: '',
-  form_template_id: null as string | null,
-  pipeline_template_id: null as string | null,
 });
 
-const formOptions = computed(() => {
-  const list = (store.options?.form_templates ?? []).map((item) => ({ label: item.name, value: item.id }));
-  if (canManageAppraisalForms.value) {
-    list.unshift({ label: 'New appraisal form', value: NEW_FORM_VALUE });
-  }
-  return list;
-});
-const pipelineOptions = computed(() =>
-  (store.options?.pipeline_templates ?? []).map((item) => ({ label: item.name, value: item.id })),
+const reportOptions = computed(() =>
+  reports.value.map((row) => ({
+    value: row.id,
+    label: row.code ? `${row.name} (${row.code})` : row.name,
+  })),
 );
 
-function isNewFormOption(option: { value?: string | number | null }) {
-  return option.value === NEW_FORM_VALUE;
-}
+const selectedFormName = computed(() => {
+  if (props.reportsOnly) {
+    return reports.value.find((row) => row.id === form.employee_id)?.appraisal_form?.name ?? '';
+  }
+  return selectedContract.value?.id === form.employee_id
+    ? selectedContract.value.appraisal_form?.name ?? ''
+    : '';
+});
 
-async function loadOptions() {
+async function loadReports() {
+  loadingReports.value = true;
   try {
-    const options = await store.fetchOptions();
-    if (!form.form_template_id && options.form_templates[0]) {
-      form.form_template_id = options.form_templates[0].id;
-    }
-    const defaultPipeline = options.pipeline_templates.find((item) => item.key === 'employee_appraisal');
-    if (!form.pipeline_template_id && defaultPipeline) {
-      form.pipeline_template_id = defaultPipeline.id;
-    }
+    reports.value = await store.fetchCandidates();
   } catch (error) {
+    reports.value = [];
     $q.notify({
       type: 'negative',
-      message: error instanceof Error ? error.message : 'Could not load appraisal options.',
+      message: error instanceof Error ? error.message : 'Could not load employees.',
     });
+  } finally {
+    loadingReports.value = false;
   }
 }
 
-function onFormTemplateSelect(value: string | null) {
-  if (value === NEW_FORM_VALUE) {
-    openCreateForm();
+async function loadContract(employeeId: string) {
+  if (!employeeId || props.reportsOnly) {
+    selectedContract.value = undefined;
     return;
   }
-  form.form_template_id = value;
-}
-
-function openCreateForm() {
-  if (!canManageAppraisalForms.value) {
-    return;
-  }
-  formSelectRef.value?.hidePopup?.();
-  editingForm.value = null;
-  formBuilderOpen.value = true;
-}
-
-async function openEditForm(id: string) {
-  if (!canManageAppraisalForms.value) {
-    return;
-  }
-  formSelectRef.value?.hidePopup?.();
   try {
-    editingForm.value = await formTemplateStore.fetchTemplate(id);
-    formBuilderOpen.value = true;
+    selectedContract.value = await store.fetchContract(employeeId);
   } catch (error) {
+    selectedContract.value = undefined;
     $q.notify({
       type: 'negative',
-      message: error instanceof Error ? error.message : 'Could not load this appraisal form.',
+      message: error instanceof Error ? error.message : 'Could not load this employee’s contract.',
     });
-  }
-}
-
-async function onFormSaved(saved: FormTemplate) {
-  await store.fetchOptions();
-  if (saved.is_active) {
-    form.form_template_id = saved.id;
   }
 }
 
@@ -256,14 +187,16 @@ async function submit() {
     $q.notify({ type: 'negative', message: 'Select an employee.' });
     return;
   }
+  if (!selectedFormName.value) {
+    $q.notify({ type: 'negative', message: 'Set an appraisal form on the employee’s contract first.' });
+    return;
+  }
   try {
     const created = await store.start({
       employee_id: form.employee_id,
       period_label: form.period_label,
       period_start: form.period_start || null,
       period_end: form.period_end || null,
-      form_template_id: form.form_template_id,
-      pipeline_template_id: form.pipeline_template_id,
     });
     $q.notify({ type: 'positive', message: 'Appraisal started.' });
     emit('update:modelValue', false);
@@ -277,18 +210,25 @@ async function submit() {
 }
 
 watch(
+  () => form.employee_id,
+  (employeeId) => {
+    void loadContract(employeeId);
+  },
+);
+
+watch(
   () => props.modelValue,
   (open) => {
-    if (open) {
-      void loadOptions();
+    if (!open) {
+      return;
+    }
+    form.employee_id = '';
+    selectedContract.value = undefined;
+    if (props.reportsOnly) {
+      void loadReports();
+    } else {
       void filterEmployees('', (fn) => fn());
     }
   },
 );
-
-onMounted(() => {
-  if (props.modelValue) {
-    void loadOptions();
-  }
-});
 </script>

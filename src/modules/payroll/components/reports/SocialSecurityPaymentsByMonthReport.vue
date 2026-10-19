@@ -38,7 +38,11 @@
               dense
               :loading="reportsStore.isLoadingSocialSecurityPaymentsByMonthPeriods"
               :disable="isBusy || !monthOptions.length"
+              @update:model-value="onMonthChanged"
             />
+          </div>
+          <div class="col-12 col-md-3">
+            <ReportHeaderSelect />
           </div>
           <div class="col-12 col-md-3">
             <q-btn
@@ -97,8 +101,26 @@
               color="primary"
               icon="download"
               label="Export pipe file"
+              class="q-mr-sm"
               :disable="!report.rows.length"
               @click="exportPipeFile"
+            />
+            <q-btn
+              outline
+              color="primary"
+              icon="table_view"
+              label="Export Excel"
+              class="q-mr-sm"
+              :disable="!report.rows.length"
+              @click="handleExportExcel"
+            />
+            <q-btn
+              outline
+              color="primary"
+              icon="picture_as_pdf"
+              label="Export PDF"
+              :disable="!report.rows.length"
+              @click="handleExportPdf"
             />
           </div>
         </div>
@@ -154,10 +176,16 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import ReportHeaderSelect from '@payroll/components/reports/ReportHeaderSelect.vue';
 import { useQuasar } from 'quasar';
 import type { QTableProps } from 'quasar';
 import { storeToRefs } from 'pinia';
 import { useReportsStore } from '@payroll/stores/reports-store';
+import { rememberReportMonth, sharedReportMonth } from '@payroll/composables/use-report-period';
+import {
+  exportSocialSecurityPaymentsExcel,
+  exportSocialSecurityPaymentsPdf,
+} from '@payroll/utils/social-security-payments-export';
 
 const $q = useQuasar();
 const reportsStore = useReportsStore();
@@ -254,6 +282,12 @@ function selectDefaultPeriod() {
     return;
   }
 
+  const shared = sharedReportMonth();
+  if ((!year.value || !availableYears.includes(year.value)) && shared && availableYears.includes(shared.year)) {
+    year.value = shared.year;
+    month.value = shared.month;
+  }
+
   if (!year.value || !availableYears.includes(year.value)) {
     year.value = availableYears[0] ?? null;
   }
@@ -279,7 +313,18 @@ function onYearChanged() {
 
 watch(monthOptions, () => {
   syncMonthToAvailableOptions();
+  publishPeriod();
 });
+
+function onMonthChanged() {
+  publishPeriod();
+}
+
+function publishPeriod() {
+  if (year.value && month.value) {
+    rememberReportMonth(year.value, month.value);
+  }
+}
 
 async function loadSaved() {
   if (!year.value || !month.value) return;
@@ -342,6 +387,20 @@ function exportPipeFile() {
   anchor.download = `social_security_payments_${report.value.year}_${String(report.value.month).padStart(2, '0')}.txt`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function handleExportExcel() {
+  if (!report.value) return;
+  exportSocialSecurityPaymentsExcel(report.value);
+  $q.notify({ type: 'positive', message: 'Social security payments exported to Excel.' });
+}
+
+function handleExportPdf() {
+  if (!report.value) return;
+  const opened = exportSocialSecurityPaymentsPdf(report.value);
+  if (!opened) {
+    $q.notify({ type: 'negative', message: 'Allow pop-ups to export the PDF.' });
+  }
 }
 
 onMounted(async () => {

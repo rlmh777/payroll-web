@@ -8,7 +8,11 @@
       </q-card-section>
       <q-card-section class="employment-contract-drawer__body q-pa-none">
         <q-form @submit.prevent="save">
-          <EmploymentDetailForm v-model="form" :disable="saving" />
+          <EmploymentDetailForm
+            :model-value="form"
+            :disable="saving"
+            @update:model-value="assignForm"
+          />
           <EmploymentLeaveEntitlements
             v-if="store.recordToEdit?.id"
             ref="entitlementsRef"
@@ -65,6 +69,10 @@ function closeDialog() {
   Object.assign(form, createDefaultEmploymentDetailForm());
 }
 
+function assignForm(value: EmploymentDetailFormModel) {
+  Object.assign(form, value);
+}
+
 function validateForm(): string | null {
   if (!store.recordToEdit) return 'Form is not ready.';
   return validateEmploymentDetailForm(form);
@@ -94,6 +102,8 @@ async function save() {
       departmentId: form.departmentId,
       worksiteId: form.worksiteId,
       defaultPayPeriodGroupId: form.defaultPayPeriodGroupId as string,
+      appraisalDate: form.appraisalDate || null,
+      appraisalFormTemplateId: form.appraisalFormTemplateId || null,
     }, form.contractAgreementFile);
 
     if (entitlementsRef.value) {

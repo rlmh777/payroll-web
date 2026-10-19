@@ -41,6 +41,7 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMenuStore } from '../../../stores/menus';
+import { moduleLandingPath } from '../../../utils/menu-navigation';
 import {
   shouldShowApplicationsLauncher,
   type AppModule,
@@ -52,12 +53,7 @@ const showLauncher = computed(() => shouldShowApplicationsLauncher(menuStore.lau
 
 function selectModule(module: AppModule) {
   menuStore.setActiveModule(module.code);
-
-  const defaultRoute = module.default_route ?? '/';
-
-  if (defaultRoute) {
-    void router.push(defaultRoute);
-  }
+  void router.push(moduleLandingPath(module.default_route, menuStore.moduleMenus[module.code] ?? []));
 }
 </script>
 

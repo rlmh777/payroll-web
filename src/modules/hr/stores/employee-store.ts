@@ -5,6 +5,7 @@ import type { Account, Allowance, CitizenshipStatus, Country, Employee, Gender, 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api'
 
 let employeesFetchId = 0;
+let employeeByIdFetchId = 0;
 
 export type EmployeeDetailsTab =
   | 'allowances'
@@ -182,9 +183,8 @@ export const useEmployeeStore = defineStore('employee', {
       return this.selectedEmployee;
     },
 
-    async fetchEmployeeById(id: string) {
-      if (this.isLoadingEmployeeById) return;
-      
+    async fetchEmployeeById(id: string, commit = true) {
+      const fetchId = ++employeeByIdFetchId;
       this.isLoadingEmployeeById = true;
       try {
         const response = await fetch(`${API_URL}/employees/${id}`, {
@@ -192,17 +192,27 @@ export const useEmployeeStore = defineStore('employee', {
             Accept: 'application/json',
           },
         });
+        if (fetchId !== employeeByIdFetchId) {
+          return;
+        }
         if (!response.ok) {
           throw new Error('Failed to fetch employee');
         }
         const data = await response.json();
-        this.selectedEmployee = data;
-        return data;
+        if (commit) {
+          this.selectedEmployee = data;
+        }
+        return data as Employee;
       } catch (error) {
+        if (fetchId !== employeeByIdFetchId) {
+          return;
+        }
         console.error('Error fetching employee:', error);
         throw error;
       } finally {
-        this.isLoadingEmployeeById = false;
+        if (fetchId === employeeByIdFetchId) {
+          this.isLoadingEmployeeById = false;
+        }
       }
     },
 

@@ -281,6 +281,31 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function loginWithPanelLink(token: string, code: string): Promise<PasswordLoginResult> {
+    try {
+      const response = await fetch(`${API_URL}/panel/access/${encodeURIComponent(token)}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || 'That code does not match the one sent to your email.');
+      }
+      if (!applyLoginPayload(data)) {
+        throw new Error('Login response missing session');
+      }
+      return { type: 'success', hasPasskeys: payloadHasPasskeys(data) };
+    } catch (error) {
+      Notify.create({
+        type: 'negative',
+        message: error instanceof Error ? error.message : 'That code does not match the one sent to your email.',
+        position: 'top',
+      });
+      return { type: 'error' };
+    }
+  }
+
   async function verifyTwoFactor(
     challengeKey: string,
     code: string,
@@ -775,6 +800,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     login,
     loginWithInviteCode,
+    loginWithPanelLink,
     verifyTwoFactor,
     beginTwoFactorSetup,
     confirmTwoFactorSetup,

@@ -26,6 +26,7 @@
             class="gst-calculator__period"
             :disable="store.isLoadingWorkspace"
           />
+          <ReportHeaderSelect class="gst-calculator__document-header" />
           <q-btn
             outline
             dense
@@ -312,8 +313,18 @@
               color="primary"
               icon="table_view"
               label="Export Excel"
+              class="q-mr-sm"
               :disable="!workspace"
               @click="handleExportExcel"
+            />
+            <q-btn
+              outline
+              no-caps
+              color="primary"
+              icon="picture_as_pdf"
+              label="Export PDF"
+              :disable="!workspace"
+              @click="handleExportPdf"
             />
           </div>
           <q-card flat bordered class="q-mb-lg">
@@ -563,6 +574,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import ReportHeaderSelect from '@payroll/components/reports/ReportHeaderSelect.vue';
 import { useQuasar } from 'quasar';
 import {
   useTaxCalculatorStore,
@@ -573,15 +585,17 @@ import {
 import GstSheetTable from './GstSheetTable.vue';
 import PurchaseLedgerPanel from './PurchaseLedgerPanel.vue';
 import SalesLedgerPanel from './SalesLedgerPanel.vue';
-import { exportGstCalculatorResultsExcel } from '@payroll/utils/gst-calculator-results-export';
+import { exportGstCalculatorResultsExcel, exportGstCalculatorResultsPdf } from '@payroll/utils/gst-calculator-results-export';
+import { rememberReportMonth, sharedReportMonth } from '@payroll/composables/use-report-period';
 
 const $q = useQuasar();
 const store = useTaxCalculatorStore();
 const now = new Date();
 const currentYear = now.getFullYear();
 const currentMonth = now.getMonth() + 1;
-const year = ref(currentYear);
-const month = ref(currentMonth);
+const shared = sharedReportMonth();
+const year = ref(shared?.year ?? currentYear);
+const month = ref(shared?.month ?? currentMonth);
 const tab = ref('accounts');
 const isAddPeriodOpen = ref(false);
 const isClearing = ref(false);
@@ -595,6 +609,10 @@ const monthOptions = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ].map((label, index) => ({ label, value: index + 1 }));
+
+watch([year, month], ([nextYear, nextMonth]) => {
+  rememberReportMonth(nextYear, nextMonth);
+});
 
 const periodKey = computed({
   get: () => periodValue(year.value, month.value),
@@ -846,6 +864,23 @@ function handleExportExcel() {
     rateName: labelFor,
   });
   $q.notify({ type: 'positive', message: 'GST calculator results exported to Excel.' });
+}
+
+function handleExportPdf() {
+  if (!workspace.value) {
+    return;
+  }
+  const opened = exportGstCalculatorResultsPdf({
+    periodLabel: `${monthLabel(month.value)} ${year.value}`,
+    year: year.value,
+    month: month.value,
+    partialExemption: partialExemption.value,
+    results: results.value,
+    rateName: labelFor,
+  });
+  if (!opened) {
+    $q.notify({ type: 'negative', message: 'Allow pop-ups to export the PDF.' });
+  }
 }
 
 function money(value: number | null | undefined) {
@@ -1193,6 +1228,12 @@ watch(newPeriodYear, () => {
 
 .gst-calculator__period {
   width: 160px;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
+.gst-calculator__document-header {
+  width: 220px;
   max-width: 100%;
   flex: 0 0 auto;
 }

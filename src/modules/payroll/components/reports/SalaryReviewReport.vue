@@ -15,7 +15,7 @@
       <q-card-section>
         <div class="text-subtitle1 text-weight-bold q-mb-md">Report period</div>
 
-        <div class="row q-col-gutter-md items-end">
+        <div class="row q-col-gutter-md">
           <div class="col-12 col-md-4">
             <DateField
               v-model="startDate"
@@ -31,6 +31,9 @@
               required
               :disable="reportsStore.isLoadingSalaryReview"
             />
+          </div>
+          <div class="col-12 col-md-4">
+            <ReportHeaderSelect />
           </div>
           <div class="col-12 col-md-4">
             <q-btn
@@ -60,8 +63,17 @@
               color="primary"
               icon="table_view"
               label="Export Excel"
+              class="q-mr-sm"
               :disable="!report.departments.length"
               @click="handleExportExcel"
+            />
+            <q-btn
+              outline
+              color="primary"
+              icon="picture_as_pdf"
+              label="Export PDF"
+              :disable="!report.departments.length"
+              @click="handleExportPdf"
             />
           </div>
         </div>
@@ -146,11 +158,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import ReportHeaderSelect from '@payroll/components/reports/ReportHeaderSelect.vue';
 import { useQuasar } from 'quasar';
 import { storeToRefs } from 'pinia';
 import type { QTableProps } from 'quasar';
 import { formatDate } from '../attendance/utils';
 import DateField from '@core/components/common/DateField.vue';
+import { useSharedReportDates } from '@payroll/composables/use-report-period';
 import {
   useReportsStore,
   type SalaryReviewDepartment,
@@ -158,6 +172,7 @@ import {
 } from '@payroll/stores/reports-store';
 import {
   exportSalaryReviewExcel,
+  exportSalaryReviewPdf,
   formatSalaryReviewCurrency,
 } from '@payroll/utils/salary-review-export';
 
@@ -165,8 +180,7 @@ const $q = useQuasar();
 const reportsStore = useReportsStore();
 const { salaryReviewReport: report } = storeToRefs(reportsStore);
 
-const startDate = ref<string | null>(defaultStartDate());
-const endDate = ref<string | null>(defaultEndDate());
+const { startDate, endDate } = useSharedReportDates(defaultStartDate, defaultEndDate);
 const selectedDepartmentKey = ref<string | null>(null);
 
 const canGenerate = computed(() =>
@@ -243,6 +257,16 @@ function handleExportExcel() {
 
   exportSalaryReviewExcel(report.value);
   $q.notify({ type: 'positive', message: 'Salary review exported to Excel.' });
+}
+
+function handleExportPdf() {
+  if (!report.value) {
+    return;
+  }
+  const opened = exportSalaryReviewPdf(report.value);
+  if (!opened) {
+    $q.notify({ type: 'negative', message: 'Allow pop-ups to export the PDF.' });
+  }
 }
 </script>
 

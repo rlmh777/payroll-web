@@ -65,8 +65,14 @@
             Converted to an employee.
           </q-banner>
 
+          <InterviewSetup
+            v-if="selected && vacancy && selected.candidate_stage?.is_shortlist"
+            :key="`${selected.id}-interview`"
+            :vacancy-id="vacancy.id"
+            :highlight-application-id="selected.id"
+          />
           <ApplicationScorePanel
-            v-if="selected && vacancy"
+            v-else-if="selected && vacancy"
             :key="selected.id"
             :vacancy-id="vacancy.id"
             :application-id="selected.id"

@@ -45,9 +45,11 @@ export interface EmployeeAppraisal {
   hr_increment_value?: number | null;
   hr_notes?: string | null;
   accounts_notes?: string | null;
+  next_appraisal_date?: string | null;
   can_act?: boolean;
   can_edit_form?: boolean;
   can_manage?: boolean;
+  is_supervisor_step?: boolean;
   is_hr_step?: boolean;
   is_accounts_step?: boolean;
   submitted_at?: string | null;
@@ -57,6 +59,15 @@ export interface EmployeeAppraisal {
 export interface AppraisalOptions {
   form_templates: Array<{ id: string; name: string }>;
   pipeline_templates: Array<{ id: string; key: string; name: string }>;
+}
+
+export interface AppraisalCandidate {
+  id: string;
+  code?: string | null;
+  name: string;
+  appraisal_form?: { id: string; name: string } | null;
+  appraisal_date?: string | null;
+  contract_end_date?: string | null;
 }
 
 export interface StartAppraisalPayload {
@@ -77,6 +88,7 @@ export interface AppraisalActionPayload {
   hr_increment_value?: number | null;
   hr_notes?: string | null;
   accounts_notes?: string | null;
+  next_appraisal_date?: string | null;
   answers?: Record<string, unknown>;
   submit_form?: boolean;
 }
@@ -153,6 +165,26 @@ export const useAppraisalStore = defineStore('appraisal', {
         pipeline_templates: Array.isArray(body.pipeline_templates) ? body.pipeline_templates : [],
       };
       return this.options;
+    },
+
+    async fetchCandidates() {
+      const response = await fetch(`${API_URL}/appraisals/candidates`, { headers: this.buildHeaders() });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(errorMessage(body, 'Failed to load employees'));
+      }
+      const rows: AppraisalCandidate[] = Array.isArray(body.data) ? body.data : [];
+      return rows;
+    },
+
+    async fetchContract(employeeId: string) {
+      const response = await fetch(`${API_URL}/appraisals/contracts/${employeeId}`, { headers: this.buildHeaders() });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(errorMessage(body, 'Failed to load the contract appraisal form'));
+      }
+      const row: AppraisalCandidate = body.data;
+      return row;
     },
 
     async fetchOne(id: string) {
