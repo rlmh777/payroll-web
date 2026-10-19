@@ -19,6 +19,8 @@ export interface EmploymentDetail {
   departmentId: number;
   worksiteId: number;
   defaultPayPeriodGroupId?: string | null;
+  appraisalDate?: string | null;
+  appraisalFormTemplateId?: string | null;
   department?: { id: number; name: string } | null;
   worksite?: { id: number; name: string } | null;
   contractType?: { id: number; name: string } | null;
@@ -59,6 +61,8 @@ export interface EmploymentDetailPayload {
   departmentId: number;
   worksiteId: number;
   defaultPayPeriodGroupId: string;
+  appraisalDate?: string | null;
+  appraisalFormTemplateId?: string | null;
 }
 
 export const useEmploymentDetailStore = defineStore('employmentDetail', {

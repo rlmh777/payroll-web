@@ -3,6 +3,11 @@ import { MODULE_ROUTES, hrSettingsPath } from '@core/config/module-routes';
 
 export const coreRoutes: RouteRecordRaw[] = [
   {
+    path: '/panel/access/:token',
+    component: () => import('layouts/LoginLayout.vue'),
+    children: [{ path: '', component: () => import('@hr/pages/PanelAccessPage.vue') }],
+  },
+  {
     path: '/login',
     component: () => import('layouts/LoginLayout.vue'),
     children: [{ path: '', component: () => import('@core/pages/LoginPage.vue') }],

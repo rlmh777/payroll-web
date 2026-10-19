@@ -16,6 +16,7 @@ declare module 'xlsx' {
   };
 
   export function read(data: ArrayBuffer | Uint8Array, options?: Record<string, unknown>): WorkBook;
+  export function write(workbook: WorkBook, options?: Record<string, unknown>): ArrayBuffer;
   export function writeFile(workbook: WorkBook, filename: string, options?: Record<string, unknown>): void;
 }
 

@@ -9,10 +9,11 @@
       <q-card-section class="compensation-drawer__body q-pa-none">
         <q-form @submit.prevent="save">
           <EmployeeCompensationForm
-            v-model="form"
+            :model-value="form"
             :disable="saving"
             :employment-details="employmentDetails"
             :payrate-frequency-name="payrateFrequencyName"
+            @update:model-value="assignForm"
           />
           <div class="compensation-drawer__actions row justify-end q-gutter-sm">
             <q-btn flat label="Cancel" color="grey" :disable="saving" @click="closeDialog" />
@@ -59,6 +60,10 @@ const isOpen = computed({
 function closeDialog() {
   store.closeCreateDialog();
   Object.assign(form, createDefaultEmployeeCompensationForm());
+}
+
+function assignForm(value: EmployeeCompensationFormModel) {
+  Object.assign(form, value);
 }
 
 async function save() {

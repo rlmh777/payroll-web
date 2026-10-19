@@ -7,7 +7,13 @@
         <q-btn icon="close" flat round dense :disable="saving" @click="closeDialog" />
       </q-card-section>
       <q-card-section>
-        <ContributionRuleForm v-model="form" :saving="saving" @submit="save" @cancel="closeDialog" />
+        <ContributionRuleForm
+          :model-value="form"
+          :saving="saving"
+          @update:model-value="assignForm"
+          @submit="save"
+          @cancel="closeDialog"
+        />
       </q-card-section>
     </q-card>
   </q-dialog>
@@ -49,6 +55,10 @@ const isOpen = computed({
 
 function closeDialog() {
   store.closeCreateDialog();
+}
+
+function assignForm(value: ContributionRuleFormModel) {
+  Object.assign(form, value);
 }
 
 async function save() {

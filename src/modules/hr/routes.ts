@@ -246,6 +246,11 @@ export const hrRoutes: RouteRecordRaw[] = [
         props: { title: 'Birthdays' },
       },
       {
+        path: 'profile-changes',
+        component: () => import('@hr/components/settings/profile-changes/ManageProfileChangeSettings.vue'),
+        props: { title: 'Profile changes' },
+      },
+      {
         path: 'letter-templates',
         component: () => import('@hr/components/settings/templates/ManageHrTemplates.vue'),
         props: { title: 'Letter templates', channel: 'letter' },

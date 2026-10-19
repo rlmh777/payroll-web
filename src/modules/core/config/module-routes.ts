@@ -14,7 +14,7 @@ export const MODULE_ROUTES = {
   hrSettings: '/hr/settings',
   payrollEmployees: '/payroll/employees',
   scheduler: '/payroll/scheduler',
-  leaves: '/payroll/leaves',
+  leaves: '/hr/leaves',
   reports: '/payroll/reports',
   settings: '/payroll/settings',
   adminSettings: '/admin/settings',

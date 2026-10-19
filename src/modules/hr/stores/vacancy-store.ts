@@ -35,6 +35,7 @@ export interface CandidateStage {
   is_default: boolean;
   is_hired: boolean;
   is_rejected: boolean;
+  is_shortlist: boolean;
   applications?: VacancyApplication[];
 }
 

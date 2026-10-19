@@ -2,6 +2,7 @@ import { defineStore, acceptHMRUpdate } from 'pinia';
 import { useAuthStore } from '@core/stores/auth';
 
 export type BirthdayVisibility = 'none' | 'department' | 'company';
+export type ProfileChangeApproval = 'supervisor' | 'hr';
 export type ReminderUnit = 'days' | 'weeks' | 'months';
 
 export interface ContractExpiryOffset {
@@ -16,6 +17,7 @@ export interface HrSettings {
   appraisalReminderEnabled: boolean;
   appraisalReminderIntervalValue: number;
   appraisalReminderIntervalUnit: 'days' | 'weeks';
+  profileChangeApproval: ProfileChangeApproval;
 }
 
 const DEFAULT_OFFSETS: ContractExpiryOffset[] = [
@@ -55,6 +57,7 @@ function normalizeSettings(data: Partial<HrSettings> | Record<string, unknown> |
     appraisalReminderEnabled: data?.appraisalReminderEnabled !== false,
     appraisalReminderIntervalValue: Number.isInteger(intervalValue) && intervalValue >= 1 ? intervalValue : 2,
     appraisalReminderIntervalUnit: intervalUnit === 'weeks' ? 'weeks' : 'days',
+    profileChangeApproval: data?.profileChangeApproval === 'supervisor' ? 'supervisor' : 'hr',
   };
 }
 

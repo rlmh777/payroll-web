@@ -58,6 +58,7 @@
               <q-td>{{ props.row.is_default ? 'Yes' : '' }}</q-td>
               <q-td>{{ props.row.is_hired ? 'Yes' : '' }}</q-td>
               <q-td>{{ props.row.is_rejected ? 'Yes' : '' }}</q-td>
+              <q-td>{{ props.row.is_shortlist ? 'Yes' : '' }}</q-td>
               <q-td class="text-right">
                 <q-btn
                   v-if="canEdit"
@@ -110,6 +111,9 @@
             <div class="col-12">
               <q-toggle v-model="form.is_rejected" label="Rejected stage" />
             </div>
+            <div class="col-12">
+              <q-toggle v-model="form.is_shortlist" label="Shortlist stage" />
+            </div>
           </AppDialogForm>
         </AppDialogBody>
         <AppDialogActions>
@@ -150,6 +154,7 @@ const form = reactive({
   is_default: false,
   is_hired: false,
   is_rejected: false,
+  is_shortlist: false,
 });
 
 const columns: QTableProps['columns'] = [
@@ -158,6 +163,7 @@ const columns: QTableProps['columns'] = [
   { name: 'is_default', label: 'Default', field: 'is_default', align: 'left' },
   { name: 'is_hired', label: 'Hired', field: 'is_hired', align: 'left' },
   { name: 'is_rejected', label: 'Rejected', field: 'is_rejected', align: 'left' },
+  { name: 'is_shortlist', label: 'Shortlist', field: 'is_shortlist', align: 'left' },
   { name: 'actions', label: '', field: 'actions', align: 'right' },
 ];
 
@@ -168,6 +174,7 @@ function openCreate() {
   form.is_default = false;
   form.is_hired = false;
   form.is_rejected = false;
+  form.is_shortlist = false;
   dialogOpen.value = true;
 }
 
@@ -178,6 +185,7 @@ function openEdit(stage: CandidateStage) {
   form.is_default = stage.is_default;
   form.is_hired = stage.is_hired;
   form.is_rejected = stage.is_rejected;
+  form.is_shortlist = stage.is_shortlist;
   dialogOpen.value = true;
 }
 
@@ -189,6 +197,7 @@ async function saveStage() {
       is_default: form.is_default,
       is_hired: form.is_hired,
       is_rejected: form.is_rejected,
+      is_shortlist: form.is_shortlist,
     };
     if (editing.value) {
       await store.updateCandidateStage(editing.value.id, payload);

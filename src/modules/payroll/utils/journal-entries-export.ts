@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { documentHeaderHtml, saveReportWorkbook } from '@payroll/utils/save-report-workbook';
 import { formatDate } from '../components/attendance/utils';
 import type { JournalEntryReport } from '@payroll/stores/reports-store';
 
@@ -67,7 +68,10 @@ export function exportJournalEntriesExcel(report: JournalEntryReport): void {
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Journal Entries');
-  XLSX.writeFile(workbook, buildExportFilename(report, 'xlsx'));
+  void saveReportWorkbook(workbook, buildExportFilename(report, 'xlsx'), {
+    title: 'Journal Entries',
+    period: formatDateRange(report),
+  });
 }
 
 function buildJournalEntriesPrintHtml(report: JournalEntryReport): string {
@@ -156,6 +160,7 @@ function buildJournalEntriesPrintHtml(report: JournalEntryReport): string {
     </style>
   </head>
   <body>
+    ${documentHeaderHtml({ title: 'Journal Entries', period: formatDateRange(report) })}
     <div class="toolbar">
       <button type="button" onclick="window.print()">Print / Save as PDF</button>
     </div>

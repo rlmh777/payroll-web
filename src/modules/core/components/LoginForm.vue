@@ -2,7 +2,7 @@
   <div v-if="step === 'accounts'" class="login-accounts" style="width: 100%">
     <div class="text-h6 q-mb-sm">Choose an account</div>
     <div class="text-caption text-grey-7 q-mb-md">
-      Select a saved account. Use a passkey only if that account already has one on this device.
+      Select a saved account. Use a passkey if one is set up, or sign in with your password to create one.
     </div>
     <q-list class="login-accounts__list">
       <q-item
@@ -114,6 +114,7 @@
         color="primary"
         class="full-width"
         :loading="loading"
+        @click="forcePasskeyOffer = false"
       />
       <q-btn
         v-if="passkeysSupported && selectedAccount && accountHasPasskey(selectedAccount)"
@@ -125,6 +126,18 @@
         :loading="passkeyLoading"
         :disable="loading"
         @click="onPasskeyLogin(true)"
+      />
+      <q-btn
+        v-else-if="canCreatePasskey"
+        flat
+        label="Create passkey"
+        color="primary"
+        class="full-width"
+        icon="fingerprint"
+        type="submit"
+        :loading="loading"
+        :disable="passkeyLoading"
+        @click="forcePasskeyOffer = true"
       />
       <q-btn
         flat
@@ -184,6 +197,19 @@
         color="primary"
         class="full-width"
         :loading="loading"
+        @click="forcePasskeyOffer = false"
+      />
+      <q-btn
+        v-if="canCreatePasskey"
+        flat
+        label="Create passkey"
+        color="primary"
+        class="full-width"
+        icon="fingerprint"
+        type="submit"
+        :loading="loading"
+        :disable="passkeyLoading"
+        @click="forcePasskeyOffer = true"
       />
       <q-btn
         v-if="accounts.length > 0"
@@ -429,6 +455,7 @@ const totpCode = ref('');
 const setupOptions = ref<LoginTwoFactorSetup | null>(null);
 const recoveryCodes = ref<string[]>([]);
 const pendingOfferPasskey = ref(true);
+const forcePasskeyOffer = ref(false);
 const accounts = ref<RememberedAccount[]>([]);
 const selectedAccount = ref<RememberedAccount | null>(null);
 const proceedingId = ref<string | null>(null);
@@ -449,6 +476,10 @@ const passkeysSupported = computed(
 );
 
 const busy = computed(() => loading.value || passkeyLoading.value);
+
+const canCreatePasskey = computed(
+  () => passkeysSupported.value && (!selectedAccount.value || !accountHasPasskey(selectedAccount.value)),
+);
 
 const passwordRules = computed(() => [
   (val: string) => !!val || 'Password is required',
@@ -583,6 +614,7 @@ function showChooserOrCredentials() {
   selectedAccount.value = null;
   proceedingId.value = null;
   password.value = '';
+  forcePasskeyOffer.value = false;
   refreshAccounts();
   step.value = accounts.value.length > 0 ? 'accounts' : 'credentials';
 }
@@ -629,10 +661,16 @@ function confirmRemove(account: RememberedAccount) {
 }
 
 function shouldOfferPasskey(hasPasskeys: boolean): boolean {
-  if (!passkeysSupported.value || hasPasskeys) {
+  if (!passkeysSupported.value) {
     return false;
   }
-  return authStore.user?.preferences?.passkeyPrompt !== 'never';
+  if (authStore.user?.preferences?.passkeyPrompt === 'never' && !forcePasskeyOffer.value) {
+    return false;
+  }
+  if (forcePasskeyOffer.value) {
+    return true;
+  }
+  return !hasPasskeys;
 }
 
 async function afterLoginSuccess(options: { offerPasskey?: boolean } = {}) {

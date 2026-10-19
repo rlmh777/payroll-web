@@ -37,6 +37,7 @@
             <q-select
               v-model="selectedPayrollRunId"
               outlined
+              dense
               emit-value
               map-options
               label="Processed payroll run"
@@ -45,7 +46,6 @@
               :disable="!selectedPayPeriodGroupId"
               :rules="[(value) => Boolean(value) || 'Select a processed payroll run']"
             >
-              <template #prepend><q-icon name="task_alt" /></template>
               <template #no-option>
                 <q-item>
                   <q-item-section class="text-grey-7">

@@ -44,6 +44,25 @@ export interface EmployeeDashboardLeaveBalance {
   accrualMethod: string;
 }
 
+export interface EmployeeDashboardTakenLeave {
+  id: string;
+  leaveTypeId: number | null;
+  leaveTypeName: string;
+  status: string | null;
+  statusName: string | null;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  duration: string | null;
+  notes: string | null;
+}
+
+export interface EmployeeDashboardTakenLeaveFilters {
+  leaveTypeId?: number | null;
+  fromDate?: string | null;
+  toDate?: string | null;
+}
+
 export interface EmployeeDashboardPayslip {
   id: string;
   payrollRunId: string;
@@ -97,6 +116,9 @@ export const useEmployeeDashboardStore = defineStore('employeeDashboard', {
     isDownloadingPayslip: false,
     payslipBusyId: null as string | null,
     error: null as string | null,
+    takenLeaves: [] as EmployeeDashboardTakenLeave[],
+    isLoadingTakenLeaves: false,
+    takenLeavesError: null as string | null,
   }),
 
   actions: {
@@ -130,6 +152,38 @@ export const useEmployeeDashboardStore = defineStore('employeeDashboard', {
         this.error = error instanceof Error ? error.message : 'Failed to load employee dashboard';
       } finally {
         this.isLoading = false;
+      }
+    },
+
+    async fetchTakenLeaves(filters: EmployeeDashboardTakenLeaveFilters = {}) {
+      this.isLoadingTakenLeaves = true;
+      this.takenLeavesError = null;
+      try {
+        const params = new URLSearchParams();
+        if (filters.leaveTypeId) {
+          params.set('leave_type_id', String(filters.leaveTypeId));
+        }
+        if (filters.fromDate) {
+          params.set('from_date', filters.fromDate);
+        }
+        if (filters.toDate) {
+          params.set('to_date', filters.toDate);
+        }
+        const query = params.toString();
+        const response = await fetch(
+          `${API_URL}/employee-dashboard/leaves${query ? `?${query}` : ''}`,
+          { headers: this.buildHeaders() },
+        );
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(body.message || 'Failed to load leave detail');
+        }
+        this.takenLeaves = Array.isArray(body.data) ? body.data : [];
+      } catch (error) {
+        this.takenLeaves = [];
+        this.takenLeavesError = error instanceof Error ? error.message : 'Failed to load leave detail';
+      } finally {
+        this.isLoadingTakenLeaves = false;
       }
     },
 

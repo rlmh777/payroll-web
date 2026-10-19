@@ -43,6 +43,27 @@
 
     <AccountSelect v-model="model.accountId" :disable="props.disable" show-add-new show-edit />
 
+    <div class="employment-detail-form__row employment-detail-form__row--2">
+      <SsBenefitDateField
+        v-model="model.appraisalDate"
+        label="Appraisal date"
+        clearable
+        :disable="props.disable"
+      />
+      <q-select
+        v-model="model.appraisalFormTemplateId"
+        :options="appraisalFormOptions"
+        emit-value
+        map-options
+        outlined
+        dense
+        clearable
+        label="Appraisal form"
+        :loading="loadingForms"
+        :disable="props.disable"
+      />
+    </div>
+
     <div class="employment-detail-form__field-group">
       <q-file
         v-model="model.contractAgreementFile"
@@ -84,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import SsBenefitDateField from '@payroll/components/employee/ss-benefit/SsBenefitDateField.vue';
 import AccountSelect from '@hr/components/employee/common/AccountSelect.vue';
 import ContractTypeSelect from '@hr/components/shared/contract-type/ContractTypeSelect.vue';
@@ -92,6 +113,7 @@ import JobTitleSelect from '@hr/components/shared/job-title/JobTitleSelect.vue';
 import DepartmentSelect from '@hr/components/department/DepartmentSelect.vue';
 import WorksiteSelect from '@hr/components/worksite/WorksiteSelect.vue';
 import PayPeriodGroupSelect from '@payroll/components/payroll/pay-period-groups/PayPeriodGroupSelect.vue';
+import { useAppraisalStore } from '@hr/stores/appraisal-store';
 import {
   contractAgreementFileName,
   type EmploymentDetailFormModel,
@@ -104,8 +126,28 @@ const props = withDefaults(defineProps<{
 });
 
 const model = defineModel<EmploymentDetailFormModel>({ required: true });
+const appraisalStore = useAppraisalStore();
+const loadingForms = ref(false);
+const appraisalFormOptions = ref<Array<{ label: string; value: string }>>([]);
 
 const existingContractName = computed(() => contractAgreementFileName(model.value.contractAgreementPath));
+
+onMounted(() => {
+  loadingForms.value = true;
+  void appraisalStore.fetchOptions()
+    .then((options) => {
+      appraisalFormOptions.value = options.form_templates.map((item) => ({
+        label: item.name,
+        value: item.id,
+      }));
+    })
+    .catch(() => {
+      appraisalFormOptions.value = [];
+    })
+    .finally(() => {
+      loadingForms.value = false;
+    });
+});
 </script>
 
 <style scoped>

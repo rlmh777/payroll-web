@@ -28,6 +28,7 @@
             <q-select
               v-model="selectedPayrollRunId"
               outlined
+              dense
               emit-value
               map-options
               label="Processed payroll run"
@@ -35,7 +36,6 @@
               :options="processedPayrollRunOptions"
               :disable="!selectedPayPeriodGroupId"
             >
-              <template #prepend><q-icon name="task_alt" /></template>
               <template #no-option>
                 <q-item>
                   <q-item-section class="text-grey-7">
@@ -52,6 +52,9 @@
                 </q-item>
               </template>
             </q-select>
+          </div>
+          <div class="col-12 col-md-4">
+            <ReportHeaderSelect />
           </div>
         </div>
       </q-card-section>
@@ -86,8 +89,26 @@
               color="primary"
               icon="download"
               label="Download CSV"
+              class="q-mr-sm"
               :disable="!report.rows.length"
               @click="downloadCsv"
+            />
+            <q-btn
+              outline
+              color="primary"
+              icon="table_view"
+              label="Export Excel"
+              class="q-mr-sm"
+              :disable="!report.rows.length"
+              @click="handleExportExcel"
+            />
+            <q-btn
+              outline
+              color="primary"
+              icon="picture_as_pdf"
+              label="Export PDF"
+              :disable="!report.rows.length"
+              @click="handleExportPdf"
             />
           </div>
         </div>
@@ -131,6 +152,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import ReportHeaderSelect from '@payroll/components/reports/ReportHeaderSelect.vue';
 import { useQuasar } from 'quasar';
 import type { QTableProps } from 'quasar';
 import { storeToRefs } from 'pinia';
@@ -139,6 +161,7 @@ import { formatDate } from '../attendance/utils';
 import { useAttendanceStore } from '@payroll/stores/attendance-store';
 import { usePayPeriodGroupStore } from '@payroll/stores/pay-period-group-store';
 import { useReportsStore, type BankUploadReport } from '@payroll/stores/reports-store';
+import { exportBankUploadExcel, exportBankUploadPdf } from '@payroll/utils/bank-upload-export';
 
 const $q = useQuasar();
 const attendanceStore = useAttendanceStore();
@@ -215,6 +238,20 @@ async function loadPayrollSetup() {
     attendanceStore.fetchPayrollRuns(),
     attendanceStore.fetchPayPeriods(),
   ]);
+}
+
+function handleExportExcel() {
+  if (!report.value) return;
+  exportBankUploadExcel(report.value);
+  $q.notify({ type: 'positive', message: 'Bank upload exported to Excel.' });
+}
+
+function handleExportPdf() {
+  if (!report.value) return;
+  const opened = exportBankUploadPdf(report.value);
+  if (!opened) {
+    $q.notify({ type: 'negative', message: 'Allow pop-ups to export the PDF.' });
+  }
 }
 
 function downloadCsv() {

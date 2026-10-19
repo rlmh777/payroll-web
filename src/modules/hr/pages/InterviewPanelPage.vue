@@ -4,7 +4,8 @@
       <div>
         <div class="text-h6">Interview panel</div>
         <div class="text-caption text-grey-7">
-          Vacancies you were invited to score. Open a candidate to record scores and comments.
+          Score each shortlisted candidate, then recommend the best person for the position.
+          A submitted score sheet cannot be opened again. HR makes the final hiring decision.
         </div>
       </div>
     </div>
@@ -19,16 +20,28 @@
           <div class="text-subtitle1">{{ assignment.vacancy.title }}</div>
           <div class="text-caption text-grey-7">
             {{ assignment.form_template?.name || 'No score sheet assigned' }}
-            · {{ assignment.applications.length }} candidate{{ assignment.applications.length === 1 ? '' : 's' }}
+            · {{ assignment.applications.length }} shortlisted candidate{{ assignment.applications.length === 1 ? '' : 's' }}
           </div>
         </q-card-section>
         <q-separator />
+        <q-card-section>
+          <q-select
+            :model-value="assignment.panel_member.recommended_application_id || null"
+            outlined
+            dense
+            emit-value
+            map-options
+            label="Best candidate for this position"
+            :options="recommendationOptions(assignment)"
+            @update:model-value="saveRecommendation(assignment, $event)"
+          />
+        </q-card-section>
         <q-list>
           <q-item
             v-for="application in assignment.applications"
             :key="String(application.id)"
-            clickable
-            v-ripple
+            :clickable="!application.my_score?.is_submitted"
+            v-ripple="!application.my_score?.is_submitted"
             @click="openScore(assignment, application)"
           >
             <q-item-section>
@@ -37,16 +50,12 @@
             </q-item-section>
             <q-item-section side>
               <q-badge :color="application.my_score?.is_submitted ? 'positive' : 'grey'">
-                {{
-                  application.my_score?.is_submitted
-                    ? `${application.my_score.total_score ?? 0}`
-                    : 'Not scored'
-                }}
+                {{ application.my_score?.is_submitted ? 'Submitted' : 'Not scored' }}
               </q-badge>
             </q-item-section>
           </q-item>
           <q-item v-if="!assignment.applications.length">
-            <q-item-section class="text-grey-7">No candidates yet.</q-item-section>
+            <q-item-section class="text-grey-7">No shortlisted candidates yet.</q-item-section>
           </q-item>
         </q-list>
       </q-card>
@@ -102,14 +111,16 @@ import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
 import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import FormRenderer from '@hr/components/forms/FormRenderer.vue';
 import { useVacancyPanelStore, type PanelAssignment } from '@hr/stores/vacancy-panel-store';
-import type { FormTemplate } from '@hr/stores/form-template-store';
+import type { FormResponse, FormTemplate } from '@hr/stores/form-template-store';
 import type { Vacancy, VacancyApplication } from '@hr/stores/vacancy-store';
+
+type PanelApplication = VacancyApplication & { my_score?: FormResponse | null };
 
 const store = useVacancyPanelStore();
 const $q = useQuasar();
 const scoreOpen = ref(false);
 const scoringVacancy = ref<Vacancy | null>(null);
-const scoringApplication = ref<VacancyApplication | null>(null);
+const scoringApplication = ref<PanelApplication | null>(null);
 const scoreTemplate = ref<FormTemplate | null>(null);
 const answers = ref<Record<string, unknown>>({});
 const comments = ref('');
@@ -123,7 +134,35 @@ onMounted(() => {
   });
 });
 
-async function openScore(assignment: PanelAssignment, application: VacancyApplication) {
+function recommendationOptions(assignment: PanelAssignment) {
+  return assignment.applications.map((application) => ({
+    label: application.applicant?.name || 'Candidate',
+    value: application.id,
+  }));
+}
+
+async function saveRecommendation(assignment: PanelAssignment, applicationId: string | null) {
+  if (!applicationId) {
+    return;
+  }
+  try {
+    const member = await store.recommend(assignment.vacancy.id, applicationId);
+    const recommendedApplicationId: string | null = member.recommended_application_id ?? null;
+    assignment.panel_member.recommended_application_id = recommendedApplicationId;
+    $q.notify({ type: 'positive', message: 'Recommendation saved. HR makes the final decision.' });
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error instanceof Error ? error.message : 'Could not save the recommendation.',
+    });
+  }
+}
+
+async function openScore(assignment: PanelAssignment, application: PanelApplication) {
+  if (application.my_score?.is_submitted) {
+    $q.notify({ type: 'info', message: 'This score sheet has been submitted and can no longer be opened.' });
+    return;
+  }
   scoringVacancy.value = assignment.vacancy;
   scoringApplication.value = application;
   try {

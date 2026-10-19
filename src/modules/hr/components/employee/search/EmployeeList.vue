@@ -7,12 +7,8 @@
           :class="{ 'employee-card-selected': isEmployeeSelected(employee.id) }"
           @click="navigateToEmployee(employee.id)"
         >
-          <div class="employee-card-header">
-            <GenderIcon :gender="employee.gender ?? null" />
-          </div>
-
           <q-card-section class="employee-info-section">
-            <div class="row items-center">
+            <div class="row items-center no-wrap">
               <q-avatar
                 :style="{ backgroundColor: getAvatarColor(employee.lastName) }"
                 text-color="white"
@@ -22,8 +18,8 @@
               >
                 {{ getInitial(employee.lastName) }}
               </q-avatar>
-              <div class="col">
-                <div class="text-h6 text-weight-medium q-mb-xs">
+              <div class="col employee-name-block">
+                <div class="text-h6 text-weight-medium q-mb-xs employee-name">
                   {{ employee.lastName }}, {{ employee.firstName }}
                 </div>
                 <div class="text-caption text-grey-7">
@@ -50,6 +46,7 @@
                   </span>
                 </div>
               </div>
+              <GenderIcon class="q-ml-sm" :gender="employee.gender ?? null" />
             </div>
           </q-card-section>
 
@@ -301,11 +298,14 @@ const navigateToEmployee = (employeeId: string) => {
   border-left: 4px solid var(--q-primary);
 }
 
-.employee-card-header {
-  position: absolute;
-  top: 12px;
-  right: 32px;
-  z-index: 1;
+.employee-name-block {
+  min-width: 0;
+}
+
+.employee-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .employee-info-section {

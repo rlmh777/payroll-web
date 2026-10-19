@@ -1,9 +1,8 @@
 <template>
   <div class="paye-employment-details-report">
-    <div class="text-h5 text-weight-bold q-mb-xs">PAYE Employment Details</div>
+    <div class="text-h5 text-weight-bold q-mb-xs">PAYE employee details</div>
     <div class="text-body2 text-grey-7 q-mb-lg">
-      Generate the Belize Tax Services PAYE Employee Details upload workbook by year,
-      or by a specific year and month.
+      Belize Tax Services PAYE employee details for a year and month that already have payroll.
     </div>
 
     <q-banner v-if="reportsStore.error" rounded class="bg-red-1 text-red-9 q-mb-md">
@@ -17,18 +16,6 @@
         <div class="text-subtitle1 text-weight-bold q-mb-md">Report period</div>
 
         <div class="row q-col-gutter-md items-end">
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="scope"
-              :options="scopeOptions"
-              emit-value
-              map-options
-              label="Scope"
-              outlined
-              dense
-              :disable="isBusy || !yearOptions.length"
-            />
-          </div>
           <div class="col-12 col-md-3">
             <q-select
               v-model="year"
@@ -51,8 +38,12 @@
               outlined
               dense
               :loading="reportsStore.isLoadingPayeEmploymentDetailsPeriods"
-              :disable="scope !== 'monthly' || isBusy || !monthOptions.length"
+              :disable="isBusy || !monthOptions.length"
+              @update:model-value="onMonthChanged"
             />
+          </div>
+          <div class="col-12 col-md-4">
+            <ReportHeaderSelect />
           </div>
           <div class="col-12 col-md-3">
             <q-btn
@@ -72,7 +63,7 @@
           rounded
           class="bg-grey-2 text-grey-8 q-mt-md"
         >
-          No processed payroll runs were found. Year options appear after payroll is processed.
+          No payroll has been generated yet. Year and month options appear after payroll is generated.
         </q-banner>
       </q-card-section>
     </q-card>
@@ -81,7 +72,7 @@
       <q-card-section>
         <div class="row items-center q-col-gutter-md q-mb-md">
           <div class="col-grow">
-            <div class="text-subtitle1 text-weight-bold">PAYE Employment Details</div>
+            <div class="text-subtitle1 text-weight-bold">PAYE employee details</div>
             <div class="text-body2 text-grey-7">
               {{ report.period }} {{ report.year }}
               <span v-if="report.submitter.name"> · {{ report.submitter.name }}</span>
@@ -188,10 +179,12 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import ReportHeaderSelect from '@payroll/components/reports/ReportHeaderSelect.vue';
 import { useQuasar } from 'quasar';
 import type { QTableProps } from 'quasar';
 import { storeToRefs } from 'pinia';
 import { useReportsStore } from '@payroll/stores/reports-store';
+import { rememberReportMonth, sharedReportMonth } from '@payroll/composables/use-report-period';
 import {
   exportPayeEmploymentDetailsExcel,
   formatPayeCurrency,
@@ -204,15 +197,9 @@ const {
   payeEmploymentDetailsPeriods: periods,
 } = storeToRefs(reportsStore);
 
-const scope = ref<'yearly' | 'monthly'>('monthly');
 const year = ref<number | null>(null);
 const month = ref<number | null>(null);
 const isExporting = ref(false);
-
-const scopeOptions = [
-  { label: 'Yearly', value: 'yearly' },
-  { label: 'Year and month', value: 'monthly' },
-];
 
 const yearOptions = computed(() => periods.value?.years ?? []);
 const monthOptions = computed(() => {
@@ -227,9 +214,8 @@ const isBusy = computed(
 );
 
 const canGenerate = computed(() => {
-  if (!year.value || isBusy.value || !yearOptions.value.length) return false;
-  if (scope.value === 'monthly' && !month.value) return false;
-  return true;
+  if (!year.value || !month.value || isBusy.value || !yearOptions.value.length) return false;
+  return monthOptions.value.some((option) => option.value === month.value);
 });
 
 const columns: QTableProps['columns'] = [
@@ -288,6 +274,12 @@ function selectDefaultPeriod() {
     return;
   }
 
+  const shared = sharedReportMonth();
+  if ((!year.value || !availableYears.includes(year.value)) && shared && availableYears.includes(shared.year)) {
+    year.value = shared.year;
+    month.value = shared.month;
+  }
+
   if (!year.value || !availableYears.includes(year.value)) {
     year.value = availableYears[0] ?? null;
   }
@@ -309,32 +301,35 @@ function syncMonthToAvailableOptions() {
 
 function onYearChanged() {
   syncMonthToAvailableOptions();
+  publishPeriod();
+}
+
+function onMonthChanged() {
+  publishPeriod();
+}
+
+function publishPeriod() {
+  if (year.value && month.value) {
+    rememberReportMonth(year.value, month.value);
+  }
 }
 
 watch(monthOptions, () => {
   syncMonthToAvailableOptions();
 });
 
-watch(scope, (nextScope) => {
-  if (nextScope === 'monthly') {
-    syncMonthToAvailableOptions();
-  }
-});
-
 async function generateReport() {
-  if (!year.value) return;
-  if (scope.value === 'monthly' && !month.value) return;
+  if (!year.value || !month.value) return;
 
   const ok = await reportsStore.fetchPayeEmploymentDetailsReport({
     year: year.value,
-    month: scope.value === 'monthly' ? month.value : null,
-    scope: scope.value,
+    month: month.value,
   });
 
   if (!ok) {
     $q.notify({
       type: 'negative',
-      message: reportsStore.error || 'Failed to generate PAYE Employment Details report.',
+      message: reportsStore.error || 'Failed to generate PAYE employee details.',
       position: 'top',
     });
   }
@@ -348,7 +343,7 @@ async function handleExportExcel() {
     await exportPayeEmploymentDetailsExcel(report.value);
     $q.notify({
       type: 'positive',
-      message: 'PAYE Employment Details workbook downloaded.',
+      message: 'PAYE employee details workbook downloaded.',
       position: 'top',
     });
   } catch (error) {

@@ -6,7 +6,7 @@
         <div class="text-caption text-grey-7">
           {{
             canManage
-              ? 'Review address, phone, and email updates. Add supervisor or extra people in Admin → Settings → Pipelines.'
+              ? 'Review address, phone, and email updates. Who confirms a change is set under Settings → Profile changes.'
               : 'Requests waiting for your review or approval.'
           }}
         </div>

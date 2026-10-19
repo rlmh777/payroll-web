@@ -28,6 +28,7 @@
             <q-select
               v-model="selectedPayrollRunId"
               outlined
+              dense
               emit-value
               map-options
               label="Processed payroll run"
@@ -35,8 +36,10 @@
               :options="processedPayrollRunOptions"
               :disable="!selectedPayPeriodGroupId"
             >
-              <template #prepend><q-icon name="task_alt" /></template>
             </q-select>
+          </div>
+          <div class="col-12 col-md-4">
+            <ReportHeaderSelect />
           </div>
         </div>
       </q-card-section>
@@ -67,8 +70,17 @@
               color="primary"
               icon="table_view"
               label="Export Excel"
+              class="q-mr-sm"
               :disable="!report.departments.length"
               @click="handleExportExcel"
+            />
+            <q-btn
+              outline
+              color="primary"
+              icon="picture_as_pdf"
+              label="Export PDF"
+              :disable="!report.departments.length"
+              @click="handleExportPdf"
             />
           </div>
         </div>
@@ -161,6 +173,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import ReportHeaderSelect from '@payroll/components/reports/ReportHeaderSelect.vue';
 import { useQuasar } from 'quasar';
 import { storeToRefs } from 'pinia';
 import type { QTableProps } from 'quasar';
@@ -176,6 +189,7 @@ import {
 } from '@payroll/stores/reports-store';
 import {
   exportPayrollSummaryByDepartmentExcel,
+  exportPayrollSummaryByDepartmentPdf,
   formatPayrollSummaryCurrency,
 } from '@payroll/utils/payroll-summary-by-department-export';
 
@@ -276,6 +290,16 @@ function handleExportExcel() {
 
   exportPayrollSummaryByDepartmentExcel(report.value);
   $q.notify({ type: 'positive', message: 'Payroll summary by department exported to Excel.' });
+}
+
+function handleExportPdf() {
+  if (!report.value) {
+    return;
+  }
+  const opened = exportPayrollSummaryByDepartmentPdf(report.value);
+  if (!opened) {
+    $q.notify({ type: 'negative', message: 'Allow pop-ups to export the PDF.' });
+  }
 }
 
 watch(selectedPayPeriodGroupId, () => {

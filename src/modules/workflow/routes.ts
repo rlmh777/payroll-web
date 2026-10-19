@@ -1,5 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 import { adminSettingsPath } from '@core/config/module-routes';
+import { useMenuStore } from '@core/stores/menus';
+import { moduleLandingPath } from '@core/utils/menu-navigation';
 
 export const workflowRoutes: RouteRecordRaw[] = [
   {
@@ -161,7 +163,12 @@ export const workflowRoutes: RouteRecordRaw[] = [
     children: [
       {
         path: '',
-        redirect: adminSettingsPath('pipelines'),
+        beforeEnter: () => {
+          const menuStore = useMenuStore();
+          const landing = moduleLandingPath('/admin/settings', menuStore.moduleMenus.admin ?? []);
+          return landing && landing !== '/admin/settings' ? landing : '/';
+        },
+        component: () => import('@workflow/components/settings/ManagePipelineTemplates.vue'),
       },
     ],
   },

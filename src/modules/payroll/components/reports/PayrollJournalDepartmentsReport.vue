@@ -28,6 +28,7 @@
             <q-select
               v-model="selectedPayrollRunId"
               outlined
+              dense
               emit-value
               map-options
               label="Processed payroll run"
@@ -35,8 +36,10 @@
               :options="processedPayrollRunOptions"
               :disable="!selectedPayPeriodGroupId"
             >
-              <template #prepend><q-icon name="task_alt" /></template>
             </q-select>
+          </div>
+          <div class="col-12 col-md-4">
+            <ReportHeaderSelect />
           </div>
         </div>
       </q-card-section>
@@ -57,6 +60,25 @@
             <div class="text-caption text-grey-7">Payroll number</div>
             <div class="text-body1 text-weight-medium">{{ report.payPeriodNumber }}</div>
           </div>
+        </div>
+        <div class="q-mb-md text-right">
+          <q-btn
+            outline
+            color="primary"
+            icon="table_view"
+            label="Export Excel"
+            class="q-mr-sm"
+            :disable="!report.departments.length"
+            @click="handleExportExcel"
+          />
+          <q-btn
+            outline
+            color="primary"
+            icon="picture_as_pdf"
+            label="Export PDF"
+            :disable="!report.departments.length"
+            @click="handleExportPdf"
+          />
         </div>
 
         <q-tabs
@@ -202,6 +224,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import ReportHeaderSelect from '@payroll/components/reports/ReportHeaderSelect.vue';
+import { useQuasar } from 'quasar';
 import { storeToRefs } from 'pinia';
 import PayPeriodGroupSelect from '@payroll/components/payroll/pay-period-groups/PayPeriodGroupSelect.vue';
 import { formatDate } from '../attendance/utils';
@@ -212,7 +236,12 @@ import {
   type PayrollJournalDepartmentsReport,
   useReportsStore,
 } from '@payroll/stores/reports-store';
+import {
+  exportPayrollJournalDepartmentsExcel,
+  exportPayrollJournalDepartmentsPdf,
+} from '@payroll/utils/payroll-journal-departments-export';
 
+const $q = useQuasar();
 const attendanceStore = useAttendanceStore();
 const payPeriodGroupStore = usePayPeriodGroupStore();
 const reportsStore = useReportsStore();
@@ -299,6 +328,20 @@ watch(selectedPayrollRunId, async (payrollRunId) => {
   const firstDepartment = reportsStore.payrollJournalDepartmentsReport?.departments[0];
   selectedDepartmentKey.value = firstDepartment ? departmentTabKey(firstDepartment) : null;
 });
+
+function handleExportExcel() {
+  if (!report.value) return;
+  exportPayrollJournalDepartmentsExcel(report.value);
+  $q.notify({ type: 'positive', message: 'Payroll journal exported to Excel.' });
+}
+
+function handleExportPdf() {
+  if (!report.value) return;
+  const opened = exportPayrollJournalDepartmentsPdf(report.value);
+  if (!opened) {
+    $q.notify({ type: 'negative', message: 'Allow pop-ups to export the PDF.' });
+  }
+}
 
 onMounted(async () => {
   await loadPayrollSetup();
