@@ -128,7 +128,6 @@
         color="primary"
         class="full-width"
         :loading="loading"
-        @click="forcePasskeyOffer = false"
       />
       <q-btn
         v-if="passkeysSupported && selectedAccount && accountHasPasskey(selectedAccount)"
@@ -140,18 +139,6 @@
         :loading="passkeyLoading"
         :disable="loading"
         @click="onPasskeyLogin(true)"
-      />
-      <q-btn
-        v-else-if="canCreatePasskey"
-        flat
-        label="Create passkey"
-        color="primary"
-        class="full-width"
-        icon="fingerprint"
-        type="submit"
-        :loading="loading"
-        :disable="passkeyLoading"
-        @click="forcePasskeyOffer = true"
       />
       <q-btn
         flat
@@ -211,19 +198,6 @@
         color="primary"
         class="full-width"
         :loading="loading"
-        @click="forcePasskeyOffer = false"
-      />
-      <q-btn
-        v-if="canCreatePasskey"
-        flat
-        label="Create passkey"
-        color="primary"
-        class="full-width"
-        icon="fingerprint"
-        type="submit"
-        :loading="loading"
-        :disable="passkeyLoading"
-        @click="forcePasskeyOffer = true"
       />
       <q-btn
         v-if="accounts.length > 0"
@@ -392,7 +366,7 @@
 
   <div v-else-if="step === 'passkey-offer'" class="column q-gutter-md" style="width: 100%">
     <div class="text-h6">Create a passkey?</div>
-    <div class="text-body2 text-grey-8">
+    <div class="text-body2">
       Save a passkey on this device so next time you can sign in with Face ID, Touch ID, or Windows Hello instead of a password.
     </div>
     <div class="column q-gutter-sm">
@@ -408,8 +382,8 @@
       />
       <q-btn
         flat
-        label="Next time"
-        color="primary"
+        no-caps
+        label="Remember later"
         class="full-width"
         :disable="busy"
         @click="skipPasskeyOffer"
@@ -417,8 +391,7 @@
       <q-btn
         flat
         no-caps
-        label="Never"
-        color="grey-7"
+        label="Don't ask again"
         class="full-width"
         :disable="busy"
         @click="neverPasskeyOffer"
@@ -469,7 +442,6 @@ const totpCode = ref('');
 const setupOptions = ref<LoginTwoFactorSetup | null>(null);
 const recoveryCodes = ref<string[]>([]);
 const pendingOfferPasskey = ref(true);
-const forcePasskeyOffer = ref(false);
 const accounts = ref<RememberedAccount[]>([]);
 const selectedAccount = ref<RememberedAccount | null>(null);
 const proceedingId = ref<string | null>(null);
@@ -490,10 +462,6 @@ const passkeysSupported = computed(
 );
 
 const busy = computed(() => loading.value || passkeyLoading.value);
-
-const canCreatePasskey = computed(
-  () => passkeysSupported.value && (!selectedAccount.value || !accountHasPasskey(selectedAccount.value)),
-);
 
 const passwordRules = computed(() => [
   (val: string) => !!val || 'Password is required',
@@ -628,7 +596,6 @@ function showChooserOrCredentials() {
   selectedAccount.value = null;
   proceedingId.value = null;
   password.value = '';
-  forcePasskeyOffer.value = false;
   refreshAccounts();
   step.value = accounts.value.length > 0 ? 'accounts' : 'credentials';
 }
@@ -675,22 +642,19 @@ function confirmRemove(account: RememberedAccount) {
 }
 
 function shouldOfferPasskey(hasPasskeys: boolean): boolean {
-  if (!passkeysSupported.value) {
+  if (!passkeysSupported.value || hasPasskeys) {
     return false;
   }
-  if (authStore.user?.preferences?.passkeyPrompt === 'never' && !forcePasskeyOffer.value) {
-    return false;
-  }
-  if (forcePasskeyOffer.value) {
-    return true;
-  }
-  return !hasPasskeys;
+  return authStore.user?.preferences?.passkeyPrompt !== 'never';
 }
 
 async function afterLoginSuccess(options: { offerPasskey?: boolean } = {}) {
   rememberCurrentUser();
-  if (options.offerPasskey && shouldOfferPasskey(Boolean(authStore.user?.hasPasskeys))) {
+  if (options.offerPasskey !== false && shouldOfferPasskey(Boolean(authStore.user?.hasPasskeys))) {
     step.value = 'passkey-offer';
+    void authStore.preparePasskeyRegistration().catch((error) => {
+      console.error('Passkey registration prefetch error:', error);
+    });
     return;
   }
   await continueAfterAuth();
@@ -781,8 +745,7 @@ async function onInviteSubmit() {
   try {
     const result = await authStore.loginWithInviteCode(inviteEmail.value.trim(), inviteCode.value.trim());
     if (result.type === 'success') {
-      pendingOfferPasskey.value = false;
-      await afterLoginSuccess({ offerPasskey: false });
+      await afterLoginSuccess();
     }
   } finally {
     loading.value = false;
@@ -865,7 +828,7 @@ async function promptPasskey(
     if (result === 'success') {
       invalidatePasskeyPrep(account.id);
       updateRememberedAccountPasskeys(account.id, true);
-      await afterLoginSuccess();
+      await afterLoginSuccess({ offerPasskey: false });
       return;
     }
     if (result === 'no_passkey') {
@@ -913,7 +876,7 @@ async function onSubmit() {
   try {
     const result = await authStore.login(loginIdentity(), password.value);
     if (result.type === 'success') {
-      await afterLoginSuccess({ offerPasskey: !result.hasPasskeys });
+      await afterLoginSuccess();
       return;
     }
     if (result.type === 'two_factor') {
@@ -937,7 +900,7 @@ async function onVerifyTwoFactor() {
   try {
     const result = await authStore.verifyTwoFactor(challengeKey.value, totpCode.value.trim());
     if (result.ok) {
-      await afterLoginSuccess({ offerPasskey: !result.hasPasskeys });
+      await afterLoginSuccess();
     }
   } catch (error) {
     console.error('Two-factor verify error:', error);
@@ -996,7 +959,7 @@ async function onPasskeyLogin(fromSelectedAccount: boolean) {
   try {
     const result = await authStore.loginWithPasskey(identity);
     if (result === 'success') {
-      await afterLoginSuccess();
+      await afterLoginSuccess({ offerPasskey: false });
     }
   } catch (error) {
     console.error('Passkey login error:', error);
