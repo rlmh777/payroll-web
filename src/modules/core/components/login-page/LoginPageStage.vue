@@ -223,7 +223,60 @@ function withAlpha(color: string, alpha: number): string {
   return value;
 }
 
+function parseRgb(color: string): [number, number, number] | null {
+  const value = color.trim();
+  const hexMatch = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  const hex = hexMatch?.[1];
+  if (hex) {
+    const digits = hex.length === 3
+      ? hex.split('').map((character) => character + character).join('')
+      : hex;
+    return [
+      Number.parseInt(digits.slice(0, 2), 16),
+      Number.parseInt(digits.slice(2, 4), 16),
+      Number.parseInt(digits.slice(4, 6), 16),
+    ];
+  }
+
+  const rgb = value.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  const red = rgb?.[1];
+  const green = rgb?.[2];
+  const blue = rgb?.[3];
+  if (!red || !green || !blue) {
+    return null;
+  }
+
+  return [Number(red), Number(green), Number(blue)];
+}
+
+function linearChannel(value: number): number {
+  const channel = value / 255;
+  return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+}
+
+function relativeLuminance(rgb: [number, number, number]): number {
+  return 0.2126 * linearChannel(rgb[0]) + 0.7152 * linearChannel(rgb[1]) + 0.0722 * linearChannel(rgb[2]);
+}
+
+function formInk(block: LoginPageBlock): string {
+  const alpha = 1 - Math.min(100, Math.max(0, Number(block.cardTransparency ?? 60))) / 100;
+  const card = parseRgb(block.cardBackground || '#ffffff') ?? [255, 255, 255];
+  const page = parseRgb(props.layout.backgroundColor || '#0f172a') ?? [15, 23, 42];
+  const blended: [number, number, number] = [
+    Math.round(card[0] * alpha + page[0] * (1 - alpha)),
+    Math.round(card[1] * alpha + page[1] * (1 - alpha)),
+    Math.round(card[2] * alpha + page[2] * (1 - alpha)),
+  ];
+  const background = relativeLuminance(blended);
+  const dark: [number, number, number] = [15, 23, 42];
+  const darkLuminance = relativeLuminance(dark);
+  const lightContrast = 1.05 / (background + 0.05);
+  const darkContrast = (Math.max(darkLuminance, background) + 0.05) / (Math.min(darkLuminance, background) + 0.05);
+  return lightContrast >= darkContrast ? '#ffffff' : '#0f172a';
+}
+
 function formCardStyle(block: LoginPageBlock) {
+  const ink = formInk(block);
   return {
     maxWidth: block.maxWidth > 0 ? `${block.maxWidth}px` : undefined,
     marginLeft: block.align === 'left' ? '0' : 'auto',
@@ -235,7 +288,8 @@ function formCardStyle(block: LoginPageBlock) {
     border: `${block.cardBorderWidth || 0}px solid ${block.cardBorderColor || 'transparent'}`,
     borderRadius: `${block.cardRadius ?? 12}px`,
     boxShadow: formCardShadow(block.cardShadow),
-    color: block.color || '#0f172a',
+    color: ink,
+    '--login-form-ink': ink,
   };
 }
 
@@ -530,20 +584,75 @@ onUnmounted(() => {
   width: 100%;
   min-height: 100%;
   padding: 16px;
+  font-size: 16px;
 }
 
-.login-stage__form-card :deep(.q-field__label),
-.login-stage__form-card :deep(.q-field__native),
-.login-stage__form-card :deep(.q-field__prefix),
-.login-stage__form-card :deep(.q-item-label),
-.login-stage__form-card :deep(.q-icon) {
-  color: inherit;
+.login-stage__form-card :deep(.text-grey-6),
+.login-stage__form-card :deep(.text-grey-7),
+.login-stage__form-card :deep(.text-grey-8),
+.login-stage__form-card :deep(.q-btn.q-btn--flat) {
+  color: var(--login-form-ink) !important;
+}
+
+.login-stage__form-card :deep(.q-field),
+.login-stage__form-card :deep(.login-accounts__list),
+.login-stage__form-card :deep(.login-accounts__item) {
+  color: #0f172a;
 }
 
 .login-stage__form-card :deep(.q-field__control),
 .login-stage__form-card :deep(.login-accounts__list),
 .login-stage__form-card :deep(.login-accounts__item) {
   background: #fff;
+}
+
+.login-stage__form-card :deep(.text-h6) {
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.login-stage__form-card :deep(.text-subtitle1) {
+  font-size: 22px;
+  line-height: 1.3;
+}
+
+.login-stage__form-card :deep(.text-subtitle2) {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.login-stage__form-card :deep(.text-body2) {
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.login-stage__form-card :deep(.q-item__label) {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.login-stage__form-card :deep(.text-caption),
+.login-stage__form-card :deep(.q-item__label--caption) {
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.login-stage__form-card :deep(.q-field__native),
+.login-stage__form-card :deep(.q-field__input),
+.login-stage__form-card :deep(.q-field__prefix) {
+  font-size: 18px;
+}
+
+.login-stage__form-card :deep(.q-field__label) {
+  font-size: 18px;
+}
+
+.login-stage__form-card :deep(.q-field__bottom) {
+  font-size: 15px;
+}
+
+.login-stage__form-card :deep(.q-btn .q-btn__content) {
+  font-size: 17px;
 }
 
 .login-stage__form-preview {

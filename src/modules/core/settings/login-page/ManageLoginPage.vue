@@ -200,7 +200,7 @@
                   @update:model-value="updateSelected({ fontSize: Number($event) })"
                 />
                 <div
-                  v-if="selectedBlock.type === 'heading' || selectedBlock.type === 'message' || selectedBlock.type === 'form'"
+                  v-if="selectedBlock.type === 'heading' || selectedBlock.type === 'message'"
                   class="row items-center no-wrap q-gutter-sm q-mt-sm"
                 >
                   <input
@@ -214,7 +214,7 @@
                     :model-value="selectedBlock.color"
                     outlined
                     dense
-                    :label="selectedBlock.type === 'form' ? 'Text color' : 'Color'"
+                    label="Color"
                     :disable="!canEdit"
                     @update:model-value="updateSelected({ color: String($event ?? '#ffffff') })"
                   />
