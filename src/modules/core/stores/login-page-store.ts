@@ -41,6 +41,7 @@ export interface LoginPageBlock {
   cardBorderWidth: number;
   cardRadius: number;
   cardShadow: number;
+  cardTransparency: number;
 }
 
 export interface LoginPageLayout {
@@ -93,7 +94,7 @@ export function normalizeHeadingLevel(value: unknown): LoginHeadingLevel {
 
 export function defaultFormChrome(): Pick<
   LoginPageBlock,
-  'cardBackground' | 'cardBorderColor' | 'cardBorderWidth' | 'cardRadius' | 'cardShadow'
+  'cardBackground' | 'cardBorderColor' | 'cardBorderWidth' | 'cardRadius' | 'cardShadow' | 'cardTransparency'
 > {
   return {
     cardBackground: '#ffffff',
@@ -101,6 +102,7 @@ export function defaultFormChrome(): Pick<
     cardBorderWidth: 0,
     cardRadius: 12,
     cardShadow: 2,
+    cardTransparency: 60,
   };
 }
 
@@ -295,6 +297,7 @@ function normalizeBlock(
     cardBorderWidth: clamp(Number(block.cardBorderWidth ?? chrome.cardBorderWidth), 0, 12),
     cardRadius: clamp(Number(block.cardRadius ?? chrome.cardRadius), 0, 48),
     cardShadow: clamp(Number(block.cardShadow ?? chrome.cardShadow), 0, 3),
+    cardTransparency: clamp(Number(block.cardTransparency ?? chrome.cardTransparency), 0, 100),
   };
 }
 

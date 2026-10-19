@@ -198,12 +198,40 @@ function blockStyle(block: LoginPageBlock) {
   };
 }
 
+function withAlpha(color: string, alpha: number): string {
+  const value = color.trim();
+  const hexMatch = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  const hex = hexMatch?.[1];
+  if (hex) {
+    const digits = hex.length === 3
+      ? hex.split('').map((character) => character + character).join('')
+      : hex;
+    const red = Number.parseInt(digits.slice(0, 2), 16);
+    const green = Number.parseInt(digits.slice(2, 4), 16);
+    const blue = Number.parseInt(digits.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+  }
+
+  const rgb = value.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  const red = rgb?.[1];
+  const green = rgb?.[2];
+  const blue = rgb?.[3];
+  if (red && green && blue) {
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+  }
+
+  return value;
+}
+
 function formCardStyle(block: LoginPageBlock) {
   return {
     maxWidth: block.maxWidth > 0 ? `${block.maxWidth}px` : undefined,
     marginLeft: block.align === 'left' ? '0' : 'auto',
     marginRight: block.align === 'right' ? '0' : 'auto',
-    background: block.cardBackground || '#ffffff',
+    background: withAlpha(
+      block.cardBackground || '#ffffff',
+      1 - Math.min(100, Math.max(0, Number(block.cardTransparency ?? 60))) / 100,
+    ),
     border: `${block.cardBorderWidth || 0}px solid ${block.cardBorderColor || 'transparent'}`,
     borderRadius: `${block.cardRadius ?? 12}px`,
     boxShadow: formCardShadow(block.cardShadow),
@@ -510,6 +538,12 @@ onUnmounted(() => {
 .login-stage__form-card :deep(.q-item-label),
 .login-stage__form-card :deep(.q-icon) {
   color: inherit;
+}
+
+.login-stage__form-card :deep(.q-field__control),
+.login-stage__form-card :deep(.login-accounts__list),
+.login-stage__form-card :deep(.login-accounts__item) {
+  background: #fff;
 }
 
 .login-stage__form-preview {
