@@ -544,6 +544,7 @@ onMounted(() => {
 
 .panel--leaves :deep(.q-tab-panel) {
   padding-top: 12px;
+}
 
 .schedule-week {
   display: grid;
