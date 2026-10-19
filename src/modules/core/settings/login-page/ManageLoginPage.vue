@@ -283,6 +283,20 @@
                       @update:model-value="updateSelected({ cardBackground: String($event ?? '#ffffff') })"
                     />
                   </div>
+                  <div>
+                    <div class="text-caption text-grey-7 q-mb-xs">
+                      Transparency {{ selectedBlock.cardTransparency }}%
+                    </div>
+                    <q-slider
+                      :model-value="selectedBlock.cardTransparency"
+                      :min="0"
+                      :max="100"
+                      :step="5"
+                      color="primary"
+                      :disable="!canEdit"
+                      @update:model-value="updateSelected({ cardTransparency: Number($event) })"
+                    />
+                  </div>
                   <div class="row items-center no-wrap q-gutter-sm">
                     <input
                       class="login-designer__swatch"
@@ -689,6 +703,9 @@ function updateBlock(id: string, patch: Partial<LoginPageBlock>) {
   }
   if (patch.cardShadow != null) {
     next.cardShadow = clamp(next.cardShadow, 0, 3);
+  }
+  if (patch.cardTransparency != null) {
+    next.cardTransparency = clamp(next.cardTransparency, 0, 100);
   }
   if (patch.align && !['left', 'center', 'right'].includes(patch.align)) {
     next.align = current.align;

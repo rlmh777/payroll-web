@@ -408,12 +408,19 @@ export const useAuthStore = defineStore('auth', () => {
     if (!publicKeyOptions) {
       throw new Error('Unable to start passkey login');
     }
-    const allowCredentials = publicKeyOptions.allowCredentials;
-    const hasAllowList = Array.isArray(allowCredentials) && allowCredentials.length > 0;
+    const allowCredentials = Array.isArray(publicKeyOptions.allowCredentials)
+      ? publicKeyOptions.allowCredentials.filter((credential) => Boolean(credential?.id))
+      : [];
+    // An empty allow list is a discoverable request: the browser asks to scan a
+    // device instead of offering to create a passkey. Only listed credentials count.
+    publicKeyOptions.allowCredentials = allowCredentials.map((credential) => ({
+      ...credential,
+      transports: ['internal'],
+    }));
     return {
       options: publicKeyOptions,
       challengeKey: payload.challenge_key ?? '',
-      hasPasskeys: payload.has_passkeys === true || hasAllowList,
+      hasPasskeys: allowCredentials.length > 0,
       fetchedAt: Date.now(),
     };
   }
@@ -429,6 +436,10 @@ export const useAuthStore = defineStore('auth', () => {
       }
       if (!startAuthenticationFn) {
         throw new Error('Passkey login is not available in this browser.');
+      }
+      const allowCredentials = publicKeyOptions.allowCredentials;
+      if (!Array.isArray(allowCredentials) || allowCredentials.length === 0) {
+        return 'no_passkey';
       }
       const credential = await startAuthenticationFn({ optionsJSON: publicKeyOptions });
 
