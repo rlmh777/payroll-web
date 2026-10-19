@@ -2,7 +2,7 @@
   <div v-if="step === 'accounts'" class="login-accounts" style="width: 100%">
     <div class="text-h6 q-mb-sm">Choose an account</div>
     <div class="text-caption text-grey-7 q-mb-md">
-      Select a saved account. Use a passkey if one is set up, or sign in with your password to create one.
+      Select a saved account. A passkey opens when one is set up. If it does not work, sign in with your password.
     </div>
     <q-list class="login-accounts__list">
       <q-item
@@ -35,6 +35,20 @@
             >
               <q-tooltip>Passkey available</q-tooltip>
             </q-icon>
+            <q-btn
+              v-if="accountHasPasskey(account)"
+              flat
+              round
+              dense
+              icon="lock"
+              color="grey-7"
+              class="q-mr-xs"
+              :disable="busy"
+              aria-label="Sign in with password"
+              @click.stop="showPasswordForAccount(account)"
+            >
+              <q-tooltip>Sign in with password</q-tooltip>
+            </q-btn>
             <q-spinner v-if="proceedingId === account.id" color="primary" size="20px" class="q-mr-xs" />
             <q-btn
               flat
@@ -827,7 +841,7 @@ function selectAccount(account: RememberedAccount) {
     showPasswordForAccount({ ...account, hasPasskeys: false });
     return;
   }
-  void promptPasskey(account, usablePasskeyCeremony(account), { onDismiss: 'accounts' });
+  void promptPasskey(account, usablePasskeyCeremony(account), { onDismiss: 'password' });
 }
 
 async function promptPasskey(
