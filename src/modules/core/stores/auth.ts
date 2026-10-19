@@ -1,7 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { Notify } from 'quasar';
-import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
+import type {
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+} from '@simplewebauthn/browser';
 import {
   clearAuthCookies,
   getAuthTokenFromCookie,
@@ -163,6 +166,15 @@ type StartAuthentication = (args: {
 let startAuthenticationFn: StartAuthentication | null = null;
 let webauthnLoad: Promise<void> | null = null;
 
+type PreparedPasskeyRegistration = {
+  options: PublicKeyCredentialCreationOptionsJSON;
+  challengeKey: string;
+  fetchedAt: number;
+};
+
+const PASSKEY_REGISTRATION_MAX_AGE_MS = 240_000;
+let preparedPasskeyRegistration: PreparedPasskeyRegistration | null = null;
+
 async function preloadPasskeyLibrary(): Promise<void> {
   webauthnLoad ??= import('@simplewebauthn/browser').then((mod) => {
     startAuthenticationFn = mod.startAuthentication;
@@ -196,6 +208,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null;
     isAuthenticated.value = false;
     lastValidatedAt.value = 0;
+    preparedPasskeyRegistration = null;
     clearAuthCookies();
     clearStoredActiveModule();
     resetMotdSession();
@@ -511,6 +524,35 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function preparePasskeyRegistration(): Promise<PreparedPasskeyRegistration | null> {
+    if (!token.value) {
+      return null;
+    }
+    const cached = preparedPasskeyRegistration;
+    if (cached && Date.now() - cached.fetchedAt < PASSKEY_REGISTRATION_MAX_AGE_MS) {
+      return cached;
+    }
+
+    const optionsResponse = await fetch(`${API_URL}/passkeys/options`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token.value}`,
+      },
+    });
+    if (!optionsResponse.ok) {
+      const err = await optionsResponse.json().catch(() => ({}));
+      throw new Error(err.message || 'Unable to start passkey registration');
+    }
+    const { options, challenge_key: challengeKey } = await optionsResponse.json();
+    preparedPasskeyRegistration = {
+      options,
+      challengeKey,
+      fetchedAt: Date.now(),
+    };
+    return preparedPasskeyRegistration;
+  }
+
   async function registerCurrentDevicePasskey(name = 'This device'): Promise<boolean> {
     if (!token.value) {
       Notify.create({
@@ -523,19 +565,13 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const { startRegistration } = await import('@simplewebauthn/browser');
-      const optionsResponse = await fetch(`${API_URL}/passkeys/options`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token.value}`,
-        },
-      });
-      if (!optionsResponse.ok) {
-        const err = await optionsResponse.json().catch(() => ({}));
-        throw new Error(err.message || 'Unable to start passkey registration');
+      const prepared = await preparePasskeyRegistration();
+      if (!prepared) {
+        throw new Error('Sign in before creating a passkey.');
       }
-      const { options, challenge_key: challengeKey } = await optionsResponse.json();
-      const credential = await startRegistration({ optionsJSON: options });
+      const credential = await startRegistration({ optionsJSON: prepared.options });
+      preparedPasskeyRegistration = null;
+      const challengeKey = prepared.challengeKey;
       const registerResponse = await fetch(`${API_URL}/passkeys`, {
         method: 'POST',
         headers: {
@@ -819,6 +855,7 @@ export const useAuthStore = defineStore('auth', () => {
     fetchPasskeyOptions,
     completePasskeyLogin,
     preloadPasskeyLibrary,
+    preparePasskeyRegistration,
     registerCurrentDevicePasskey,
     logout,
     checkAuth,
