@@ -141,7 +141,12 @@ const {
   visibleStepperTabs,
 } = useEmployeeFormAccess();
 
-const step = ref<EmployeeFormTabKey>('personal');
+const step = computed({
+  get: (): EmployeeFormTabKey => employeeStore.activeProfileTab,
+  set: (value: EmployeeFormTabKey) => {
+    employeeStore.setActiveProfileTab(value);
+  },
+});
 const isSaving = ref(false);
 
 const isCreating = computed(() => !props.readonly && !employeeStore.selectedEmployee?.id);
@@ -158,7 +163,7 @@ const canSaveEmployee = computed(() => {
 
 watch(visibleStepperTabs, (tabs) => {
   if (tabs.length > 0 && !tabs.includes(step.value)) {
-    step.value = tabs[0]!;
+    employeeStore.setActiveProfileTab(tabs[0]!);
   }
 }, { immediate: true });
 

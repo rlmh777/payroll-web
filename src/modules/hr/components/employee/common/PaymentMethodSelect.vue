@@ -30,6 +30,8 @@ import { computed, onMounted, ref } from 'vue';
 import { useEmployeeStore } from '@/stores/employee-store';
 import type { PaymentMethod } from '@core/types/models';
 
+type PaymentMethodOption = PaymentMethod & { id: string };
+
 const props = withDefaults(defineProps<{
   modelValue?: number | string | null;
   label?: string;
@@ -52,15 +54,32 @@ const employeeStore = useEmployeeStore();
 const filterText = ref('');
 
 const selectedId = computed({
-  get: () => props.modelValue ?? null,
-  set: (value: number | string | null) => {
-    emit('update:modelValue', value);
+  get: (): string | null => {
+    const value = props.modelValue;
+    if (value == null || value === '') {
+      return null;
+    }
+    return String(value);
+  },
+  set: (value: string | number | null) => {
+    if (value == null || value === '') {
+      emit('update:modelValue', null);
+      return;
+    }
+    emit('update:modelValue', String(value));
   },
 });
 
-const options = computed((): PaymentMethod[] => {
+const normalizedMethods = computed((): PaymentMethodOption[] => (
+  employeeStore.paymentMethods.map((method) => ({
+    ...method,
+    id: String(method.id),
+  }))
+));
+
+const options = computed((): PaymentMethodOption[] => {
   const needle = filterText.value.trim().toLowerCase();
-  const source = employeeStore.paymentMethods;
+  const source = normalizedMethods.value;
   if (!needle) {
     return [...source];
   }

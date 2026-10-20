@@ -1,6 +1,13 @@
 import { defineStore, acceptHMRUpdate } from 'pinia';
 import { useAuthStore } from '@core/stores/auth';
 import type { Account, Allowance, CitizenshipStatus, Country, Employee, Gender, Honorific, LeaveType, Locality, PaymentMethod, PayrateFrequency } from '@core/types/models';
+import type { EmployeeFormTabKey } from '@core/types/employee-form-access';
+import {
+  getRememberedDetailsTab,
+  getRememberedProfileTab,
+  setRememberedDetailsTab,
+  setRememberedProfileTab,
+} from '@hr/utils/employee-ui-preferences';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api'
 
@@ -54,11 +61,22 @@ export const useEmployeeStore = defineStore('employee', {
     isLoadingPaymentMethods: false,
     hasMore: true,
     selectedEmployee: null as Employee | null,
-    activeDetailsTab: 'allowances' as EmployeeDetailsTab,
+    activeProfileTab: getRememberedProfileTab('personal'),
+    activeDetailsTab: getRememberedDetailsTab('allowances'),
   }),
 
   getters: {  },
   actions: {
+    setActiveProfileTab(tab: EmployeeFormTabKey) {
+      this.activeProfileTab = tab;
+      setRememberedProfileTab(tab);
+    },
+
+    setActiveDetailsTab(tab: EmployeeDetailsTab) {
+      this.activeDetailsTab = tab;
+      setRememberedDetailsTab(tab);
+    },
+
     async fetchEmployees(reset: boolean = true) {
       const fetchId = ++employeesFetchId;
       this.isLoading = true;

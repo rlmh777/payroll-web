@@ -259,6 +259,9 @@ export interface PayrollRunEmployeeSummaryRow {
   bankId?: string | null;
   bankName?: string | null;
   accountNumber?: string | null;
+  paymentMethodId?: string | number | null;
+  paymentMethodName?: string | null;
+  requiresBankAccount?: boolean;
   paymentReady?: boolean;
 }
 
