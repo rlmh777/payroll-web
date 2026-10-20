@@ -52,6 +52,8 @@ export interface EmployeeImportPayload {
   departmentHeads?: EmployeeImportRow[];
   /** Used when creating localities that do not already exist. */
   defaultDistrictId?: string | null;
+  /** When true, matching employee codes update existing records instead of failing. */
+  overwriteExisting?: boolean;
 }
 
 const SHEET_TO_PAYLOAD_KEY: Record<EmployeeImportSheetName, keyof EmployeeImportSheets> = {
@@ -239,7 +241,7 @@ export async function parseEmployeeImportFile(file: File): Promise<EmployeeImpor
 
 export function toEmployeeImportPayload(
   sheets: EmployeeImportSheets,
-  options?: { defaultDistrictId?: string | null },
+  options?: { defaultDistrictId?: string | null; overwriteExisting?: boolean },
 ): EmployeeImportPayload {
   const payload: EmployeeImportPayload = {
     employees: sheets.employees,
@@ -259,6 +261,9 @@ export function toEmployeeImportPayload(
   if (sheets.departmentHeads.length) payload.departmentHeads = sheets.departmentHeads;
   if (options?.defaultDistrictId) {
     payload.defaultDistrictId = options.defaultDistrictId;
+  }
+  if (options?.overwriteExisting) {
+    payload.overwriteExisting = true;
   }
 
   return payload;

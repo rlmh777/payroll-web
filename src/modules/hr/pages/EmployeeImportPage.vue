@@ -93,6 +93,19 @@
                 />
               </div>
 
+              <div class="q-mb-md">
+                <q-toggle
+                  v-model="overwriteExisting"
+                  color="primary"
+                  label="Overwrite existing employees"
+                />
+                <div class="text-caption text-grey-7" style="max-width: 520px">
+                  When on, rows whose employee code already exists update that employee and related
+                  records (employment, compensation, banks, contacts, allowances, deductions) with
+                  the imported values. When off, duplicate codes are reported as errors.
+                </div>
+              </div>
+
               <div class="text-subtitle2 q-mb-sm">Employees preview (first {{ previewLimit }} rows)</div>
               <q-table
                 flat
@@ -196,6 +209,7 @@ const isDownloadingTemplate = ref(false);
 const isImporting = ref(false);
 const importResult = ref<Record<string, unknown> | null>(null);
 const defaultDistrictId = ref<string | null>(null);
+const overwriteExisting = ref(false);
 const previewLimit = PREVIEW_LIMIT;
 
 const requiredDistrict = (val: string | null | undefined) =>
@@ -353,6 +367,7 @@ async function commitImport() {
   try {
     const payload = toEmployeeImportPayload(sheets.value, {
       defaultDistrictId: defaultDistrictId.value,
+      overwriteExisting: overwriteExisting.value,
     });
     const result = await employeeStore.importEmployees(payload as unknown as Record<string, unknown>);
     importResult.value = result as Record<string, unknown>;
