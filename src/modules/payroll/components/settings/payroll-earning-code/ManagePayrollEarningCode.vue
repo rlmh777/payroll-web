@@ -28,6 +28,8 @@
           </template>
           <template #body-cell-flags="props">
             <q-td :props="props">
+              <q-badge v-if="props.row.post_to_department_account" color="indigo" class="q-mr-xs">Dept GL</q-badge>
+              <q-badge v-if="props.row.split_by_timesheet_department && props.row.post_to_department_account" color="deep-purple" class="q-mr-xs">Split depts</q-badge>
               <q-badge v-if="props.row.is_taxable" color="blue-grey" class="q-mr-xs">Taxable</q-badge>
               <q-badge v-if="props.row.is_ss_subject" color="teal">SS</q-badge>
               <q-badge v-if="!props.row.is_active" color="grey" class="q-ml-xs">Inactive</q-badge>

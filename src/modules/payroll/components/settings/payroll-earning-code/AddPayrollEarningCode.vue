@@ -49,6 +49,11 @@
             label="Post through department GL when the department has an account"
             :disable="saving"
           />
+          <q-toggle
+            v-model="form.split_by_timesheet_department"
+            label="Split this earning across timesheet departments"
+            :disable="saving || !form.post_to_department_account"
+          />
           <q-input
             v-model.number="form.sort_order"
             type="number"
@@ -87,6 +92,7 @@ const form = reactive({
   account_id: null as string | null,
   source: null as string | null,
   post_to_department_account: false,
+  split_by_timesheet_department: false,
   sort_order: 0,
   is_taxable: true,
   is_ss_subject: true,
@@ -106,6 +112,7 @@ function resetForm() {
   form.account_id = null;
   form.source = null;
   form.post_to_department_account = false;
+  form.split_by_timesheet_department = false;
   form.sort_order = 0;
   form.is_taxable = true;
   form.is_ss_subject = true;
@@ -131,6 +138,9 @@ async function save() {
       account_id: form.account_id,
       source: form.source,
       post_to_department_account: form.post_to_department_account,
+      split_by_timesheet_department: form.post_to_department_account
+        ? form.split_by_timesheet_department
+        : false,
       sort_order: form.sort_order,
       is_taxable: form.is_taxable,
       is_ss_subject: form.is_ss_subject,

@@ -8,7 +8,8 @@ import {
 import { useAuthStore } from 'src/stores/auth';
 import { useMenuStore } from '@core/stores/menus';
 import { useFormAssignmentStore } from '@hr/stores/form-assignment-store';
-import { moduleLandingPath } from '@core/utils/menu-navigation';
+import { moduleLandingPath, resolvePreferredLandingPath } from '@core/utils/menu-navigation';
+import { resolveModuleForPath } from '@core/utils/module-navigation';
 import { hasRoutePermission, routeViewPermission } from '@core/utils/permissions';
 import routes from './routes';
 
@@ -89,6 +90,31 @@ export default route(function (/* { store } */) {
       }
 
       menuStore.syncActiveModuleFromPath(to.path);
+
+      // Escape hatch: Modules settings must stay reachable so apps can be re-enabled.
+      const isModulesSettings =
+        to.path === '/admin/settings/modules' || to.path.startsWith('/admin/settings/modules/');
+      const pathModule = resolveModuleForPath(to.path, menuStore.menuTree, {
+        preferredModule: menuStore.activeModule,
+        moduleMenus: menuStore.moduleMenus,
+      });
+      if (
+        !isModulesSettings &&
+        pathModule &&
+        menuStore.modules.some((module) => module.code === pathModule && !module.enabled)
+      ) {
+        const fallback = resolvePreferredLandingPath(
+          authStore.user?.preferences?.defaultModule ?? null,
+          authStore.user?.preferences?.defaultMenu ?? null,
+          menuStore.enabledModules,
+          menuStore.moduleMenus,
+        );
+        if (fallback && fallback !== to.path) {
+          return { path: fallback };
+        }
+
+        return { path: '/' };
+      }
 
       if (to.path === '/admin/settings') {
         const landing = adminLandingPath();
