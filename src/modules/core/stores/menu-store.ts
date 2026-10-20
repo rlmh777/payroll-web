@@ -232,7 +232,7 @@ export const useMenuStore = defineStore('menu', {
         const result = await response.json();
         const newMenu = result.data || result;
 
-        this.menus = [...this.menus, newMenu];
+        this.syncMenu(newMenu);
         return newMenu;
       } catch (error) {
         console.error('Error creating menu:', error);
@@ -306,11 +306,7 @@ export const useMenuStore = defineStore('menu', {
         const result = await response.json();
         const updatedMenu = result.data || result;
 
-        const index = this.menus.findIndex((m) => m.id === id);
-        if (index !== -1) {
-          this.menus[index] = updatedMenu;
-        }
-
+        this.syncMenu(updatedMenu);
         return updatedMenu;
       } catch (error) {
         console.error('Error updating menu:', error);
@@ -345,7 +341,7 @@ export const useMenuStore = defineStore('menu', {
           throw new Error(errorData.message || errorData.error || `Failed to delete menu: ${response.statusText}`);
         }
 
-        this.menus = this.menus.filter((m) => m.id !== id);
+        this.removeMenu(id);
         return true;
       } catch (error) {
         console.error('Error deleting menu:', error);
@@ -355,8 +351,104 @@ export const useMenuStore = defineStore('menu', {
         this.isLoading = false;
       }
     },
+
+    syncMenu(menu: Menu) {
+      const stripped = this.menus.map((item) => ({
+        ...item,
+        children: (item.children ?? []).filter((child) => child.id !== menu.id),
+      }));
+      const index = stripped.findIndex((item) => item.id === menu.id);
+      const existing = index === -1 ? undefined : stripped[index];
+      const stored = existing
+        ? { ...existing, ...menu, children: menu.children ?? existing.children }
+        : menu;
+      const next = index === -1
+        ? [...stripped, stored]
+        : stripped.map((item, itemIndex) => (itemIndex === index ? stored : item));
+
+      this.menus = sortMenuTree(next.map((item) => {
+        if (item.id !== menu.parent_id) {
+          return item;
+        }
+
+        return {
+          ...item,
+          children: sortMenus([...(item.children ?? []).filter((child) => child.id !== menu.id), stored]),
+        };
+      }));
+    },
+
+    removeMenu(id: string) {
+      this.menus = this.menus
+        .filter((menu) => menu.id !== id)
+        .map((menu) => ({
+          ...menu,
+          children: (menu.children ?? []).filter((child) => child.id !== id),
+        }));
+    },
+
+    async reorderMenus(items: { id: string; order: number }[]): Promise<boolean> {
+      this.error = null;
+      const orderById = new Map(items.map((item) => [item.id, item.order]));
+      const previous = this.menus;
+
+      this.menus = sortMenuTree(this.menus.map((menu) => applyMenuOrder(menu, orderById)));
+
+      try {
+        const authStore = useAuthStore();
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        if (authStore.token) {
+          headers.Authorization = `Bearer ${authStore.token}`;
+        }
+
+        const response = await fetch(`${API_URL}/menus/reorder`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ items }),
+        });
+
+        if (!response.ok) {
+          const errorData: ApiErrorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to reorder menus: ${response.statusText}`);
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Error reordering menus:', error);
+        this.menus = previous;
+        this.error = error instanceof Error ? error.message : 'Error reordering menus';
+        return false;
+      }
+    },
   },
 });
+
+function sortMenus(menus: Menu[]): Menu[] {
+  return [...menus].sort((left, right) => (left.order ?? 0) - (right.order ?? 0) || left.title.localeCompare(right.title));
+}
+
+function sortMenuTree(menus: Menu[]): Menu[] {
+  return sortMenus(menus.map((menu) => (
+    menu.children
+      ? { ...menu, children: sortMenus(menu.children) }
+      : menu
+  )));
+}
+
+function applyMenuOrder(menu: Menu, orderById: Map<string, number>): Menu {
+  const order = orderById.get(menu.id);
+
+  return {
+    ...menu,
+    ...(order !== undefined ? { order } : {}),
+    ...(menu.children
+      ? { children: menu.children.map((child) => applyMenuOrder(child, orderById)) }
+      : {}),
+  };
+}
 
 if (import.meta.hot) {
   import.meta.hot.accept(acceptHMRUpdate(useMenuStore, import.meta.hot));

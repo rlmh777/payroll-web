@@ -11,6 +11,7 @@ import {
   type NavigationPayload,
 } from '../utils/module-navigation';
 import type { MenuItem } from '../types/menu-item';
+import type { Menu as AdminMenu } from './menu-store';
 
 export type { MenuItem } from '../types/menu-item';
 
@@ -125,13 +126,92 @@ export const useMenuStore = defineStore('menus', () => {
   }
 
   function normalizeMenuTree(items: MenuItem[], parentId: string | null = null): MenuItem[] {
-    return items
+    return sortNavigationTree(items.map((item) => normalizeMenuNode(item, parentId)));
+  }
+
+  function toNavigationItem(menu: AdminMenu): MenuItem {
+    const item: MenuItem = {
+      id: menu.id,
+      parent_id: menu.parent_id ?? null,
+      title: menu.title,
+      route: menu.route ?? null,
+      icon: menu.icon ?? null,
+      permission: menu.permission ?? null,
+      order: menu.order ?? 0,
+      is_active: menu.is_active ?? true,
+      type: menu.type ?? 'menu',
+      children: (menu.children ?? []).map((child) => toNavigationItem(child)),
+    };
+
+    if (menu.module_code !== undefined) {
+      item.module_code = menu.module_code;
+    }
+    if (menu.source !== undefined) {
+      item.source = menu.source;
+    }
+    if (menu.system_key !== undefined) {
+      item.system_key = menu.system_key;
+    }
+
+    return normalizeMenuNode(item);
+  }
+
+  function normalizeMenuNode(item: MenuItem, parentId: string | null = null): MenuItem {
+    return {
+      ...item,
+      parent_id: item.parent_id ?? parentId,
+      order: item.order ?? 0,
+      children: normalizeMenuTree(item.children ?? [], item.id),
+    };
+  }
+
+  function sortNavigationTree(items: MenuItem[]): MenuItem[] {
+    return [...items]
+      .sort((left, right) => left.order - right.order || left.title.localeCompare(right.title))
       .map((item) => ({
         ...item,
-        parent_id: item.parent_id ?? parentId,
-        children: normalizeMenuTree(item.children ?? [], item.id),
-      }))
-      .sort((a, b) => a.order - b.order);
+        children: sortNavigationTree(item.children ?? []),
+      }));
+  }
+
+  function removeMenuById(items: MenuItem[], id: string): MenuItem[] {
+    return items
+      .filter((item) => item.id !== id)
+      .map((item) => ({
+        ...item,
+        children: removeMenuById(item.children ?? [], id),
+      }));
+  }
+
+  function placeMenu(items: MenuItem[], menu: MenuItem): MenuItem[] {
+    if (!menu.parent_id) {
+      return sortNavigationTree([...items.filter((item) => item.id !== menu.id), menu]);
+    }
+
+    return sortNavigationTree(items.map((item) => {
+      if (item.id === menu.parent_id) {
+        return {
+          ...item,
+          children: sortNavigationTree([
+            ...(item.children ?? []).filter((child) => child.id !== menu.id),
+            menu,
+          ]),
+        };
+      }
+
+      return {
+        ...item,
+        children: placeMenu(item.children ?? [], menu),
+      };
+    }));
+  }
+
+  function applyOrder(items: MenuItem[], orderById: Map<string, number>): MenuItem[] {
+    return items.map((item) => ({
+      ...item,
+      order: orderById.get(item.id) ?? item.order,
+      children: applyOrder(item.children ?? [], orderById),
+    }));
   }
 
   function flattenMenuTree(items: MenuItem[], parentId: string | null = null): MenuItem[] {
@@ -150,6 +230,41 @@ export const useMenuStore = defineStore('menus', () => {
     }
 
     return flat;
+  }
+
+  function applyMenuUpdate(menu: AdminMenu) {
+    const item = toNavigationItem(menu);
+    menuTree.value = placeMenu(removeMenuById(menuTree.value, item.id), item);
+    const nextModules = { ...moduleMenus.value };
+
+    for (const code of Object.keys(nextModules)) {
+      nextModules[code] = removeMenuById(nextModules[code] ?? [], item.id);
+    }
+
+    const moduleCode = item.module_code;
+    if (moduleCode && Object.prototype.hasOwnProperty.call(nextModules, moduleCode)) {
+      nextModules[moduleCode] = placeMenu(nextModules[moduleCode] ?? [], item);
+    }
+
+    moduleMenus.value = nextModules;
+  }
+
+  function applyMenuOrder(items: { id: string; order: number }[]) {
+    const orderById = new Map(items.map((item) => [item.id, item.order]));
+    menuTree.value = sortNavigationTree(applyOrder(menuTree.value, orderById));
+    moduleMenus.value = Object.fromEntries(
+      Object.entries(moduleMenus.value).map(([code, tree]) => [
+        code,
+        sortNavigationTree(applyOrder(tree, orderById)),
+      ]),
+    );
+  }
+
+  function removeNavigationMenu(id: string) {
+    menuTree.value = removeMenuById(menuTree.value, id);
+    moduleMenus.value = Object.fromEntries(
+      Object.entries(moduleMenus.value).map(([code, tree]) => [code, removeMenuById(tree, id)]),
+    );
   }
 
   function clearMenus() {
@@ -191,6 +306,9 @@ export const useMenuStore = defineStore('menus', () => {
     loading,
     error,
     fetchMenus,
+    applyMenuUpdate,
+    applyMenuOrder,
+    removeNavigationMenu,
     setActiveModule,
     syncActiveModuleFromPath,
     clearMenus,

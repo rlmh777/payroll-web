@@ -13,60 +13,72 @@
       :rows-per-page-options="[10, 15, 20, 50]"
       @request="onRequest"
     >
-      <template v-slot:body-cell-parent="props">
-        <q-td :props="props">
-          {{ getParentTitle(props.row) }}
-        </q-td>
-      </template>
-      <template v-slot:body-cell-icon="props">
-        <q-td :props="props">
-          <q-icon v-if="props.value" :name="props.value" size="sm" />
-          <span v-else class="text-grey">-</span>
-        </q-td>
-      </template>
-      <template v-slot:body-cell-module_code="props">
-        <q-td :props="props">
-          {{ getModuleTitle(props.row.module_code) }}
-        </q-td>
-      </template>
-      <template v-slot:body-cell-is_active="props">
-        <q-td :props="props">
-          <q-icon
-            :name="props.value ? 'check_circle' : 'cancel'"
-            :color="props.value ? 'positive' : 'negative'"
-            size="sm"
-          />
-        </q-td>
-      </template>
-      <template v-slot:body-cell-actions="props">
-        <q-td :props="props" class="text-right">
-          <div class="action-buttons">
-            <q-btn
-              flat
-              round
-              dense
-              icon="edit"
-              color="primary"
-              size="sm"
-              class="action-btn"
-              @click="openEditDialog(props.row)"
+      <template #body="props">
+        <q-tr
+          :props="props"
+          :class="{ 'menu-row--over': dragOverId === props.row.id && canDropOn(props.row) }"
+          @dragover.prevent="onDragOver(props.row)"
+          @dragleave="onDragLeave(props.row)"
+          @drop.prevent="onDrop(props.row)"
+        >
+          <q-td v-for="col in props.cols" :key="col.name" :props="props">
+            <span
+              v-if="col.name === 'drag'"
+              class="menu-drag-handle"
+              draggable="true"
+              @dragstart.stop="onDragStart($event, props.row)"
+              @dragend="onDragEnd"
             >
-              <q-tooltip>Edit Menu</q-tooltip>
-            </q-btn>
-            <q-btn
-              flat
-              round
-              dense
-              icon="delete"
-              color="negative"
-              size="sm"
-              class="action-btn"
-              @click="confirmDelete(props.row)"
-            >
-              <q-tooltip>Delete Menu</q-tooltip>
-            </q-btn>
-          </div>
-        </q-td>
+              <q-icon name="drag_indicator" />
+            </span>
+            <template v-else-if="col.name === 'parent'">
+              {{ getParentTitle(props.row) }}
+            </template>
+            <template v-else-if="col.name === 'icon'">
+              <q-icon v-if="col.value" :name="col.value" size="sm" />
+              <span v-else class="text-grey">-</span>
+            </template>
+            <template v-else-if="col.name === 'module_code'">
+              {{ getModuleTitle(props.row.module_code) }}
+            </template>
+            <template v-else-if="col.name === 'is_active'">
+              <q-icon
+                :name="col.value ? 'check_circle' : 'cancel'"
+                :color="col.value ? 'positive' : 'negative'"
+                size="sm"
+              />
+            </template>
+            <div v-else-if="col.name === 'actions'" class="action-buttons">
+              <q-btn
+                flat
+                round
+                dense
+                icon="edit"
+                color="primary"
+                size="sm"
+                class="action-btn"
+                @click="openEditDialog(props.row)"
+              >
+                <q-tooltip>Edit Menu</q-tooltip>
+              </q-btn>
+              <q-btn
+                flat
+                round
+                dense
+                icon="delete"
+                color="negative"
+                size="sm"
+                class="action-btn"
+                @click="confirmDelete(props.row)"
+              >
+                <q-tooltip>Delete Menu</q-tooltip>
+              </q-btn>
+            </div>
+            <template v-else>
+              {{ col.value }}
+            </template>
+          </q-td>
+        </q-tr>
       </template>
     </q-table>
     <EditMenu
@@ -112,6 +124,13 @@ const navigationMenuStore = useNavigationMenuStore();
 const moduleStore = useModuleStore();
 
 const columns = [
+  {
+    name: 'drag',
+    label: '',
+    field: 'id',
+    align: 'center' as const,
+    sortable: false,
+  },
   {
     name: 'order',
     label: 'Order',
@@ -185,15 +204,13 @@ const columns = [
 ];
 
 const allMenus = computed(() => {
-  // Group menus by parent, showing parent menus first, then their children
-  const rootMenus = menuStore.rootMenus;
+  const rootMenus = [...menuStore.rootMenus].sort(compareMenus);
   const result: Menu[] = [];
-  
+
   rootMenus.forEach(rootMenu => {
     result.push(rootMenu);
-    // Add children if they exist
     if (rootMenu.children && rootMenu.children.length > 0) {
-      result.push(...rootMenu.children);
+      result.push(...[...rootMenu.children].sort(compareMenus));
     }
   });
   
@@ -232,6 +249,80 @@ const showEditDialog = ref(false);
 const showDeleteDialog = ref(false);
 const selectedMenu = ref<Menu | null>(null);
 const menuToDelete = ref<Menu | null>(null);
+const draggingMenu = ref<Menu | null>(null);
+const dragOverId = ref<string | null>(null);
+
+function compareMenus(left: Menu, right: Menu): number {
+  return (left.order ?? 0) - (right.order ?? 0) || left.title.localeCompare(right.title);
+}
+
+function sameParent(left: Menu, right: Menu): boolean {
+  return (left.parent_id ?? null) === (right.parent_id ?? null);
+}
+
+function canDropOn(target: Menu): boolean {
+  return Boolean(draggingMenu.value && draggingMenu.value.id !== target.id && sameParent(draggingMenu.value, target));
+}
+
+function onDragStart(event: DragEvent, menu: Menu) {
+  draggingMenu.value = menu;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', menu.id);
+  }
+}
+
+function onDragOver(menu: Menu) {
+  dragOverId.value = canDropOn(menu) ? menu.id : null;
+}
+
+function onDragLeave(menu: Menu) {
+  if (dragOverId.value === menu.id) {
+    dragOverId.value = null;
+  }
+}
+
+function onDragEnd() {
+  draggingMenu.value = null;
+  dragOverId.value = null;
+}
+
+async function onDrop(target: Menu) {
+  const source = draggingMenu.value;
+  dragOverId.value = null;
+  draggingMenu.value = null;
+  if (!source || source.id === target.id || !sameParent(source, target)) {
+    return;
+  }
+
+  const siblings = menuStore.menus
+    .filter((menu) => (menu.parent_id ?? null) === (target.parent_id ?? null))
+    .sort(compareMenus);
+  const fromIndex = siblings.findIndex((menu) => menu.id === source.id);
+  const toIndex = siblings.findIndex((menu) => menu.id === target.id);
+  if (fromIndex < 0 || toIndex < 0) {
+    return;
+  }
+
+  const next = siblings.slice();
+  const [moved] = next.splice(fromIndex, 1);
+  if (!moved) {
+    return;
+  }
+  next.splice(toIndex, 0, moved);
+  const items = next.map((menu, index) => ({ id: menu.id, order: index + 1 }));
+  const saved = await menuStore.reorderMenus(items);
+  if (!saved) {
+    $q.notify({
+      type: 'negative',
+      message: menuStore.error || 'Failed to reorder menus',
+      position: 'top',
+    });
+    return;
+  }
+
+  navigationMenuStore.applyMenuOrder(items);
+}
 
 const pagination = ref({
   page: 1,
@@ -287,14 +378,11 @@ const openEditDialog = (menu: Menu) => {
   showEditDialog.value = true;
 };
 
-const onMenuUpdated = async () => {
-  // Refresh the list after a menu is updated
-  await menuStore.fetchMenus();
-  // Refresh the navigation menu (header and drawer)
-  await navigationMenuStore.fetchMenus();
-  // Reset pagination to first page to show updated data
-  pagination.value.page = 1;
-  // Close edit dialog
+const onMenuUpdated = (menuId: string) => {
+  const updated = menuStore.menus.find((menu) => menu.id === menuId);
+  if (updated) {
+    navigationMenuStore.applyMenuUpdate(updated);
+  }
   showEditDialog.value = false;
   selectedMenu.value = null;
 };
@@ -315,11 +403,8 @@ const handleDelete = async () => {
       position: 'top',
     });
     showDeleteDialog.value = false;
+    navigationMenuStore.removeNavigationMenu(menuToDelete.value.id);
     menuToDelete.value = null;
-    // Refresh the list after deletion
-    await menuStore.fetchMenus();
-    // Refresh the navigation menu (header and drawer)
-    await navigationMenuStore.fetchMenus();
   } else {
     $q.notify({
       type: 'negative',
@@ -364,6 +449,16 @@ onMounted(async () => {
   display: flex;
   gap: 4px;
   justify-content: flex-end;
+}
+
+.menu-drag-handle {
+  cursor: grab;
+  color: #64748b;
+}
+
+.menu-row--over {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
 }
 
 .action-btn {

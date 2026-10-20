@@ -237,7 +237,7 @@ watch(
 );
 
 // Reset form when dialog opens
-watch(isOpen, async (newValue) => {
+watch(isOpen, (newValue) => {
   if (newValue) {
     form.value = {
       title: '',
@@ -250,8 +250,6 @@ watch(isOpen, async (newValue) => {
       is_active: true,
       module_code: DEFAULT_MENU_MODULE,
     };
-    // Fetch menus to populate parent options
-    await menuStore.fetchMenus();
   }
 });
 </script>

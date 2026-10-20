@@ -119,6 +119,15 @@ export const coreRoutes: RouteRecordRaw[] = [
       },
       { path: '/payroll/settings/general/locality', redirect: hrSettingsPath('locality') },
       {
+        path: '/payroll/settings/banks',
+        component: () => import('@core/settings/bank/ManageBanks.vue'),
+        props: { title: 'Banks' },
+      },
+      {
+        path: '/payroll/settings/general/banks',
+        redirect: '/payroll/settings/banks',
+      },
+      {
         path: '/payroll/settings/bank-account-type',
         component: () => import('@core/settings/bank-account-type/ManageBankAccountType.vue'),
         props: { title: 'Setting Bank Account Type' },

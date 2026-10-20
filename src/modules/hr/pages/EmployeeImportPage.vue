@@ -81,6 +81,18 @@
                 </div>
               </div>
 
+              <div class="q-mb-md" style="max-width: 420px">
+                <div class="text-subtitle2 q-mb-xs">Default district for new localities</div>
+                <div class="text-caption text-grey-7 q-mb-sm">
+                  Missing locality names from the file are created under this district.
+                </div>
+                <DistrictSelect
+                  v-model="defaultDistrictId"
+                  :rules="[requiredDistrict]"
+                  show-add-new
+                />
+              </div>
+
               <div class="text-subtitle2 q-mb-sm">Employees preview (first {{ previewLimit }} rows)</div>
               <q-table
                 flat
@@ -101,7 +113,7 @@
 
       <q-card-section class="row items-center justify-between">
         <div class="text-caption text-grey-7">
-          Commit sends JSON sheet arrays to the API. Profile sheets (banks, contacts, leave, SS, shares, allowances, deductions, department heads) are included when present.
+          Commit sends JSON sheet arrays to the API. Profile sheets (banks, contacts, leave, SS, shares, allowances, deductions, department heads) are included when present. New localities use the default district above.
         </div>
         <q-btn
           unelevated
@@ -159,6 +171,7 @@ import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { employeePath } from '@core/config/module-routes';
 import type { QTableColumn } from 'quasar';
+import DistrictSelect from '@core/components/shared/locality/DistrictSelect.vue';
 import { useEmployeeStore } from '@hr/stores/employee-store';
 import {
   emptyEmployeeImportSheets,
@@ -182,7 +195,11 @@ const isParsing = ref(false);
 const isDownloadingTemplate = ref(false);
 const isImporting = ref(false);
 const importResult = ref<Record<string, unknown> | null>(null);
+const defaultDistrictId = ref<string | null>(null);
 const previewLimit = PREVIEW_LIMIT;
+
+const requiredDistrict = (val: string | null | undefined) =>
+  (val != null && String(val).trim() !== '') || 'Select a default district for new localities';
 
 const errorColumns: QTableColumn[] = [
   { name: 'sheet', label: 'Sheet', field: 'sheet', align: 'left' },
@@ -198,6 +215,7 @@ const canCommit = computed(
     && !isParsing.value
     && !parseError.value
     && sheets.value.employees.length > 0
+    && Boolean(defaultDistrictId.value)
     && !isImporting.value,
 );
 
@@ -333,8 +351,10 @@ async function commitImport() {
   importResult.value = null;
 
   try {
-    const payload = toEmployeeImportPayload(sheets.value);
-    const result = await employeeStore.importEmployees(payload as unknown as Record<string, unknown[]>);
+    const payload = toEmployeeImportPayload(sheets.value, {
+      defaultDistrictId: defaultDistrictId.value,
+    });
+    const result = await employeeStore.importEmployees(payload as unknown as Record<string, unknown>);
     importResult.value = result as Record<string, unknown>;
     $q.notify({ type: 'positive', message: 'Import completed.' });
     await employeeStore.fetchEmployees(true);

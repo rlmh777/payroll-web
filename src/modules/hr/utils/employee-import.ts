@@ -50,6 +50,8 @@ export interface EmployeeImportPayload {
   allowances?: EmployeeImportRow[];
   deductions?: EmployeeImportRow[];
   departmentHeads?: EmployeeImportRow[];
+  /** Used when creating localities that do not already exist. */
+  defaultDistrictId?: string | null;
 }
 
 const SHEET_TO_PAYLOAD_KEY: Record<EmployeeImportSheetName, keyof EmployeeImportSheets> = {
@@ -235,7 +237,10 @@ export async function parseEmployeeImportFile(file: File): Promise<EmployeeImpor
   return parseEmployeeImportWorkbook(workbook);
 }
 
-export function toEmployeeImportPayload(sheets: EmployeeImportSheets): EmployeeImportPayload {
+export function toEmployeeImportPayload(
+  sheets: EmployeeImportSheets,
+  options?: { defaultDistrictId?: string | null },
+): EmployeeImportPayload {
   const payload: EmployeeImportPayload = {
     employees: sheets.employees,
     employment: sheets.employment,
@@ -252,6 +257,9 @@ export function toEmployeeImportPayload(sheets: EmployeeImportSheets): EmployeeI
   if (sheets.allowances.length) payload.allowances = sheets.allowances;
   if (sheets.deductions.length) payload.deductions = sheets.deductions;
   if (sheets.departmentHeads.length) payload.departmentHeads = sheets.departmentHeads;
+  if (options?.defaultDistrictId) {
+    payload.defaultDistrictId = options.defaultDistrictId;
+  }
 
   return payload;
 }
