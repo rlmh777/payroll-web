@@ -1,6 +1,22 @@
 <template>
   <div>
     <div class="row q-gutter-md items-center">
+      <div class="col-12 col-md-2">
+        <q-select
+          v-model="searchFilters.module_code"
+          :options="moduleOptions"
+          option-value="code"
+          option-label="title"
+          emit-value
+          map-options
+          outlined
+          dense
+          label="Module"
+          clearable
+          :loading="moduleStore.loading"
+          @update:model-value="onSearch"
+        />
+      </div>
       <div class="col-12 col-md-3">
         <q-input
           v-model="searchFilters.search"
@@ -42,22 +58,6 @@
           dense
           label="Status"
           clearable
-          @update:model-value="onSearch"
-        />
-      </div>
-      <div class="col-12 col-md-2">
-        <q-select
-          v-model="searchFilters.module_code"
-          :options="moduleOptions"
-          option-value="code"
-          option-label="title"
-          emit-value
-          map-options
-          outlined
-          dense
-          label="Module"
-          clearable
-          :loading="moduleStore.loading"
           @update:model-value="onSearch"
         />
       </div>
@@ -147,12 +147,11 @@ onMounted(async () => {
   await moduleStore.fetchModules();
 });
 
-const onMenuSaved = async () => {
-  // Refresh the list after a new menu is added
-  await menuStore.fetchMenus();
-  // Refresh the navigation menu (header and drawer)
-  await navigationMenuStore.fetchMenus();
-  // Close add dialog
+const onMenuSaved = (menuId: string) => {
+  const created = menuStore.menus.find((menu) => menu.id === menuId);
+  if (created) {
+    navigationMenuStore.applyMenuUpdate(created);
+  }
   showAddDialog.value = false;
 };
 </script>

@@ -215,7 +215,7 @@ onMounted(async () => {
 
 <style scoped>
 .my-sticky-dynamic {
-  max-height: 600px;
+  height: calc(100vh - 250px);
 }
 
 .text-ellipsis {

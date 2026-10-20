@@ -551,7 +551,7 @@ export const useEmployeeStore = defineStore('employee', {
       URL.revokeObjectURL(url);
     },
 
-    async importEmployees(payload: Record<string, unknown[]>) {
+    async importEmployees(payload: Record<string, unknown>) {
       const response = await fetch(`${API_URL}/employees/import`, {
         method: 'POST',
         headers: this.authHeaders(),

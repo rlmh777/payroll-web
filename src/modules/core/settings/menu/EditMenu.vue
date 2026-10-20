@@ -217,11 +217,8 @@ const onClose = () => {
 };
 
 // Load menu data when dialog opens
-watch(isOpen, async (newValue) => {
+watch(isOpen, (newValue) => {
   if (newValue && props.menu) {
-    // Fetch menus to populate parent options
-    await menuStore.fetchMenus();
-    // Populate form with existing data
     form.value = {
       title: props.menu.title || '',
       parent_id: props.menu.parent_id || null,

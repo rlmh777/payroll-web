@@ -282,6 +282,11 @@ export const hrRoutes: RouteRecordRaw[] = [
         props: { title: 'Setting Relationship' },
       },
       {
+        path: 'gender',
+        component: () => import('@hr/components/settings/gender/ManageGender.vue'),
+        props: { title: 'Genders' },
+      },
+      {
         path: 'degree',
         component: () => import('@core/settings/degree/ManageDegree.vue'),
         props: { title: 'Setting Degree' },
