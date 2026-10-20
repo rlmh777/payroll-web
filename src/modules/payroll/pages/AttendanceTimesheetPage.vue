@@ -569,14 +569,24 @@
               <template #body-cell-bankName="props">
                 <q-td :props="props">
                   <span v-if="props.row.bankName">{{ props.row.bankName }}</span>
-                  <span v-else-if="Number(props.row.netPay) > 0" class="text-negative">Missing</span>
+                  <span
+                    v-else-if="Number(props.row.netPay) > 0 && props.row.paymentReady === false"
+                    class="text-negative"
+                  >Missing</span>
+                  <span v-else-if="props.row.paymentMethodName" class="text-grey-8">
+                    {{ props.row.paymentMethodName }}
+                  </span>
                   <span v-else class="text-grey-6">—</span>
                 </q-td>
               </template>
               <template #body-cell-accountNumber="props">
                 <q-td :props="props">
                   <span v-if="props.row.accountNumber">{{ props.row.accountNumber }}</span>
-                  <span v-else-if="Number(props.row.netPay) > 0" class="text-negative">Missing</span>
+                  <span
+                    v-else-if="Number(props.row.netPay) > 0 && props.row.paymentReady === false"
+                    class="text-negative"
+                  >Missing</span>
+                  <span v-else-if="props.row.requiresBankAccount === false" class="text-grey-6">N/A</span>
                   <span v-else class="text-grey-6">—</span>
                 </q-td>
               </template>

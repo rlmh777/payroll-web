@@ -132,14 +132,14 @@ const tab = computed({
   },
   set: (value: string) => {
     if (visibleDetailTabs.value.some((item) => item.name === value)) {
-      activeDetailsTab.value = value as EmployeeDetailsTab;
+      employeeStore.setActiveDetailsTab(value as EmployeeDetailsTab);
     }
   },
 });
 
 watch(visibleDetailTabs, (tabs) => {
   if (tabs.length > 0 && !tabs.some((item) => item.name === activeDetailsTab.value)) {
-    activeDetailsTab.value = tabs[0]!.name;
+    employeeStore.setActiveDetailsTab(tabs[0]!.name);
   }
 }, { immediate: true });
 </script>

@@ -87,6 +87,7 @@ export interface PayrateFrequency {
 export interface PaymentMethod {
   id: string;
   name?: string;
+  requiresBankAccount?: boolean;
 }
 
 export interface LeaveType {
@@ -279,6 +280,7 @@ export interface Employee {
   nationalityId?: string | null;
   payrateFrequencyId?: string | null;
   paymentMethodId: string;
+  paymentMethod?: PaymentMethod | null;
   notes?: string | null;
   picturePath?: string | null;
   pictureUrl?: string | null;
