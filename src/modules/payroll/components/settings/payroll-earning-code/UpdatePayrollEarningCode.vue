@@ -35,6 +35,15 @@
             label="Post through department GL when the department has an account"
             :disable="saving"
           />
+          <q-toggle
+            v-model="form.split_by_timesheet_department"
+            label="Split this earning across timesheet departments"
+            :disable="saving || !form.post_to_department_account"
+          >
+            <q-tooltip v-if="!form.post_to_department_account">
+              Turn on department posting to split cost by the department worked for.
+            </q-tooltip>
+          </q-toggle>
           <q-input
             v-model.number="form.sort_order"
             type="number"
@@ -74,6 +83,7 @@ const form = ref<{
   account_id: string | null;
   source: string | null;
   post_to_department_account: boolean;
+  split_by_timesheet_department: boolean;
   sort_order: number;
   is_taxable: boolean;
   is_ss_subject: boolean;
@@ -101,6 +111,7 @@ watch(
       account_id: code.account_id ?? null,
       source: code.source ?? null,
       post_to_department_account: Boolean(code.post_to_department_account),
+      split_by_timesheet_department: Boolean(code.split_by_timesheet_department),
       sort_order: code.sort_order,
       is_taxable: code.is_taxable,
       is_ss_subject: code.is_ss_subject,
@@ -128,6 +139,9 @@ async function save() {
       account_id: form.value.account_id,
       source: form.value.source,
       post_to_department_account: form.value.post_to_department_account,
+      split_by_timesheet_department: form.value.post_to_department_account
+        ? form.value.split_by_timesheet_department
+        : false,
       sort_order: form.value.sort_order,
       is_taxable: form.value.is_taxable,
       is_ss_subject: form.value.is_ss_subject,

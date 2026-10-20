@@ -10,6 +10,7 @@ export interface PayrollEarningCode {
   account_id?: string | null;
   source?: string | null;
   post_to_department_account?: boolean;
+  split_by_timesheet_department?: boolean;
   is_taxable: boolean;
   is_ss_subject: boolean;
   is_active: boolean;
