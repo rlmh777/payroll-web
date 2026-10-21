@@ -4,10 +4,11 @@
       <div>
         <div class="text-h6">Day / trip work</div>
         <div class="text-caption text-grey-7">
-          Record units worked for daily-rate employees who do not clock in. Pay = units × daily rate.
+          Record units worked for daily-rate employees who do not clock in. Several entries can be saved for the same day. Pay = units × daily rate.
         </div>
       </div>
       <q-btn
+        v-if="activeTab === 'entries'"
         color="primary"
         icon="add"
         label="Record work"
@@ -18,6 +19,36 @@
       />
     </div>
 
+    <q-tabs v-model="activeTab" dense align="left" class="q-mb-md" active-color="primary" indicator-color="primary">
+      <q-tab name="week" label="Week" no-caps />
+      <q-tab name="entries" label="Entries" no-caps />
+    </q-tabs>
+
+    <q-banner v-if="store.error" class="bg-negative text-white q-mb-md" rounded>
+      {{ store.error }}
+    </q-banner>
+
+    <q-banner
+      v-else-if="!store.isBootstrapping && store.employees.length === 0"
+      class="bg-grey-2 text-grey-8 q-mb-md"
+      rounded
+    >
+      No daily-rate employees are in your scope. Set an employee’s compensation method to
+      <strong>Daily / trip rate</strong> first.
+    </q-banner>
+
+    <q-tab-panels v-model="activeTab" animated keep-alive class="day-work-tabs">
+      <q-tab-panel name="week" class="q-pa-none">
+        <EmployeeDayWorkWeekBoard
+          :employees="store.employees"
+          :refresh-token="weekRefreshToken"
+          @add="openCreateForDay"
+          @edit="openEditFromWeek"
+          @delete="confirmDelete"
+        />
+      </q-tab-panel>
+
+      <q-tab-panel name="entries" class="q-pa-none">
     <div class="row q-col-gutter-md q-mb-md items-end">
       <div class="col-12 col-md-3">
         <SsBenefitDateField
@@ -53,19 +84,6 @@
         />
       </div>
     </div>
-
-    <q-banner v-if="store.error" class="bg-negative text-white q-mb-md" rounded>
-      {{ store.error }}
-    </q-banner>
-
-    <q-banner
-      v-else-if="!store.isBootstrapping && store.employees.length === 0"
-      class="bg-grey-2 text-grey-8 q-mb-md"
-      rounded
-    >
-      No daily-rate employees are in your scope. Set an employee’s compensation method to
-      <strong>Daily / trip rate</strong> first.
-    </q-banner>
 
     <q-table
       flat
@@ -110,16 +128,28 @@
         </q-td>
       </template>
     </q-table>
+      </q-tab-panel>
+    </q-tab-panels>
 
     <EmployeeDayWorkFormDialog
       v-model="showForm"
       :record="editingRecord"
       :employees="store.employees"
       :saving="store.isSaving"
+      :preset-employee-id="presetEmployeeId"
+      :preset-date="presetDate"
+      :lock-employee-and-date="lockEmployeeAndDate"
       @save="handleSave"
     />
   </q-page>
 </template>
+
+<style scoped>
+.day-work-tabs {
+  padding-bottom: 2.5rem;
+  margin-bottom: 2rem;
+}
+</style>
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
@@ -130,6 +160,7 @@ import {
   type EmployeeDayWork,
 } from '@payroll/stores/employee-day-work-store';
 import EmployeeDayWorkFormDialog from '@payroll/components/payroll/EmployeeDayWorkFormDialog.vue';
+import EmployeeDayWorkWeekBoard from '@payroll/components/payroll/EmployeeDayWorkWeekBoard.vue';
 import SsBenefitDateField from '@payroll/components/employee/ss-benefit/SsBenefitDateField.vue';
 
 const $q = useQuasar();
@@ -137,6 +168,11 @@ const store = useEmployeeDayWorkStore();
 
 const showForm = ref(false);
 const editingRecord = ref<EmployeeDayWork | null>(null);
+const activeTab = ref('week');
+const weekRefreshToken = ref(0);
+const presetEmployeeId = ref<string | null>(null);
+const presetDate = ref<string | null>(null);
+const lockEmployeeAndDate = ref(false);
 const employeeFilterOptions = ref<DayWorkEmployeeOption[]>([]);
 
 const pagination = ref({
@@ -151,6 +187,8 @@ const columns = [
   { name: 'units', label: 'Units', field: 'units', align: 'right' as const },
   { name: 'dailyRate', label: 'Daily rate', field: 'dailyRate', align: 'right' as const },
   { name: 'amount', label: 'Amount', field: 'amount', align: 'right' as const },
+  { name: 'guest', label: 'Guest', field: 'guest', align: 'left' as const },
+  { name: 'destination', label: 'Destination', field: 'destination', align: 'left' as const },
   { name: 'note', label: 'Note', field: 'note', align: 'left' as const },
   { name: 'actions', label: '', field: 'actions', align: 'right' as const },
 ];
@@ -245,11 +283,33 @@ const onRequest: NonNullable<QTableProps['onRequest']> = (requestProps) => {
 
 const openCreate = () => {
   editingRecord.value = null;
+  presetEmployeeId.value = null;
+  presetDate.value = null;
+  lockEmployeeAndDate.value = false;
+  showForm.value = true;
+};
+
+const openCreateForDay = (employeeId: string, day: string) => {
+  editingRecord.value = null;
+  presetEmployeeId.value = employeeId;
+  presetDate.value = day;
+  lockEmployeeAndDate.value = true;
   showForm.value = true;
 };
 
 const openEdit = (row: EmployeeDayWork) => {
   editingRecord.value = row;
+  presetEmployeeId.value = null;
+  presetDate.value = null;
+  lockEmployeeAndDate.value = false;
+  showForm.value = true;
+};
+
+const openEditFromWeek = (row: EmployeeDayWork) => {
+  editingRecord.value = row;
+  presetEmployeeId.value = null;
+  presetDate.value = null;
+  lockEmployeeAndDate.value = true;
   showForm.value = true;
 };
 
@@ -258,7 +318,9 @@ const handleSave = async (payload: {
   date: string;
   units: number;
   dailyRate: number;
-  note?: string;
+  note?: string | null;
+  guest?: string | null;
+  destination?: string | null;
 }) => {
   try {
     if (editingRecord.value?.id) {
@@ -270,6 +332,7 @@ const handleSave = async (payload: {
     }
     showForm.value = false;
     editingRecord.value = null;
+    weekRefreshToken.value += 1;
   } catch {
     $q.notify({ type: 'negative', message: store.error || 'Save failed' });
   }
@@ -284,6 +347,7 @@ const confirmDelete = (row: EmployeeDayWork) => {
     void (async () => {
       try {
         await store.deleteEntry(row.id);
+        weekRefreshToken.value += 1;
         $q.notify({ type: 'positive', message: 'Entry deleted' });
       } catch {
         $q.notify({ type: 'negative', message: store.error || 'Delete failed' });

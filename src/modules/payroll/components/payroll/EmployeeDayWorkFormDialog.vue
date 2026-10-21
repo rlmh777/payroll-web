@@ -23,7 +23,7 @@
                 outlined
                 dense
                 label="Employee *"
-                :disable="saving || isEdit"
+                :disable="saving === true || isEdit || lockEmployeeAndDate === true"
                 :rules="[(val) => !!val || 'Employee is required']"
                 @filter="filterEmployees"
                 @update:model-value="onEmployeeChanged"
@@ -34,7 +34,7 @@
                 v-model="form.date"
                 label="Work date *"
                 required
-                :disable="saving === true"
+                :disable="saving === true || lockEmployeeAndDate === true"
               />
             </div>
             <div class="col-12">
@@ -74,6 +74,26 @@
                 readonly
                 label="Amount (total)"
                 hint="Calculated as units × daily rate"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.guest"
+                outlined
+                dense
+                label="Guest"
+                maxlength="255"
+                :disable="saving"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.destination"
+                outlined
+                dense
+                label="Destination"
+                maxlength="255"
+                :disable="saving"
               />
             </div>
             <div class="col-12">
@@ -123,6 +143,9 @@ const props = defineProps<{
   record?: EmployeeDayWork | null;
   employees: DayWorkEmployeeOption[];
   saving?: boolean;
+  presetEmployeeId?: string | null;
+  presetDate?: string | null;
+  lockEmployeeAndDate?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -132,7 +155,9 @@ const emit = defineEmits<{
     date: string;
     units: number;
     dailyRate: number;
-    note?: string;
+    note?: string | null;
+    guest?: string | null;
+    destination?: string | null;
   }];
 }>();
 
@@ -148,6 +173,8 @@ const form = ref({
   date: new Date().toISOString().slice(0, 10),
   units: 1 as number | null,
   dailyRate: null as number | null,
+  guest: '',
+  destination: '',
   note: '',
 });
 
@@ -206,6 +233,8 @@ const resetForm = () => {
     date: new Date().toISOString().slice(0, 10),
     units: 1,
     dailyRate: null,
+    guest: '',
+    destination: '',
     note: '',
   };
   syncSelectOptions();
@@ -230,18 +259,18 @@ const onSubmit = () => {
     date: string;
     units: number;
     dailyRate: number;
-    note?: string;
+    note: string | null;
+    guest: string | null;
+    destination: string | null;
   } = {
     employeeId: form.value.employeeId,
     date: form.value.date,
     units: Number(form.value.units),
     dailyRate: Number(form.value.dailyRate),
+    guest: form.value.guest.trim() || null,
+    destination: form.value.destination.trim() || null,
+    note: form.value.note.trim() || null,
   };
-
-  const note = form.value.note.trim();
-  if (note !== '') {
-    payload.note = note;
-  }
 
   emit('save', payload);
 };
@@ -262,12 +291,21 @@ watch(
         date: String(record.date).slice(0, 10),
         units: Number(record.units ?? 1),
         dailyRate: Number(record.dailyRate ?? 0),
+        guest: record.guest ?? '',
+        destination: record.destination ?? '',
         note: record.note ?? '',
       };
       return;
     }
 
     resetForm();
+    if (props.presetEmployeeId) {
+      form.value.employeeId = props.presetEmployeeId;
+      onEmployeeChanged(props.presetEmployeeId);
+    }
+    if (props.presetDate) {
+      form.value.date = props.presetDate;
+    }
   },
 );
 
