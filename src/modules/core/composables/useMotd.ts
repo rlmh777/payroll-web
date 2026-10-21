@@ -10,7 +10,7 @@ import {
 } from '@core/utils/motd-session';
 
 const API_URL = import.meta.env.VITE_API_URL || process.env.API_URL || 'http://localhost:3031/api';
-const TOAST_MS = 30_000;
+const TOAST_MS = 5_000;
 
 function greeting(now = new Date()): string {
   const hour = now.getHours();

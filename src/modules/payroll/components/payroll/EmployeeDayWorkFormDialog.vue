@@ -38,6 +38,25 @@
               />
             </div>
             <div class="col-12">
+              <q-select
+                v-model="form.departmentId"
+                :options="departmentOptions"
+                option-value="id"
+                option-label="name"
+                emit-value
+                map-options
+                use-input
+                input-debounce="0"
+                outlined
+                dense
+                label="Department *"
+                hint="Defaults to the active contract department. Change it when this trip's pay should post to another department."
+                :disable="saving"
+                :rules="[(val) => !!val || 'Department is required']"
+                @filter="filterDepartments"
+              />
+            </div>
+            <div class="col-12">
               <q-input
                 v-model.number="form.units"
                 type="number"
@@ -133,6 +152,7 @@ import AppDialogCard from '@core/components/dialog/AppDialogCard.vue';
 import AppDialogForm from '@core/components/dialog/AppDialogForm.vue';
 import AppDialogHeader from '@core/components/dialog/AppDialogHeader.vue';
 import type {
+  DayWorkDepartmentOption,
   DayWorkEmployeeOption,
   EmployeeDayWork,
 } from '@payroll/stores/employee-day-work-store';
@@ -142,6 +162,7 @@ const props = defineProps<{
   modelValue: boolean;
   record?: EmployeeDayWork | null;
   employees: DayWorkEmployeeOption[];
+  departments: DayWorkDepartmentOption[];
   saving?: boolean;
   presetEmployeeId?: string | null;
   presetDate?: string | null;
@@ -158,6 +179,7 @@ const emit = defineEmits<{
     note?: string | null;
     guest?: string | null;
     destination?: string | null;
+    departmentId: number;
   }];
 }>();
 
@@ -170,6 +192,7 @@ const isEdit = computed(() => !!props.record?.id);
 
 const form = ref({
   employeeId: null as string | null,
+  departmentId: null as number | null,
   date: new Date().toISOString().slice(0, 10),
   units: 1 as number | null,
   dailyRate: null as number | null,
@@ -179,6 +202,7 @@ const form = ref({
 });
 
 const employeeOptions = ref<DayWorkEmployeeOption[]>([]);
+const departmentOptions = ref<DayWorkDepartmentOption[]>([]);
 
 const computedAmount = computed(() => {
   const units = Number(form.value.units ?? 0);
@@ -217,6 +241,13 @@ const filterEmployees = (val: string, update: (fn: () => void) => void) => {
 
 const syncSelectOptions = () => {
   employeeOptions.value = [...props.employees];
+  departmentOptions.value = [...props.departments];
+};
+
+const contractDepartmentId = (employeeId: string | null): number | null => {
+  if (!employeeId) return null;
+  const employee = props.employees.find((item) => item.id === employeeId);
+  return employee?.departmentId != null ? Number(employee.departmentId) : null;
 };
 
 const onEmployeeChanged = (employeeId: string | null) => {
@@ -225,11 +256,22 @@ const onEmployeeChanged = (employeeId: string | null) => {
   if (employee && (form.value.dailyRate == null || form.value.dailyRate === 0)) {
     form.value.dailyRate = Number(employee.dailyRate ?? 0);
   }
+  form.value.departmentId = contractDepartmentId(employeeId);
+};
+
+const filterDepartments = (val: string, update: (fn: () => void) => void) => {
+  update(() => {
+    const needle = val.trim().toLowerCase();
+    departmentOptions.value = needle
+      ? props.departments.filter((department) => department.name.toLowerCase().includes(needle))
+      : [...props.departments];
+  });
 };
 
 const resetForm = () => {
   form.value = {
     employeeId: null,
+    departmentId: null,
     date: new Date().toISOString().slice(0, 10),
     units: 1,
     dailyRate: null,
@@ -247,6 +289,7 @@ const onClose = () => {
 const onSubmit = () => {
   if (
     !form.value.employeeId
+    || !form.value.departmentId
     || !form.value.date
     || form.value.units == null
     || form.value.dailyRate == null
@@ -262,8 +305,10 @@ const onSubmit = () => {
     note: string | null;
     guest: string | null;
     destination: string | null;
+    departmentId: number;
   } = {
     employeeId: form.value.employeeId,
+    departmentId: Number(form.value.departmentId),
     date: form.value.date,
     units: Number(form.value.units),
     dailyRate: Number(form.value.dailyRate),
@@ -288,6 +333,9 @@ watch(
     if (record) {
       form.value = {
         employeeId: record.employeeId || null,
+        departmentId: record.departmentId != null
+          ? Number(record.departmentId)
+          : contractDepartmentId(record.employeeId || null),
         date: String(record.date).slice(0, 10),
         units: Number(record.units ?? 1),
         dailyRate: Number(record.dailyRate ?? 0),
@@ -314,6 +362,15 @@ watch(
   () => {
     if (props.modelValue) {
       syncSelectOptions();
+    }
+  },
+);
+
+watch(
+  () => props.departments,
+  () => {
+    if (props.modelValue) {
+      departmentOptions.value = [...props.departments];
     }
   },
 );

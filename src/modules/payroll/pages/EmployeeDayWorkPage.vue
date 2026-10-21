@@ -4,7 +4,7 @@
       <div>
         <div class="text-h6">Day / trip work</div>
         <div class="text-caption text-grey-7">
-          Record units worked for daily-rate employees who do not clock in. Several entries can be saved for the same day. Pay = units × daily rate.
+          Record trips for daily-rate employees, or for hourly and base employees who have a trip rate. A trip is only for a day they are not scheduled and have not clocked in. Pay = units × trip rate.
         </div>
       </div>
       <q-btn
@@ -33,8 +33,7 @@
       class="bg-grey-2 text-grey-8 q-mb-md"
       rounded
     >
-      No daily-rate employees are in your scope. Set an employee’s compensation method to
-      <strong>Daily / trip rate</strong> first.
+      No employees with a trip rate are in your scope. Use Daily / trip rate, or set a trip rate on an hourly or base compensation.
     </q-banner>
 
     <q-tab-panels v-model="activeTab" animated keep-alive class="day-work-tabs">
@@ -97,6 +96,11 @@
       :rows-per-page-options="[10, 25, 50]"
       @request="onRequest"
     >
+      <template #body-cell-department="props">
+        <q-td :props="props">
+          {{ departmentLabel(props.row) }}
+        </q-td>
+      </template>
       <template #body-cell-employee="props">
         <q-td :props="props">
           {{ employeeLabel(props.row) }}
@@ -135,6 +139,7 @@
       v-model="showForm"
       :record="editingRecord"
       :employees="store.employees"
+      :departments="store.departments"
       :saving="store.isSaving"
       :preset-employee-id="presetEmployeeId"
       :preset-date="presetDate"
@@ -184,6 +189,7 @@ const pagination = ref({
 const columns = [
   { name: 'date', label: 'Date', field: 'date', align: 'left' as const },
   { name: 'employee', label: 'Employee', field: 'employee', align: 'left' as const },
+  { name: 'department', label: 'Department', field: 'department', align: 'left' as const },
   { name: 'units', label: 'Units', field: 'units', align: 'right' as const },
   { name: 'dailyRate', label: 'Daily rate', field: 'dailyRate', align: 'right' as const },
   { name: 'amount', label: 'Amount', field: 'amount', align: 'right' as const },
@@ -247,6 +253,12 @@ const formatCurrency = (value: number | string | null | undefined) => {
     style: 'currency',
     currency: 'USD',
   }).format(amount);
+};
+
+const departmentLabel = (row: EmployeeDayWork) => {
+  if (row.department?.name) return row.department.name;
+  const match = store.departments.find((department) => department.id === Number(row.departmentId));
+  return match?.name || '—';
 };
 
 const employeeLabel = (row: EmployeeDayWork) => {
@@ -321,6 +333,7 @@ const handleSave = async (payload: {
   note?: string | null;
   guest?: string | null;
   destination?: string | null;
+  departmentId: number;
 }) => {
   try {
     if (editingRecord.value?.id) {
