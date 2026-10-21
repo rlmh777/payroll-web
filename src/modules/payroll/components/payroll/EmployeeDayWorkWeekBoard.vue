@@ -77,6 +77,7 @@
             >
               <div class="trip-chip-title ellipsis">{{ entry.guest || 'Trip' }}</div>
               <div v-if="entry.destination" class="trip-chip-meta ellipsis">{{ entry.destination }}</div>
+              <div v-if="entry.department?.name" class="trip-chip-meta ellipsis">{{ entry.department.name }}</div>
               <div class="row items-center no-wrap justify-between">
                 <span class="trip-chip-meta">{{ entry.units }} · {{ formatCurrency(entry.amount) }}</span>
                 <q-btn

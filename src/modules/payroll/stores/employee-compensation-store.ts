@@ -141,7 +141,7 @@ export const useEmployeeCompensationStore = defineStore('employeeCompensation', 
     async updateRecord(
       id: string,
       payload: Partial<EmployeeCompensationPayload>,
-    ): Promise<{ revised: boolean }> {
+    ): Promise<{ revised: boolean; message: string | null }> {
       const response = await fetch(`${API_URL}/employee-compensations/${id}`, {
         method: 'PUT',
         headers: this.buildHeaders(),
@@ -157,6 +157,7 @@ export const useEmployeeCompensationStore = defineStore('employeeCompensation', 
 
       return {
         revised: Boolean(result.revised),
+        message: typeof result.message === 'string' ? result.message : null,
       };
     },
 

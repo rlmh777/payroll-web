@@ -3,6 +3,11 @@ import { useAuthStore } from '@core/stores/auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3031/api';
 
+export interface DayWorkDepartmentOption {
+  id: number;
+  name: string;
+}
+
 export interface DayWorkEmployeeOption {
   id: string;
   code?: string | null;
@@ -29,6 +34,10 @@ export interface EmployeeDayWork {
   guest?: string | null;
   destination?: string | null;
   approvalStatus?: string;
+  department?: {
+    id: number;
+    name: string;
+  } | null;
   employee?: {
     id: string;
     code?: string | null;
@@ -45,6 +54,7 @@ interface DayWorkPayload {
   note?: string | null;
   guest?: string | null;
   destination?: string | null;
+  departmentId?: number | null;
 }
 
 function authHeaders(): HeadersInit {
@@ -87,6 +97,7 @@ export const useEmployeeDayWorkStore = defineStore('employeeDayWork', {
     return {
       entries: [] as EmployeeDayWork[],
       employees: [] as DayWorkEmployeeOption[],
+      departments: [] as DayWorkDepartmentOption[],
       selectedEmployeeId: null as string | null,
       startDate: range.start,
       endDate: range.end,
@@ -115,6 +126,7 @@ export const useEmployeeDayWorkStore = defineStore('employeeDayWork', {
 
         const data = await response.json();
         this.employees = data.employees ?? [];
+        this.departments = data.departments ?? [];
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Failed to load day / trip work options.';
       } finally {

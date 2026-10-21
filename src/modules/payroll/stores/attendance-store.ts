@@ -429,6 +429,7 @@ export const useAttendanceStore = defineStore('attendance', {
     isLoadingPayrollRuns: false,
     isLoadingPayrollRunSummary: false,
     isProcessingPayrollRun: false,
+    isReopeningPayrollRun: false,
     isGeneratingPayslips: false,
     isImportingFile: false,
     isUpdatingApproval: false,
@@ -679,6 +680,48 @@ export const useAttendanceStore = defineStore('attendance', {
         return null;
       } finally {
         this.isProcessingPayrollRun = false;
+      }
+    },
+
+    async reopenPayrollRun(payrollRunId: string) {
+      this.isReopeningPayrollRun = true;
+      this.error = null;
+
+      try {
+        const response = await fetch(`${API_URL}/payroll-runs/${payrollRunId}/reopen`, {
+          method: 'POST',
+          headers: this.buildJsonHeaders(),
+        });
+
+        if (!response.ok) {
+          throw new Error(await this.parseError(response, 'Failed to reopen payroll run.'));
+        }
+
+        const payload = (await response.json()) as { data?: { payrollRunId?: string; status?: string } };
+        const reopenedRunId = payload.data?.payrollRunId;
+        const status = payload.data?.status;
+
+        if (!reopenedRunId || !status) {
+          throw new Error('Payroll run was reopened, but the response could not be read.');
+        }
+
+        this.payrollRuns = this.payrollRuns.map((run) =>
+          run.id === reopenedRunId
+            ? { ...run, status }
+            : run,
+        );
+        this.payPeriods = this.payPeriods.map((period) =>
+          period.payrollRunId === reopenedRunId
+            ? { ...period, payrollRunStatus: status }
+            : period,
+        );
+
+        return { payrollRunId: reopenedRunId, status };
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to reopen payroll run.';
+        return null;
+      } finally {
+        this.isReopeningPayrollRun = false;
       }
     },
 

@@ -93,7 +93,16 @@
                   class="bg-grey-2 text-grey-9 q-mb-md"
                 >
                   <template #avatar><q-icon name="lock" /></template>
-                  This pay period has already been processed. It can be reviewed here, but automatic recalculation will not update it.
+                  This pay period has been processed. Reopen it to correct a mistake, then process it again.
+                  <template #action>
+                    <q-btn
+                      flat
+                      color="primary"
+                      label="Reopen payroll"
+                      :loading="isReopeningPayrollRun"
+                      @click="confirmReopenPayrollRun"
+                    />
+                  </template>
                 </q-banner>
 
                 <div class="row q-col-gutter-md">
@@ -646,7 +655,16 @@
               class="bg-green-1 text-green-9 q-mb-md"
             >
               <template #avatar><q-icon name="task_alt" /></template>
-              This payroll run has been processed. You can regenerate payslips at any time.
+              This payroll run has been processed. Reopen it to correct timesheets, other payments, or pool amounts, then process it again. Payslips can be generated while it stays processed.
+              <template #action>
+                <q-btn
+                  flat
+                  color="primary"
+                  label="Reopen payroll"
+                  :loading="isReopeningPayrollRun"
+                  @click="confirmReopenPayrollRun"
+                />
+              </template>
             </q-banner>
 
             <q-banner
@@ -655,7 +673,7 @@
               class="bg-blue-1 text-blue-9 q-mb-md"
             >
               <template #avatar><q-icon name="info" /></template>
-              Processing will persist payroll records and mark this pay period as posted. This action cannot be undone from this screen.
+              Processing saves payroll records and marks this pay period as posted. You can reopen it later to correct a mistake and process it again.
             </q-banner>
 
             <div class="text-subtitle2 text-weight-medium q-mb-sm">Payslip sort order</div>
@@ -941,6 +959,7 @@ const {
   isLoadingPayrollRuns,
   isLoadingPayrollRunSummary,
   isProcessingPayrollRun,
+  isReopeningPayrollRun,
   isGeneratingPayslips,
   isImportingFile,
   isUpdatingApproval,
@@ -1507,6 +1526,48 @@ async function refreshPayrollSummary() {
   if (!result) {
     $q.notify({ type: 'negative', message: error.value ?? 'Failed to fetch payroll summary.' });
   }
+}
+
+function confirmReopenPayrollRun() {
+  if (!selectedPeriodProcessed.value) {
+    return;
+  }
+
+  $q.dialog({
+    title: 'Reopen payroll run?',
+    message: 'This returns the payroll to draft. Correct timesheets, other payments, or pool amounts, then process it again. Payslips and posted reports stay unavailable until you process it.',
+    cancel: true,
+    ok: {
+      label: 'Reopen payroll',
+      color: 'primary',
+      icon: 'lock_open',
+    },
+  }).onOk(() => {
+    void reopenPayrollRun();
+  });
+}
+
+async function reopenPayrollRun() {
+  const payrollRunId = await ensureSelectedPayrollRunId();
+  if (!payrollRunId) {
+    return;
+  }
+
+  const result = await attendanceStore.reopenPayrollRun(payrollRunId);
+  if (!result) {
+    $q.notify({ type: 'negative', message: error.value ?? 'Failed to reopen payroll run.' });
+    return;
+  }
+
+  await attendanceStore.fetchPayrollRuns();
+  await attendanceStore.fetchPayPeriods();
+  syncSelectedPayPeriod(selectedPayPeriodId.value);
+  await refreshPayrollSummary();
+
+  $q.notify({
+    type: 'positive',
+    message: 'Payroll run reopened. Correct it, then process it again.',
+  });
 }
 
 function confirmProcessPayrollRun() {

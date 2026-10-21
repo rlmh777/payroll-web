@@ -128,6 +128,18 @@
       />
       <q-input
         v-if="!isDailyRateMethod(model.compensationMethod)"
+        v-model.number="model.dailyRate"
+        type="number"
+        step="0.01"
+        min="0"
+        label="Trip rate"
+        dense
+        outlined
+        hint="Optional. Pays a trip on a day this employee is not scheduled. Regular hours still come from the clock."
+        :disable="props.disable"
+      />
+      <q-input
+        v-if="!isDailyRateMethod(model.compensationMethod)"
         v-model.number="model.standardWeeklyHours"
         type="number"
         step="0.5"

@@ -93,7 +93,7 @@ async function save() {
 
   saving.value = true;
   try {
-    await store.updateRecord(store.recordToEdit.id, {
+    const result = await store.updateRecord(store.recordToEdit.id, {
       employmentDetailId: form.employmentDetailId,
       effectiveDate: form.effectiveDate,
       endDate: form.endDate || null,
@@ -112,7 +112,7 @@ async function save() {
     $q.notify({
       color: 'positive',
       position: 'top',
-      message: 'Compensation record updated.',
+      message: result.message || 'Compensation record updated.',
     });
     emit('saved');
     closeDialog();
