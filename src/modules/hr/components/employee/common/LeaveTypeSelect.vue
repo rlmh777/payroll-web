@@ -19,6 +19,7 @@
       label="Leave Type"
       :loading="employeeStore.isLoadingLeaveTypes"
       @filter="filterLeaveTypes"
+      @popup-show="filterText = ''"
     >
       <template v-if="employeeStore.isLoadingLeaveTypes" v-slot:prepend>
         <q-spinner color="primary" size="20px" />
@@ -115,14 +116,29 @@ const showEditDialog = ref(false);
 const selectedLeaveType = ref<LeaveType | null>(null);
 const filterText = ref('');
 
+const leaveTypeOptions = computed(() =>
+  (employeeStore.leaveTypes ?? []).map((leaveType) => ({
+    ...leaveType,
+    id: Number(leaveType.id),
+  })),
+);
+
+const selectedLeaveTypeName = computed(() => {
+  if (props.modelValue == null) {
+    return '';
+  }
+  const selected = leaveTypeOptions.value.find((leaveType) => leaveType.id === Number(props.modelValue));
+  return (selected?.name || '').trim().toLowerCase();
+});
+
 const options = computed(() => {
   const needle = filterText.value.trim().toLowerCase();
   const filtered = needle
-    ? employeeStore.leaveTypes.filter((leaveType) =>
+    ? leaveTypeOptions.value.filter((leaveType) =>
         (leaveType.name || '').toLowerCase().includes(needle),
       )
-    : [...employeeStore.leaveTypes];
-  const list: (LeaveType | { id: string; name: string })[] = filtered;
+    : [...leaveTypeOptions.value];
+  const list: (LeaveType | { id: string | number; name: string })[] = filtered;
   if (props.showAddNew && !props.readonly) {
     list.unshift({ id: 'add-new', name: 'Add New Leave Type' });
   }
@@ -131,21 +147,35 @@ const options = computed(() => {
 
 const filterLeaveTypes = (val: string, update: (callback: () => void) => void) => {
   update(() => {
-    filterText.value = val || '';
+    const needle = (val || '').trim().toLowerCase();
+    // The input is filled with the current leave type name. That is not a search,
+    // otherwise the list collapses to the first selection.
+    filterText.value = needle && needle !== selectedLeaveTypeName.value ? val : '';
   });
 };
 
 const selectedLeaveTypeId = computed({
   get: (): number | null => {
-    return props.modelValue;
+    if (props.modelValue == null) {
+      return null;
+    }
+    const id = Number(props.modelValue);
+    return Number.isFinite(id) ? id : null;
   },
   set: (value: number | null | string) => {
     if (value === 'add-new') {
       openAddLeaveTypeDialog();
       return;
     }
-    emit('update:modelValue', value as number | null);
-    emit('change', value as number | null);
+    if (value == null || value === '') {
+      emit('update:modelValue', null);
+      emit('change', null);
+      return;
+    }
+    const id = Number(value);
+    const next = Number.isFinite(id) ? id : null;
+    emit('update:modelValue', next);
+    emit('change', next);
   },
 });
 

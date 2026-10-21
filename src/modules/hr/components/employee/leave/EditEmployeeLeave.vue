@@ -239,7 +239,7 @@ const selectedLeaveType = computed(() => {
   if (leaveTypeId == null) {
     return null;
   }
-  return employeeStore.leaveTypes.find((leaveType) => Number(leaveType.id) === leaveTypeId) ?? null;
+  return (employeeStore.leaveTypes ?? []).find((leaveType) => Number(leaveType.id) === leaveTypeId) ?? null;
 });
 
 const certification = computed(() => {
@@ -294,7 +294,7 @@ const attachmentRules = computed(() => {
 
 const syncMultiplierFromLeaveType = (leaveTypeId: number | null) => {
   const leaveType = leaveTypeId
-    ? employeeStore.leaveTypes.find((item) => item.id === leaveTypeId) ?? null
+    ? (employeeStore.leaveTypes ?? []).find((item) => item.id === leaveTypeId) ?? null
     : null;
   form.value.multiplier = leavePayMultiplierFromType(leaveType);
 };

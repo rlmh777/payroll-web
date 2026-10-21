@@ -350,9 +350,10 @@ export const useEmployeeStore = defineStore('employee', {
         if (search) {
           queryParams.append('search', search);
         }
+        queryParams.set('per_page', '100');
         const response = await fetch(`${API_URL}/leave-types?${queryParams.toString()}`);
         const data = await response.json();
-        this.leaveTypes = data.data;
+        this.leaveTypes = Array.isArray(data?.data) ? data.data : [];
       } catch (error) {
         console.error('Error fetching leave types:', error);
       } finally {

@@ -618,10 +618,10 @@ const formatDate = (dateString: string): string => {
 };
 
 const formatExpiryDate = (dateString: string | null): string => {
-  if (!dateString) return 'never';
+  if (!dateString) return 'No expiry';
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString();
+  return date.toLocaleString();
 };
 
 const loadTokens = async (userId: string) => {

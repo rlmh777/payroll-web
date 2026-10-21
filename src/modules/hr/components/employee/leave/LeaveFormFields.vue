@@ -288,7 +288,7 @@ const leaveTypeCardItems = computed((): LeaveTypeCardItem[] => {
     }));
   }
 
-  return employeeStore.leaveTypes.map((leaveType) => ({
+  return (employeeStore.leaveTypes ?? []).map((leaveType) => ({
     leaveTypeId: Number(leaveType.id),
     name: leaveType.name,
     code: leaveType.code ?? null,
@@ -320,7 +320,7 @@ const selectedLeaveType = computed(() => {
   if (leaveTypeId == null) {
     return null;
   }
-  return employeeStore.leaveTypes.find((leaveType) => Number(leaveType.id) === leaveTypeId) ?? null;
+  return (employeeStore.leaveTypes ?? []).find((leaveType) => Number(leaveType.id) === leaveTypeId) ?? null;
 });
 
 const certification = computed(() => {

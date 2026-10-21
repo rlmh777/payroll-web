@@ -82,6 +82,7 @@ interface ReportOption {
   id: string;
   code?: string | null;
   name: string;
+  is_self?: boolean;
   appraisal_form?: { id: string; name: string } | null;
 }
 
@@ -110,10 +111,13 @@ const form = reactive({
 });
 
 const reportOptions = computed(() =>
-  reports.value.map((row) => ({
-    value: row.id,
-    label: row.code ? `${row.name} (${row.code})` : row.name,
-  })),
+  reports.value.map((row) => {
+    const name = row.is_self ? `${row.name} (you)` : row.name;
+    return {
+      value: row.id,
+      label: row.code ? `${name} (${row.code})` : name,
+    };
+  }),
 );
 
 const selectedFormName = computed(() => {
@@ -129,6 +133,15 @@ async function loadReports() {
   loadingReports.value = true;
   try {
     reports.value = await store.fetchCandidates();
+    if (!form.employee_id) {
+      const reportWithForm = reports.value.find((row) => !row.is_self && row.appraisal_form);
+      const report = reports.value.find((row) => !row.is_self);
+      const self = reports.value.find((row) => row.is_self);
+      const initial = reportWithForm ?? report ?? self;
+      if (initial) {
+        form.employee_id = initial.id;
+      }
+    }
   } catch (error) {
     reports.value = [];
     $q.notify({
