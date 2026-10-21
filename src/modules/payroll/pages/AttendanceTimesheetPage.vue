@@ -289,9 +289,18 @@
                 <div class="text-overline text-primary">Step 3</div>
                 <div class="text-h6 text-weight-bold">Upload other payments and deductions</div>
                 <div class="text-body2 text-grey-7 q-mt-xs">
-                  Upload an Excel or CSV file with employee id, employee name, then repeating columns for code, date, quantity, and rate.
-                  Negative quantities are treated as deductions.
+                  Upload one row per payment. Use employee id, employee name, account code, date, quantity, and rate.
+                  A negative quantity is a deduction. Leave the account code blank to use the account selected on this screen.
                 </div>
+
+                <q-btn
+                  class="q-mt-md"
+                  outline
+                  color="primary"
+                  icon="download"
+                  label="Download sample file"
+                  @click="downloadAllowanceDeductionSample"
+                />
 
                 <q-file
                   class="q-mt-md"
@@ -1694,6 +1703,27 @@ function spreadsheetDate(value: unknown): string | null {
 
 function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function downloadAllowanceDeductionSample() {
+  const rows = [
+    ['Employee ID', 'Employee Name', 'Account code', 'Date', 'Quantity', 'Rate'],
+    ['E001', 'Herrera, Luis', '6100', '10/16/2026', 1, 150],
+    ['E001', 'Herrera, Luis', '6200', '10/16/2026', -1, 40],
+    ['E002', 'Cruz, Ana', '', '10/16/2026', 2, 75],
+  ];
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  worksheet['!cols'] = [
+    { wch: 14 },
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 10 },
+  ];
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Payments and deductions');
+  XLSX.writeFile(workbook, 'payroll-other-payments-and-deductions-sample.xlsx');
 }
 
 function parseAllowanceDeductionRows(sheetRows: unknown[][]): PayrollAllowanceDeductionImportRow[] {
