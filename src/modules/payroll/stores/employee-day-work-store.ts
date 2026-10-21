@@ -26,6 +26,8 @@ export interface EmployeeDayWork {
   dailyRate: number;
   amount: number;
   note?: string | null;
+  guest?: string | null;
+  destination?: string | null;
   approvalStatus?: string;
   employee?: {
     id: string;
@@ -40,7 +42,9 @@ interface DayWorkPayload {
   date: string;
   units: number;
   dailyRate?: number;
-  note?: string;
+  note?: string | null;
+  guest?: string | null;
+  destination?: string | null;
 }
 
 function authHeaders(): HeadersInit {
@@ -149,6 +153,36 @@ export const useEmployeeDayWorkStore = defineStore('employeeDayWork', {
       } finally {
         this.isLoading = false;
       }
+    },
+
+    async fetchAllInRange(start: string, end: string, employeeId?: string | null): Promise<EmployeeDayWork[]> {
+      const collected: EmployeeDayWork[] = [];
+      let page = 1;
+      let lastPage = 1;
+
+      do {
+        const params = new URLSearchParams({
+          page: String(page),
+          per_page: '100',
+          start_date: start,
+          end_date: end,
+        });
+        if (employeeId) params.set('employee_id', employeeId);
+        const response = await fetch(`${API_URL}/employee-day-works?${params}`, {
+          headers: authHeaders(),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(extractError(body, 'Failed to load day / trip work entries.'));
+        }
+
+        const data = await response.json();
+        collected.push(...(data.data ?? []));
+        lastPage = data.last_page ?? 1;
+        page += 1;
+      } while (page <= lastPage);
+
+      return collected;
     },
 
     async createEntry(payload: DayWorkPayload) {
