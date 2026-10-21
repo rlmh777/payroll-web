@@ -215,8 +215,8 @@
         :title="applyLeaveTitle"
         submit-label="Request leave"
         :initial-leave-type-id="selectedLeaveTypeId"
-        lock-leave-type
         :show-leave-type-actions="false"
+        @leave-type-change="onApplyLeaveTypeChange"
         @saved="onLeaveRequested"
       />
 
@@ -484,6 +484,17 @@ function resetTakenLeaves() {
   takenFilters.fromDate = `${currentYear}-01-01`;
   takenFilters.toDate = new Date().toISOString().slice(0, 10);
   searchTakenLeaves();
+}
+
+function onApplyLeaveTypeChange(leaveTypeId: number | null) {
+  if (leaveTypeId == null) {
+    selectedLeaveTypeId.value = null;
+    return;
+  }
+  if (Number(leaveTypeId) === Number(selectedLeaveTypeId.value)) {
+    return;
+  }
+  selectedLeaveTypeId.value = leaveTypeId;
 }
 
 function onLeaveRequested() {

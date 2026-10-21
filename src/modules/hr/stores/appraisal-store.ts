@@ -65,6 +65,7 @@ export interface AppraisalCandidate {
   id: string;
   code?: string | null;
   name: string;
+  is_self?: boolean;
   appraisal_form?: { id: string; name: string } | null;
   appraisal_date?: string | null;
   contract_end_date?: string | null;

@@ -101,6 +101,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   saved: [employeeLeaveId: string];
   cancel: [];
+  leaveTypeChange: [value: number | null];
 }>();
 
 const employeeLeaveStore = useEmployeeLeaveStore();
@@ -158,11 +159,16 @@ const areDatesValid = computed(() => {
 });
 
 const onLeaveTypeChange = (value: number | null) => {
-  form.value.leaveTypeId = value;
-  const leaveType = value
-    ? employeeStore.leaveTypes.find((item) => item.id === value) ?? null
-    : null;
+  const leaveTypeId = value == null ? null : Number(value);
+  const normalizedId = leaveTypeId != null && Number.isFinite(leaveTypeId) ? leaveTypeId : null;
+  // Dates, duration, times, notes, attachments, and hours-bank values stay.
+  // Only the pay multiplier follows the newly selected type.
+  form.value.leaveTypeId = normalizedId;
+  const leaveType = normalizedId == null
+    ? null
+    : (employeeStore.leaveTypes ?? []).find((item) => Number(item.id) === normalizedId) ?? null;
   form.value.multiplier = leavePayMultiplierFromType(leaveType);
+  emit('leaveTypeChange', normalizedId);
 };
 
 const onDurationChange = (value: string | null) => {
@@ -272,7 +278,7 @@ const onSubmit = async () => {
 
   const leaveTypeId = form.value.leaveTypeId;
   const balance = leaveBalanceStore.balances.find((row) => row.leaveTypeId === leaveTypeId);
-  const leaveType = employeeStore.leaveTypes.find((row) => Number(row.id) === leaveTypeId);
+  const leaveType = (employeeStore.leaveTypes ?? []).find((row) => Number(row.id) === leaveTypeId);
   if (
     leaveProofRequired({
       requiresCertification: Boolean(balance?.requiresCertification ?? leaveType?.requiresCertification),
@@ -405,12 +411,16 @@ watch([() => form.value.fromTime, () => form.value.toTime], () => {
 watch(
   () => props.initialLeaveTypeId,
   (id) => {
-    if (!id) {
+    if (id == null) {
       return;
     }
-    if (props.embedded || isOpen.value) {
-      onLeaveTypeChange(id);
+    if (!(props.embedded || isOpen.value)) {
+      return;
     }
+    if (Number(form.value.leaveTypeId) === Number(id)) {
+      return;
+    }
+    onLeaveTypeChange(id);
   },
 );
 
