@@ -6,7 +6,7 @@
           <div class="text-overline text-primary">Pool distribution</div>
           <div class="text-h6 text-weight-bold">Enter pool totals</div>
           <div class="text-body2 text-grey-7 q-mt-xs">
-            Enter one period total for tips. Amounts are stored at full precision and shown rounded to two decimals. Department percentages must add to 100%. Sub-departments inherit the parent split unless they have their own percentage. Only employees who worked the period are paid; active employees who did not work still appear with $0.
+            Upload a file of employee code and shares for tips, shares, or any other pool, then type that pool’s total here. Distribute splits the total by those shares. Each pool posts to the account on its earning code. Without a file, the pool still uses its saved points or department split.
           </div>
           <div class="q-mt-md column q-gutter-sm">
             <q-btn
@@ -27,6 +27,13 @@
               :disable="disabled || !payrollRunId"
               @click="distribute"
             />
+            <q-btn
+              flat
+              color="primary"
+              icon="download"
+              label="Download share sample"
+              @click="downloadShareSample"
+            />
           </div>
         </div>
 
@@ -41,35 +48,57 @@
           </q-banner>
 
           <q-list bordered separator>
-            <q-item v-for="row in totals" :key="row.poolDistributionTypeId">
-              <q-item-section>
-                <q-item-label>{{ row.name }}</q-item-label>
-                <q-item-label caption>
-                  {{ row.code }} · {{ modeLabel(row.calculationMode) }}
-                  <span v-if="row.requiresHoursEligibility"> · hours eligibility</span>
-                </q-item-label>
-                <q-item-label
-                  v-if="row.calculationMode === 'department_equal_share'"
-                  caption
-                >
-                  {{ departmentShareCaption(row) }}
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side style="min-width: 180px">
-                <q-input
-                  :model-value="amountInputValue(row)"
-                  type="text"
-                  inputmode="decimal"
-                  dense
-                  outlined
-                  prefix="$"
-                  :disable="disabled || row.calculationMode === 'manual' || row.calculationMode === 'disabled'"
-                  @focus="startEditingAmount(row)"
-                  @blur="stopEditingAmount"
-                  @update:model-value="(value) => onAmountInput(row, value)"
-                />
-              </q-item-section>
-            </q-item>
+            <template v-for="row in totals" :key="row.poolDistributionTypeId">
+              <q-item>
+                <q-item-section>
+                  <q-item-label>{{ row.name }}</q-item-label>
+                  <q-item-label caption>
+                    {{ row.code }} · {{ modeLabel(row.calculationMode) }}
+                    <span v-if="row.requiresHoursEligibility && !row.importedShareCount"> · hours eligibility</span>
+                  </q-item-label>
+                  <q-item-label
+                    v-if="row.calculationMode === 'department_equal_share' && !row.importedShareCount"
+                    caption
+                  >
+                    {{ departmentShareCaption(row) }}
+                  </q-item-label>
+                  <q-item-label caption>{{ shareCaption(row) }} {{ accountCaption(row) }}</q-item-label>
+                  <q-item-label v-if="shareErrors[row.poolDistributionTypeId]" caption class="text-negative">
+                    {{ shareErrors[row.poolDistributionTypeId] }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side style="min-width: 220px">
+                  <q-input
+                    :model-value="amountInputValue(row)"
+                    type="text"
+                    inputmode="decimal"
+                    dense
+                    outlined
+                    prefix="$"
+                    label="Total payout"
+                    :disable="disabled || row.calculationMode === 'disabled'"
+                    @focus="startEditingAmount(row)"
+                    @blur="stopEditingAmount"
+                    @update:model-value="(value) => onAmountInput(row, value)"
+                  />
+                  <q-file
+                    class="q-mt-sm"
+                    dense
+                    outlined
+                    label="Upload shares"
+                    accept=".csv,.xls,.xlsx,text/csv"
+                    :disable="disabled || !payrollRunId"
+                    :loading="uploadingShareId === row.poolDistributionTypeId"
+                    :model-value="shareFiles[row.poolDistributionTypeId] ?? null"
+                    @update:model-value="(file) => uploadShares(row, file)"
+                  >
+                    <template #prepend>
+                      <q-icon name="upload_file" />
+                    </template>
+                  </q-file>
+                </q-item-section>
+              </q-item>
+            </template>
             <q-item v-if="payrollRunId && !totals.length && !isLoadingTotals">
               <q-item-section class="text-grey-7">
                 No active pool types. Configure them under Settings → General → Pool Distribution.
@@ -110,8 +139,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { useQuasar, type QTableProps } from 'quasar';
+import * as XLSX from 'xlsx';
 import { useAuthStore } from '@core/stores/auth';
 import {
   POOL_CALCULATION_MODE_OPTIONS,
@@ -141,6 +171,11 @@ type PoolTotalRow = {
   name: string;
   calculationMode: string;
   requiresHoursEligibility: boolean;
+  earningCodeName?: string | null;
+  accountName?: string | null;
+  accountCode?: string | null;
+  importedShareCount: number;
+  importedShareTotal: number;
   totalAmount: number;
   notes?: string | null;
   departmentShares?: DepartmentShare[];
@@ -183,6 +218,9 @@ const distributions = ref<DistributionRow[]>([]);
 const departmentBreakdown = ref<DepartmentBreakdownRow[]>([]);
 const saving = ref(false);
 const distributing = ref(false);
+const uploadingShareId = ref<number | null>(null);
+const shareFiles = reactive<Record<number, File | null>>({});
+const shareErrors = reactive<Record<number, string>>({});
 const isLoadingTotals = ref(false);
 const loadError = ref<string | null>(null);
 
@@ -210,6 +248,7 @@ const distributionColumns: QTableProps['columns'] = [
   { name: 'departmentPercent', label: 'Dept %', field: (row) => row.departmentPercent == null ? '—' : `${Number(row.departmentPercent).toFixed(2)}%`, align: 'right' },
   { name: 'departmentAmount', label: 'Dept amount', field: (row) => row.departmentAmount == null ? '—' : formatMoney(row.departmentAmount), align: 'right' },
   { name: 'workedThisPeriod', label: 'Worked', field: (row) => (row.workedThisPeriod ? 'Yes' : 'No'), align: 'left' },
+  { name: 'points', label: 'Shares', field: (row) => Number(row.points || 0), align: 'right' },
   { name: 'amount', label: 'Amount', field: (row) => formatMoney(row.amount), align: 'right' },
   {
     name: 'eligible',
@@ -319,10 +358,130 @@ function mapPoolTotalRow(row: Record<string, unknown>): PoolTotalRow {
     name: asText(row.name),
     calculationMode: asText(row.calculationMode ?? row.calculation_mode),
     requiresHoursEligibility: Boolean(row.requiresHoursEligibility ?? row.requires_hours_eligibility),
+    earningCodeName: asNullableText(row.earningCodeName ?? row.earning_code_name),
+    accountName: asNullableText(row.accountName ?? row.account_name),
+    accountCode: asNullableText(row.accountCode ?? row.account_code),
+    importedShareCount: Number(row.importedShareCount ?? row.imported_share_count ?? 0),
+    importedShareTotal: Number(row.importedShareTotal ?? row.imported_share_total ?? 0),
     totalAmount: Number(row.totalAmount ?? row.total_amount ?? 0),
     notes: asNullableText(row.notes),
     departmentShares: mapDepartmentShares(row),
   };
+}
+
+function shareCaption(row: PoolTotalRow): string {
+  if (!row.importedShareCount) {
+    return 'Upload employee code and shares.';
+  }
+  return `${row.importedShareCount} employees, ${row.importedShareTotal} shares.`;
+}
+
+function accountCaption(row: PoolTotalRow): string {
+  if (row.accountCode || row.accountName) {
+    return `Posts to ${[row.accountCode, row.accountName].filter(Boolean).join(' ')}.`;
+  }
+  if (row.earningCodeName) {
+    return `Posts through ${row.earningCodeName}.`;
+  }
+  return 'Set an earning account on this pool so the amount hits the right GL.';
+}
+
+function downloadShareSample() {
+  const csv = 'Employee code,Shares\nE001,2\nE002,1\n';
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'payroll-pool-shares-sample.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function cellText(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value).replace(/^\uFEFF/, '').trim();
+  }
+  return '';
+}
+
+async function parseShareFile(file: File): Promise<Array<{ employeeCode: string; shares: number }>> {
+  const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
+  if (!sheet) {
+    throw new Error('The file has no rows.');
+  }
+
+  const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, {
+    header: 1,
+    raw: false,
+    defval: '',
+  });
+  const parsed: Array<{ employeeCode: string; shares: number }> = [];
+  rows.forEach((row, index) => {
+    const employeeCode = cellText(row?.[0]);
+    const shareText = cellText(row?.[1]);
+    if (!employeeCode && !shareText) return;
+    const header = index === 0
+      && /code|employee/i.test(employeeCode)
+      && /share/i.test(shareText);
+    if (header) return;
+    const shares = Number(shareText.replace(/,/g, ''));
+    if (!employeeCode || !Number.isFinite(shares) || shares <= 0) {
+      throw new Error(`Row ${index + 1} needs an employee code and a share greater than zero.`);
+    }
+    parsed.push({ employeeCode, shares });
+  });
+
+  if (!parsed.length) {
+    throw new Error('The file needs at least one employee code and a share amount.');
+  }
+  return parsed;
+}
+
+async function uploadShares(row: PoolTotalRow, file: File | File[] | null | undefined) {
+  const selected = Array.isArray(file) ? file[0] ?? null : file ?? null;
+  shareFiles[row.poolDistributionTypeId] = selected ?? null;
+  delete shareErrors[row.poolDistributionTypeId];
+  if (!selected || !props.payrollRunId) return;
+
+  uploadingShareId.value = row.poolDistributionTypeId;
+  try {
+    const shares = await parseShareFile(selected);
+    const response = await fetch(`${API_URL}/payroll-runs/${props.payrollRunId}/pool-shares`, {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify({
+        poolDistributionTypeId: row.poolDistributionTypeId,
+        shares,
+      }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      const fieldError = body?.errors?.shares;
+      const message = Array.isArray(fieldError) ? fieldError[0] : fieldError;
+      throw new Error(message || body?.message || 'Failed to save pool shares.');
+    }
+    const data = await response.json();
+    if (Array.isArray(data.totals)) {
+      totals.value = data.totals.map((item: Record<string, unknown>) => mapPoolTotalRow(item));
+    }
+    $q.notify({
+      color: 'positive',
+      position: 'top',
+      message: `Saved ${data.importedShareCount ?? shares.length} shares for ${row.name}. Type the total, then distribute.`,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Share upload failed.';
+    shareErrors[row.poolDistributionTypeId] = message;
+    $q.notify({
+      color: 'negative',
+      position: 'top',
+      message,
+    });
+  } finally {
+    uploadingShareId.value = null;
+  }
 }
 
 function rowsFromPoolTypes(types: PoolDistributionType[]): PoolTotalRow[] {
