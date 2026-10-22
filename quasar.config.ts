@@ -95,7 +95,7 @@ export default defineConfig((ctx) => {
       // analyze: true,
       env: {
         API_URL: 'http://localhost:3031/api',
-        VITE_SESSION_TIMEOUT_MINUTES: '120',
+        VITE_SESSION_TIMEOUT_MINUTES: '480',
       },
       // rawDefine: {}
       // ignorePublicFolder: true,

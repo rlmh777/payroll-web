@@ -26,6 +26,7 @@ import DepartmentHoursAndPayReport from '@payroll/components/reports/DepartmentH
 import CompanyPayrollAnalysisByDepartmentReport from '@payroll/components/reports/CompanyPayrollAnalysisByDepartmentReport.vue';
 import PayrollMasterSheetReport from '@payroll/components/reports/PayrollMasterSheetReport.vue';
 import SalaryPaymentsReport from '@payroll/components/reports/SalaryPaymentsReport.vue';
+import PoolPayoutsReport from '@payroll/components/reports/PoolPayoutsReport.vue';
 import PayrollRegistryReport from '@payroll/components/reports/PayrollRegistryReport.vue';
 import RegistrySummaryByOfficeDepartmentReport from '@payroll/components/reports/RegistrySummaryByOfficeDepartmentReport.vue';
 import PayeReport from '@payroll/components/reports/PayeReport.vue';
@@ -70,6 +71,7 @@ const reportComponents: Record<ReportId, Component> = {
   'company-payroll-analysis-by-department': CompanyPayrollAnalysisByDepartmentReport,
   'payroll-master-sheet': PayrollMasterSheetReport,
   'salary-payments': SalaryPaymentsReport,
+  'pool-payouts': PoolPayoutsReport,
   'payroll-registry': PayrollRegistryReport,
   'registry-summary-by-office-department': RegistrySummaryByOfficeDepartmentReport,
   'paye': PayeReport,

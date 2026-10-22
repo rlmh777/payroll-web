@@ -9,6 +9,7 @@ export interface EmployeePoolPoint {
   pool_distribution_type_id: number;
   points: number | string;
   weight: number | string;
+  tip_percent?: number | string | null;
   effective_date: string;
   end_date?: string | null;
   notes?: string | null;
@@ -29,6 +30,7 @@ export interface EmployeePoolPointPayload {
   pool_distribution_type_id: number;
   points: number;
   weight?: number;
+  tip_percent?: number | null;
   effective_date: string;
   end_date?: string | null;
   notes?: string | null;

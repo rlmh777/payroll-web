@@ -4,7 +4,7 @@
       <div class="col">
         <div class="text-h6">Pool points history</div>
         <div class="text-caption text-grey-7">
-          Weighted points for configurable pools (tips, shares, or any custom label). History is dated and used when payroll totals are distributed.
+          Shares use points. Tips also store a tip percent on the employee. Payroll records that percent when tips are distributed without an uploaded file.
         </div>
       </div>
       <q-btn color="primary" icon="add" label="Add points" dense @click="openCreate" />
@@ -50,14 +50,27 @@
               :rules="[(v) => !!v || 'Required']"
             />
             <q-input
+              v-if="selectedIsTips"
+              v-model.number="form.tip_percent"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              label="Tip percent *"
+              outlined
+              dense
+              hint="Saved on this employee and copied onto each tips payroll that is distributed without a file."
+              :rules="[(v) => v !== null && v !== '' && Number(v) >= 0 && Number(v) <= 100 || 'Enter a percent from 0 to 100']"
+            />
+            <q-input
               v-model.number="form.points"
               type="number"
               step="0.0001"
               min="0"
-              label="Points *"
+              :label="selectedIsTips ? 'Points' : 'Points *'"
               outlined
               dense
-              :rules="[(v) => v !== null && v !== '' && Number(v) >= 0 || 'Required']"
+              :rules="[(v) => selectedIsTips || (v !== null && v !== '' && Number(v) >= 0) || 'Required']"
             />
             <q-input
               v-model.number="form.weight"
@@ -99,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useQuasar, type QTableProps } from 'quasar';
 import DateField from '@core/components/common/DateField.vue';
 import { useEmployeePoolStore, type EmployeePoolPoint } from '@payroll/stores/employee-pool-store';
@@ -113,11 +126,12 @@ const typeStore = usePoolDistributionTypeStore();
 const dialogOpen = ref(false);
 const saving = ref(false);
 const editingId = ref<string | null>(null);
-const typeOptions = ref<Array<{ label: string; value: number }>>([]);
+const typeOptions = ref<Array<{ label: string; value: number; code: string }>>([]);
 
 const form = reactive({
   pool_distribution_type_id: null as number | null,
   points: 0,
+  tip_percent: null as number | null,
   weight: 1,
   effective_date: new Date().toISOString().slice(0, 10) as string | null,
   end_date: null as string | null,
@@ -133,6 +147,12 @@ const columns: QTableProps['columns'] = [
     align: 'left',
   },
   { name: 'points', label: 'Points', field: (row) => Number(row.points).toFixed(4), align: 'right' },
+  {
+    name: 'tip_percent',
+    label: 'Tip %',
+    field: (row) => row.tip_percent == null || row.tip_percent === '' ? '—' : `${Number(row.tip_percent)}%`,
+    align: 'right',
+  },
   { name: 'weight', label: 'Weight', field: (row) => Number(row.weight).toFixed(4), align: 'right' },
   {
     name: 'weighted',
@@ -150,10 +170,17 @@ async function refresh() {
   await store.fetchPoints(props.employeeId);
 }
 
+const selectedIsTips = computed(() => {
+  const selected = typeOptions.value.find((type) => type.value === form.pool_distribution_type_id);
+  if (!selected) return false;
+  return selected.code.toUpperCase() === 'TIPS' || selected.label.toLowerCase().includes('tip');
+});
+
 function openCreate() {
   editingId.value = null;
   form.pool_distribution_type_id = typeOptions.value[0]?.value ?? null;
   form.points = 0;
+  form.tip_percent = null;
   form.weight = 1;
   form.effective_date = new Date().toISOString().slice(0, 10);
   form.end_date = null;
@@ -165,6 +192,7 @@ function openEdit(row: EmployeePoolPoint) {
   editingId.value = row.id;
   form.pool_distribution_type_id = row.pool_distribution_type_id;
   form.points = Number(row.points);
+  form.tip_percent = row.tip_percent == null || row.tip_percent === '' ? null : Number(row.tip_percent);
   form.weight = Number(row.weight);
   form.effective_date = String(row.effective_date).slice(0, 10);
   form.end_date = row.end_date ? String(row.end_date).slice(0, 10) : null;
@@ -178,8 +206,9 @@ async function onSave() {
   try {
     if (editingId.value) {
       await store.updatePoint(editingId.value, {
-        points: Number(form.points),
+        points: Number(form.points) || 0,
         weight: Number(form.weight),
+        tip_percent: selectedIsTips.value ? Number(form.tip_percent) : null,
         effective_date: form.effective_date,
         end_date: form.end_date || null,
         notes: form.notes || null,
@@ -188,8 +217,9 @@ async function onSave() {
       await store.createPoint({
         employee_id: props.employeeId,
         pool_distribution_type_id: form.pool_distribution_type_id,
-        points: Number(form.points),
+        points: Number(form.points) || 0,
         weight: Number(form.weight),
+        tip_percent: selectedIsTips.value ? Number(form.tip_percent) : null,
         effective_date: form.effective_date,
         end_date: form.end_date || null,
         notes: form.notes || null,
@@ -230,6 +260,7 @@ onMounted(async () => {
   typeOptions.value = types.map((type) => ({
     label: `${type.name} (${type.code})`,
     value: type.id,
+    code: type.code,
   }));
 });
 </script>
