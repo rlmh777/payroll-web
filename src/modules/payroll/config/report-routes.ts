@@ -14,6 +14,7 @@ export type ReportId =
   | 'company-payroll-analysis-by-department'
   | 'payroll-master-sheet'
   | 'salary-payments'
+  | 'pool-payouts'
   | 'payroll-registry'
   | 'registry-summary-by-office-department'
   | 'paye'
@@ -96,6 +97,12 @@ export const REPORT_OPTIONS: ReportOption[] = [
     label: 'Salary Payments',
     caption: 'Period pay by department, with hours, tips, and gross',
     icon: 'payments',
+  },
+  {
+    id: 'pool-payouts',
+    label: 'Pool Payouts',
+    caption: 'Shares and tip percentages paid on each payroll',
+    icon: 'pie_chart',
   },
   {
     id: 'payroll-registry',

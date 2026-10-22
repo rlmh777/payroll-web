@@ -8,6 +8,7 @@
           @prev="prevWeek"
           @next="nextWeek"
           @today="goToday"
+          @imported="refreshTimesheets(true)"
         />
       </div>
 

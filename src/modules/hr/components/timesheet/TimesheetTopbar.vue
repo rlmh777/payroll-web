@@ -12,14 +12,21 @@
     </div>
 
     <div class="row items-center q-gutter-sm">
+      <q-btn outline color="primary" icon="upload_file" label="Upload" no-caps @click="importOpen = true" />
       <q-chip outline color="primary" icon="groups" :label="`${employeeCount} employees`" />
       <TimesheetColumnPicker />
     </div>
   </div>
+
+  <TimesheetImportDialog v-model="importOpen" @imported="emit('imported')" />
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import TimesheetColumnPicker from './TimesheetColumnPicker.vue';
+import TimesheetImportDialog from './TimesheetImportDialog.vue';
+
+const importOpen = ref(false);
 
 defineProps<{
   headerLabel: string;
@@ -30,6 +37,7 @@ const emit = defineEmits<{
   (event: 'prev'): void;
   (event: 'next'): void;
   (event: 'today'): void;
+  (event: 'imported'): void;
 }>();
 </script>
 
